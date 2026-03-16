@@ -1,0 +1,7 @@
+dist/
+dist-demo/
+node_modules/
+coverage/
+.DS_Store
+*.local
+.idea/
