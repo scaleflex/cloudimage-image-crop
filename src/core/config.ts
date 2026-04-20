@@ -1,6 +1,6 @@
-import type { CICropViewConfig, CropShapeName } from './types';
+import type { SfxCropConfig } from './types';
 
-export const DEFAULT_CONFIG: CICropViewConfig = {
+export const DEFAULT_CONFIG: SfxCropConfig = {
   src: '',
   cropShape: 'free',
   initialCrop: null,
@@ -39,11 +39,11 @@ export const DEFAULT_CONFIG: CICropViewConfig = {
   wheelZoom: true,
 };
 
-export function mergeConfig(partial: Partial<CICropViewConfig>): CICropViewConfig {
+export function mergeConfig(partial: Partial<SfxCropConfig>): SfxCropConfig {
   return { ...DEFAULT_CONFIG, ...partial };
 }
 
-export function validateConfig(config: CICropViewConfig): string[] {
+export function validateConfig(config: SfxCropConfig): string[] {
   const errors: string[] = [];
 
   if (!config.src) {
@@ -67,41 +67,4 @@ export function validateConfig(config: CICropViewConfig): string[] {
   }
 
   return errors;
-}
-
-/** Parse data-ci-crop-* attributes from an HTML element into a partial config. */
-export function parseDataAttributes(element: HTMLElement): Partial<CICropViewConfig> {
-  const config: Partial<CICropViewConfig> = {};
-
-  const src = element.getAttribute('data-ci-crop-src');
-  if (src) config.src = src;
-
-  const shape = element.getAttribute('data-ci-crop-shape');
-  if (shape) config.cropShape = shape as CropShapeName;
-
-  const theme = element.getAttribute('data-ci-crop-theme');
-  if (theme === 'light' || theme === 'dark') config.theme = theme;
-
-  const showGrid = element.getAttribute('data-ci-crop-show-grid');
-  if (showGrid === 'true') config.showGrid = true;
-  else if (showGrid === 'false') config.showGrid = false;
-  else if (showGrid === 'interaction') config.showGrid = 'interaction';
-
-  const minScale = element.getAttribute('data-ci-crop-min-scale');
-  if (minScale) config.minScale = parseFloat(minScale);
-
-  const maxScale = element.getAttribute('data-ci-crop-max-scale');
-  if (maxScale) config.maxScale = parseFloat(maxScale);
-
-  const enableAnimations = element.getAttribute('data-ci-crop-enable-animations');
-  if (enableAnimations === 'true') config.enableAnimations = true;
-  else if (enableAnimations === 'false') config.enableAnimations = false;
-
-  const toolbarPosition = element.getAttribute('data-ci-crop-toolbar-position');
-  if (toolbarPosition === 'top' || toolbarPosition === 'bottom') config.toolbarPosition = toolbarPosition;
-
-  const overlayColor = element.getAttribute('data-ci-crop-overlay-color');
-  if (overlayColor) config.overlayColor = overlayColor;
-
-  return config;
 }

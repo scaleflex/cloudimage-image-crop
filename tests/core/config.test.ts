@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeConfig, validateConfig, parseDataAttributes, DEFAULT_CONFIG } from '../../src/core/config';
+import { mergeConfig, validateConfig, DEFAULT_CONFIG } from '../../src/core/config';
 
 describe('DEFAULT_CONFIG', () => {
   it('should have correct default values', () => {
@@ -84,57 +84,5 @@ describe('validateConfig', () => {
     const config = mergeConfig({ src: 'test.jpg' });
     const errors = validateConfig(config);
     expect(errors).toEqual([]);
-  });
-});
-
-describe('parseDataAttributes', () => {
-  it('should parse data-ci-crop-src', () => {
-    const el = document.createElement('div');
-    el.setAttribute('data-ci-crop-src', '/photo.jpg');
-    const config = parseDataAttributes(el);
-    expect(config.src).toBe('/photo.jpg');
-  });
-
-  it('should parse data-ci-crop-shape', () => {
-    const el = document.createElement('div');
-    el.setAttribute('data-ci-crop-shape', '16:9');
-    const config = parseDataAttributes(el);
-    expect(config.cropShape).toBe('16:9');
-  });
-
-  it('should parse data-ci-crop-theme', () => {
-    const el = document.createElement('div');
-    el.setAttribute('data-ci-crop-theme', 'light');
-    const config = parseDataAttributes(el);
-    expect(config.theme).toBe('light');
-  });
-
-  it('should parse data-ci-crop-show-grid', () => {
-    const el = document.createElement('div');
-    el.setAttribute('data-ci-crop-show-grid', 'interaction');
-    const config = parseDataAttributes(el);
-    expect(config.showGrid).toBe('interaction');
-  });
-
-  it('should parse numeric attributes', () => {
-    const el = document.createElement('div');
-    el.setAttribute('data-ci-crop-min-scale', '0.3');
-    el.setAttribute('data-ci-crop-max-scale', '8');
-    const config = parseDataAttributes(el);
-    expect(config.minScale).toBe(0.3);
-    expect(config.maxScale).toBe(8);
-  });
-
-  it('should parse boolean attributes', () => {
-    const el = document.createElement('div');
-    el.setAttribute('data-ci-crop-enable-animations', 'false');
-    const config = parseDataAttributes(el);
-    expect(config.enableAnimations).toBe(false);
-  });
-
-  it('should return empty config for element with no data attributes', () => {
-    const el = document.createElement('div');
-    const config = parseDataAttributes(el);
-    expect(Object.keys(config)).toHaveLength(0);
   });
 });

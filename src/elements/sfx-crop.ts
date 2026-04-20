@@ -6,7 +6,7 @@ import { createCropController, type CropController } from '../core/crop-controll
 import { mergeConfig } from '../core/config';
 import { setupAria } from '../a11y/aria';
 import type {
-  CICropViewConfig,
+  SfxCropConfig,
   CropShapeName,
   CropRect,
   TransformState,
@@ -17,8 +17,9 @@ import type { SfxCropToolbarElement, SfxCropToolbarCommand } from './sfx-crop-to
 import type { SfxCropZoomElement } from './sfx-crop-zoom';
 import './sfx-crop-zoom';
 import { SfxCropBaseElement } from './base';
-// Legacy stylesheet re-used unchanged in P2. CSS token rename (--ci-crop-* →
-// --sfx-cr-*) and per-element `static styles` split happen in P5.
+// Shared stylesheet — tokens on :host(+.ci-crop-container) with --sfx-cr-*
+// prefix. Per-element `static styles` split is on the roadmap; for 2.0.0 the
+// full sheet is injected once via unsafeCSS.
 import CSS_STRING from '../styles/index.css?inline';
 
 /**
@@ -39,8 +40,8 @@ import CSS_STRING from '../styles/index.css?inline';
  *   - `sfx-crop-cancel` (from imperative `.cancel()`)
  *   - `sfx-crop-error`  `{ error }`
  *
- * Theme a consumer via `--sfx-cr-*` custom properties (mapped to the legacy
- * `--ci-crop-*` tokens until P5) or via `::part(canvas|toolbar|loading|error)`.
+ * Theme a consumer via `--sfx-cr-*` custom properties set on the host, or via
+ * `::part(canvas-host|toolbar|zoom|loading|error|container)` from light DOM.
  */
 export class SfxCropElement extends SfxCropBaseElement {
   static styles = [
@@ -56,7 +57,7 @@ export class SfxCropElement extends SfxCropBaseElement {
     unsafeCSS(CSS_STRING),
   ];
 
-  // === Attributes mirroring CICropViewConfig ===
+  // === Attributes mirroring SfxCropConfig ===
 
   @property({ type: String, reflect: true }) src = '';
   @property({ type: String, attribute: 'crop-shape', reflect: true }) cropShape: CropShapeName = 'free';
@@ -148,10 +149,10 @@ export class SfxCropElement extends SfxCropBaseElement {
 
   updated(changed: PropertyValues): void {
     if (!this.controller) return;
-    const delta: Partial<CICropViewConfig> = {};
+    const delta: Partial<SfxCropConfig> = {};
     let has = false;
 
-    const forward = <K extends keyof CICropViewConfig>(prop: keyof SfxCropElement, key: K, value: CICropViewConfig[K]): void => {
+    const forward = <K extends keyof SfxCropConfig>(prop: keyof SfxCropElement, key: K, value: SfxCropConfig[K]): void => {
       if (changed.has(prop as PropertyKey)) {
         delta[key] = value;
         has = true;
@@ -305,7 +306,7 @@ export class SfxCropElement extends SfxCropBaseElement {
     try { return JSON.parse(v) as CropRect; } catch { return null; }
   }
 
-  private buildConfig(): Partial<CICropViewConfig> {
+  private buildConfig(): Partial<SfxCropConfig> {
     return {
       src: this.src,
       cropShape: this.cropShape,

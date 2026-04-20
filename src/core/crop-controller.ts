@@ -1,5 +1,5 @@
 import type {
-  CICropViewConfig,
+  SfxCropConfig,
   TransformState,
   CropShapeName,
   TransformParams,
@@ -58,7 +58,7 @@ export interface CropControllerOptions {
   /** Layout reference — the wrapping container whose dimensions drive the fit-scale math. */
   layoutContainer: HTMLElement;
   /** Merged config (see {@link mergeConfig}). */
-  config: CICropViewConfig;
+  config: SfxCropConfig;
   /** Optional callbacks. */
   callbacks?: CropControllerCallbacks;
 }
@@ -79,7 +79,7 @@ export interface CropController {
   toBlob(type?: string, quality?: number): Promise<Blob>;
   toDataURL(type?: string, quality?: number): string;
   toTransformParams(): TransformParams;
-  update(config: Partial<CICropViewConfig>): void;
+  update(config: Partial<SfxCropConfig>): void;
   destroy(): void;
 }
 
@@ -499,7 +499,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     return getTransformParams(state, image.naturalWidth, image.naturalHeight);
   }
 
-  function update(partial: Partial<CICropViewConfig>): void {
+  function update(partial: Partial<SfxCropConfig>): void {
     if (destroyed) return;
     const oldSrc = config.src;
     config = mergeConfig({ ...config, ...partial });

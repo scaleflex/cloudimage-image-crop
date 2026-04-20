@@ -17,6 +17,9 @@ export type CropShapeName = 'free' | 'square' | 'circle' | 'rounded-rect' | '16:
 /** @deprecated Use CropShapeName instead */
 export type CropShape = CropShapeName;
 
+/** @deprecated Renamed to `SfxCropConfig` in 2.0.0. */
+export type CICropViewConfig = SfxCropConfig;
+
 export interface CropShapeConfig {
   type: 'free' | 'rect' | 'circle' | 'rounded-rect';
   ratio?: number; // width/height ratio for 'rect' type
@@ -105,7 +108,14 @@ export interface LerpConfig {
 
 // === Config ===
 
-export interface CICropViewConfig {
+/**
+ * Internal config shape. Consumers interact with `<sfx-crop>` via attributes
+ * and properties — see the element's `@property` declarations in
+ * `src/elements/sfx-crop.ts` for the authoritative public API. This interface
+ * is shared with `crop-controller` so attribute deltas and defaults stay
+ * aligned with the element.
+ */
+export interface SfxCropConfig {
   /** Image source URL */
   src: string;
 
@@ -199,13 +209,6 @@ export interface CICropViewConfig {
   pinchZoom: boolean;
   /** Enable mouse wheel zoom */
   wheelZoom: boolean;
-
-  // Callbacks
-  onReady?: (instance: CICropViewInstance) => void;
-  onChange?: (state: TransformState) => void;
-  onCropChange?: (crop: CropRect) => void;
-  onImageLoad?: (image: HTMLImageElement) => void;
-  onError?: (error: Error) => void;
 }
 
 // === Export ===
@@ -231,40 +234,7 @@ export interface TransformParams {
 export type CropResult = TransformParams;
 
 // === Instance ===
-
-export interface CICropViewInstance {
-  /** Load a new image */
-  loadImage(src: string): Promise<void>;
-  /** Get current transform state */
-  getTransformState(): TransformState;
-  /** Set crop shape */
-  setCropShape(shape: CropShapeName): void;
-  /** Set crop rect programmatically */
-  setCropRect(rect: CropRect): void;
-  /** Get crop rect in original image coordinates */
-  getCropRect(): CropRect;
-  /** Rotate left by 90° */
-  rotateLeft(): void;
-  /** Flip horizontally */
-  flipHorizontal(): void;
-  /** Flip vertically */
-  flipVertical(): void;
-  /** Set fine rotation (-45 to +45 degrees) */
-  setRotation(degrees: number): void;
-  /** Set zoom/scale level */
-  setScale(scale: number): void;
-  /** Reset all transforms */
-  reset(): void;
-  /** Export to canvas element */
-  toCanvas(): HTMLCanvasElement;
-  /** Export to blob */
-  toBlob(type?: string, quality?: number): Promise<Blob>;
-  /** Export to data URL */
-  toDataURL(type?: string, quality?: number): string;
-  /** Get transform params for server-side processing */
-  toTransformParams(): TransformParams;
-  /** Update configuration */
-  update(config: Partial<CICropViewConfig>): void;
-  /** Destroy instance and cleanup */
-  destroy(): void;
-}
+//
+// The public imperative instance is the `<sfx-crop>` element itself — see
+// `SfxCropElement` in `src/elements/sfx-crop.ts`. The former `CICropViewInstance`
+// interface was removed in 2.0.0 because consumers now hold an element ref.
