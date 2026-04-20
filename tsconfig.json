@@ -12,6 +12,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "experimentalDecorators": true,
+    // Required by Lit 3 — under ES2022 `define` semantics, class field
+    // initializers run AFTER decorators, clobbering values that `@property`
+    // set via reflection. Keeping this `false` preserves the legacy
+    // `[[Set]]` behavior that Lit's `@property` depends on.
     "useDefineForClassFields": false,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "baseUrl": ".",

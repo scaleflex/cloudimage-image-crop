@@ -14,7 +14,6 @@ interface ConfiguratorState {
   showShapeSelector: boolean;
   showRotateButton: boolean;
   showFlipButton: boolean;
-  showFlipVButton: boolean;
   keyboard: boolean;
   wheelZoom: boolean;
   showBleedMargin: boolean;
@@ -92,7 +91,6 @@ export function initConfigurator(): void {
   const cfgShapeSelector = document.getElementById('cfg-shape-selector') as HTMLInputElement;
   const cfgRotateBtn = document.getElementById('cfg-rotate-btn') as HTMLInputElement;
   const cfgFlipBtn = document.getElementById('cfg-flip-btn') as HTMLInputElement;
-  const cfgFlipVBtn = document.getElementById('cfg-flip-v-btn') as HTMLInputElement;
   const cfgKeyboard = document.getElementById('cfg-keyboard') as HTMLInputElement;
   const cfgWheelZoom = document.getElementById('cfg-wheel-zoom') as HTMLInputElement;
   const cfgBleed = document.getElementById('cfg-bleed') as HTMLInputElement;
@@ -121,7 +119,6 @@ export function initConfigurator(): void {
       showShapeSelector: cfgShapeSelector.checked,
       showRotateButton: cfgRotateBtn.checked,
       showFlipButton: cfgFlipBtn.checked,
-      showFlipVButton: cfgFlipVBtn.checked,
       keyboard: cfgKeyboard.checked,
       wheelZoom: cfgWheelZoom.checked,
       showBleedMargin: cfgBleed.checked,
@@ -144,7 +141,6 @@ export function initConfigurator(): void {
     if (!s.showShapeSelector) attrs.push(`  ?show-shape-selector=\${false}`);
     if (!s.showRotateButton) attrs.push(`  ?show-rotate-button=\${false}`);
     if (!s.showFlipButton) attrs.push(`  ?show-flip-button=\${false}`);
-    if (!s.showFlipVButton) attrs.push(`  ?show-flip-v-button=\${false}`);
     if (s.toolbarPosition !== 'bottom') attrs.push(`  toolbar-position="${s.toolbarPosition}"`);
     if (!s.keyboard) attrs.push(`  ?keyboard=\${false}`);
     if (!s.wheelZoom) attrs.push(`  ?wheel-zoom=\${false}`);
@@ -167,7 +163,6 @@ export function initConfigurator(): void {
     viewer!.showShapeSelector = s.showShapeSelector;
     viewer!.showRotateButton = s.showRotateButton;
     viewer!.showFlipButton = s.showFlipButton;
-    viewer!.showFlipVButton = s.showFlipVButton;
     viewer!.keyboard = s.keyboard;
     viewer!.wheelZoom = s.wheelZoom;
     viewer!.showBleedMargin = s.showBleedMargin;
@@ -178,7 +173,7 @@ export function initConfigurator(): void {
     prism?.highlightElement(cfgCode);
   }
 
-  const toggles = [cfgGrid, cfgToolbar, cfgRotateSlider, cfgZoomSlider, cfgShapeSelector, cfgRotateBtn, cfgFlipBtn, cfgFlipVBtn, cfgKeyboard, cfgWheelZoom, cfgBleed];
+  const toggles = [cfgGrid, cfgToolbar, cfgRotateSlider, cfgZoomSlider, cfgShapeSelector, cfgRotateBtn, cfgFlipBtn, cfgKeyboard, cfgWheelZoom, cfgBleed];
   toggles.forEach((el) => el.addEventListener('change', applyState));
 
   const selects = [cfgCropShape, cfgTheme, cfgToolbarPos];

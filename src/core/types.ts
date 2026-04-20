@@ -109,11 +109,12 @@ export interface LerpConfig {
 // === Config ===
 
 /**
- * Internal config shape. Consumers interact with `<sfx-crop>` via attributes
- * and properties — see the element's `@property` declarations in
- * `src/elements/sfx-crop.ts` for the authoritative public API. This interface
- * is shared with `crop-controller` so attribute deltas and defaults stay
- * aligned with the element.
+ * @internal
+ *
+ * Internal config shape shared with {@link import('./crop-controller').createCropController}
+ * so attribute deltas and defaults stay aligned with the element. Consumers
+ * interact with `<sfx-crop>` via HTML attributes and DOM properties — see the
+ * `@property` declarations in `src/elements/sfx-crop.ts` for the public API.
  */
 export interface SfxCropConfig {
   /** Image source URL */
@@ -160,8 +161,6 @@ export interface SfxCropConfig {
   showRotateButton: boolean;
   /** Show flip button */
   showFlipButton: boolean;
-  /** Show vertical flip button */
-  showFlipVButton: boolean;
   /** Toolbar position */
   toolbarPosition: 'bottom' | 'top';
   /** Show toolbar */

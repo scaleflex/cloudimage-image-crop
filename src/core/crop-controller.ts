@@ -71,7 +71,6 @@ export interface CropController {
   setCropRect(rect: CropRect): void;
   rotateLeft(): void;
   flipHorizontal(): void;
-  flipVertical(): void;
   setRotation(deg: number): void;
   setScale(scale: number): void;
   reset(): void;
@@ -84,10 +83,10 @@ export interface CropController {
 }
 
 /**
- * Non-DOM-owning factory extracted from {@link CICropView}. The element that
- * owns the DOM (e.g. `<sfx-crop>`) provides the canvas + layout container and
- * listens to state via callbacks. No toolbar, zoom slider, or overlay divs
- * are created here — those are the host's responsibility.
+ * Non-DOM-owning factory. The element that owns the DOM (e.g. `<sfx-crop>`)
+ * provides the canvas + layout container and listens to state via callbacks.
+ * No toolbar, zoom slider, or overlay divs are created here — those are the
+ * host's responsibility.
  */
 export function createCropController(opts: CropControllerOptions): CropController {
   const { canvas, host, layoutContainer, callbacks = {} } = opts;
@@ -407,6 +406,10 @@ export function createCropController(opts: CropControllerOptions): CropControlle
 
   function setCropShape(shape: CropShapeName): void {
     if (destroyed) return;
+    // Idempotence guard: property reflection + toolbar events can both land
+    // on the same cropShape value. Skipping the no-op avoids double
+    // change/cropChange dispatches to consumers.
+    if (cropShape === shape) return;
     cropShape = shape;
     state = applyShapeChange(state, shape);
     callbacks.onShapeSync?.(shape);
@@ -439,10 +442,6 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     announceState(host, state, cropShape);
     emitChange();
     emitCropChange();
-  }
-
-  function flipVertical(): void {
-    // No-op: vertical flip removed (parity with CICropView).
   }
 
   function setRotation(degrees: number): void {
@@ -525,7 +524,6 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     setCropRect,
     rotateLeft,
     flipHorizontal,
-    flipVertical,
     setRotation,
     setScale,
     reset,

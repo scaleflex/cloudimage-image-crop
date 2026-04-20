@@ -7,6 +7,7 @@ import './sfx-crop-rotate';
 import './sfx-crop-shapes';
 import type { SfxCropRotateElement } from './sfx-crop-rotate';
 import type { SfxCropShapesElement } from './sfx-crop-shapes';
+import { parseAvailableShapes, DEFAULT_SHAPES } from './parse-shapes';
 
 /**
  * Unified descriptor dispatched on `sfx-crop-toolbar-command` so the host
@@ -20,8 +21,8 @@ export type SfxCropToolbarCommand =
 
 /**
  * `<sfx-crop-toolbar>` — composes rotate/flip buttons + `<sfx-crop-rotate>` +
- * `<sfx-crop-shapes>` into the editor's action bar. Fully Lit-native since P3;
- * the legacy imperative `createToolbar` factory is no longer called.
+ * `<sfx-crop-shapes>` into the editor's action bar. Fully Lit-native; the
+ * legacy imperative `createToolbar` factory is no longer called.
  *
  * Light DOM so the parent `<sfx-crop>`'s shadow stylesheet (carrying the
  * `.ci-crop-toolbar*` rules) applies without duplication.
@@ -37,7 +38,6 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
   @property({ type: Number }) rotation = 0;
   @property({ type: Boolean, attribute: 'show-rotate-button' }) showRotateButton = true;
   @property({ type: Boolean, attribute: 'show-flip-button' }) showFlipButton = true;
-  @property({ type: Boolean, attribute: 'show-flip-v-button' }) showFlipVButton = false;
   @property({ type: Boolean, attribute: 'show-rotate-slider' }) showRotateSlider = true;
   @property({ type: Boolean, attribute: 'show-shape-selector' }) showShapeSelector = true;
   @property({ type: String, attribute: 'toolbar-position' }) toolbarPosition: 'top' | 'bottom' = 'bottom';
@@ -52,7 +52,7 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
   render(): unknown {
     const hasLeftButtons = this.showRotateButton || this.showFlipButton;
     const cls = `ci-crop-toolbar${this.toolbarPosition === 'top' ? ' ci-crop-toolbar--top' : ''}`;
-    const shapes = this.parseAvailableShapes() ?? ['free', 'square', 'circle', 'rounded-rect', '16:9', '4:3', '3:2'];
+    const shapes = parseAvailableShapes(this.availableShapes) ?? [...DEFAULT_SHAPES];
 
     return html`
       <div class=${cls}>
@@ -121,19 +121,6 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
       bubbles: true,
       composed: true,
     }));
-  }
-
-  private parseAvailableShapes(): CropShapeName[] | undefined {
-    const v = this.availableShapes;
-    if (!v) return undefined;
-    if (Array.isArray(v)) return v;
-    if (typeof v === 'string') {
-      if (v.trim().startsWith('[')) {
-        try { return JSON.parse(v) as CropShapeName[]; } catch { /* fall through */ }
-      }
-      return v.split(/[\s,]+/).filter(Boolean) as CropShapeName[];
-    }
-    return undefined;
   }
 }
 

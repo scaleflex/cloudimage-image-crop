@@ -12,35 +12,55 @@ import type {
   TransformState,
   TransformParams,
 } from '../core/types';
-import type { SfxCropCanvasElement } from './sfx-crop-canvas';
+import { SfxCropCanvasElement } from './sfx-crop-canvas';
 import type { SfxCropToolbarElement, SfxCropToolbarCommand } from './sfx-crop-toolbar';
 import type { SfxCropZoomElement } from './sfx-crop-zoom';
 import './sfx-crop-zoom';
 import { SfxCropBaseElement } from './base';
-// Shared stylesheet — tokens on :host(+.ci-crop-container) with --sfx-cr-*
-// prefix. Per-element `static styles` split is on the roadmap; for 2.0.0 the
-// full sheet is injected once via unsafeCSS.
+import { parseAvailableShapes, DEFAULT_SHAPES } from './parse-shapes';
+// Shared stylesheet — tokens live on :host with --sfx-cr-* prefix, so
+// consumers can theme from light DOM. Per-element `static styles` split is
+// on the roadmap; for 2.0.0 the full sheet is injected once via unsafeCSS.
+// INVARIANT: the sheet MUST NOT contain user-supplied content — unsafeCSS
+// bypasses CSS escaping. Current source is a static asset we own.
 import CSS_STRING from '../styles/index.css?inline';
+
+/**
+ * Lit `@property` converter for the tri-state `show-grid` attribute, which
+ * accepts `"true" | "false" | "interaction"` (string or empty-shorthand), and
+ * exposes it on the element as a real `boolean | 'interaction'` property.
+ */
+const SHOW_GRID_CONVERTER = {
+  fromAttribute(v: string | null): boolean | 'interaction' {
+    if (v === null) return 'interaction';
+    if (v === 'true' || v === '') return true;
+    if (v === 'false') return false;
+    return 'interaction';
+  },
+  toAttribute(v: boolean | 'interaction'): string {
+    return v === true ? 'true' : v === false ? 'false' : 'interaction';
+  },
+};
 
 /**
  * `<sfx-crop>` — Scaleflex interactive image-crop editor web component.
  *
- * P2: full open shadow-DOM root. Renders `<sfx-crop-canvas>` plus an optional
- * `<sfx-crop-toolbar>` and a zoom slider. A {@link createCropController}
- * instance drives the canvas/pointer/keyboard pipeline using the pre-created
- * `<canvas>` ref — it never re-creates the canvas node, so pointer capture
- * and non-passive wheel listeners stay stable across Lit updates.
+ * Renders `<sfx-crop-canvas>` plus an optional `<sfx-crop-toolbar>` and a zoom
+ * slider inside an open shadow root. A {@link createCropController} instance
+ * drives the canvas / pointer / keyboard pipeline against the pre-created
+ * `<canvas>` ref — the canvas node is never re-created, so pointer capture and
+ * non-passive `wheel` listeners stay stable across Lit updates.
  *
  * Events (all `bubbles: true, composed: true`):
- *   - `sfx-crop-ready`  `{ element }`
- *   - `sfx-crop-image-load` `{ image }`
- *   - `sfx-crop-change` `TransformState`
- *   - `sfx-crop-crop-change` `CropRect` (image-pixel coords)
- *   - `sfx-crop-save`   `{ blob, dataURL, params }` (from imperative `.save()`)
- *   - `sfx-crop-cancel` (from imperative `.cancel()`)
- *   - `sfx-crop-error`  `{ error }`
+ *   - `sfx-crop-ready`        `{ element }`
+ *   - `sfx-crop-image-load`   `{ image }`
+ *   - `sfx-crop-change`       `TransformState`
+ *   - `sfx-crop-crop-change`  `CropRect` (image-pixel coords)
+ *   - `sfx-crop-save`         `{ blob, dataURL, params }` (from imperative `.save()`)
+ *   - `sfx-crop-cancel`       (from imperative `.cancel()`)
+ *   - `sfx-crop-error`        `{ error }`
  *
- * Theme a consumer via `--sfx-cr-*` custom properties set on the host, or via
+ * Theme via `--sfx-cr-*` custom properties set on the host, or via
  * `::part(canvas-host|toolbar|zoom|loading|error|container)` from light DOM.
  */
 export class SfxCropElement extends SfxCropBaseElement {
@@ -82,7 +102,9 @@ export class SfxCropElement extends SfxCropBaseElement {
   @property({ type: String, attribute: 'output-type' }) outputType = 'image/png';
   @property({ type: String, attribute: 'toolbar-position' }) toolbarPosition: 'bottom' | 'top' = 'bottom';
 
-  @property({ type: String, attribute: 'show-grid' }) showGridAttr: string | boolean = 'interaction';
+  /** `true | false | 'interaction'` (default). Attribute accepts all three as strings. */
+  @property({ attribute: 'show-grid', converter: SHOW_GRID_CONVERTER })
+  showGrid: boolean | 'interaction' = 'interaction';
 
   @property({ type: Boolean, attribute: 'show-toolbar' }) showToolbar = true;
   @property({ type: Boolean, attribute: 'show-rotate-slider' }) showRotateSlider = true;
@@ -90,7 +112,6 @@ export class SfxCropElement extends SfxCropBaseElement {
   @property({ type: Boolean, attribute: 'show-shape-selector' }) showShapeSelector = true;
   @property({ type: Boolean, attribute: 'show-rotate-button' }) showRotateButton = true;
   @property({ type: Boolean, attribute: 'show-flip-button' }) showFlipButton = true;
-  @property({ type: Boolean, attribute: 'show-flip-v-button' }) showFlipVButton = true;
   @property({ type: Boolean, attribute: 'show-bleed-margin' }) showBleedMargin = false;
   @property({ type: Boolean, attribute: 'enable-animations' }) enableAnimations = true;
   @property({ type: Boolean }) keyboard = true;
@@ -98,7 +119,7 @@ export class SfxCropElement extends SfxCropBaseElement {
   @property({ type: Boolean, attribute: 'wheel-zoom' }) wheelZoom = true;
 
   @property({ attribute: 'available-shapes' })
-  availableShapes: CropShapeName[] | string = ['free', 'square', 'circle', 'rounded-rect', '16:9', '4:3', '3:2'];
+  availableShapes: CropShapeName[] | string = [...DEFAULT_SHAPES];
 
   @property({ attribute: 'initial-crop' })
   initialCrop: CropRect | string | null = null;
@@ -121,11 +142,26 @@ export class SfxCropElement extends SfxCropBaseElement {
   async firstUpdated(): Promise<void> {
     setupAria(this);
 
+    // Guard: if @scaleflex/crop/define wasn't imported, canvasHost will be an
+    // un-upgraded HTMLUnknownElement with no Lit lifecycle — bail with a
+    // descriptive error rather than a cryptic "undefined.then" crash.
+    if (!(this.canvasHost instanceof SfxCropCanvasElement)) {
+      throw new Error(
+        "<sfx-crop>: custom elements not registered. Import '@scaleflex/crop/define' before using the tag.",
+      );
+    }
+
     // <sfx-crop-canvas> is a child custom element; its template (the <canvas>)
     // only materializes after its own first update cycle. Awaiting the child's
     // updateComplete guarantees `canvasEl` is non-null before we hand it to
-    // the controller (renderer.getContext would throw otherwise).
+    // the controller.
     await this.canvasHost.updateComplete;
+
+    // If the host was removed from the DOM during the microtask window (fast
+    // mount/unmount, e.g. React StrictMode or router transitions),
+    // disconnectedCallback already ran with a null controller — don't leak one
+    // by creating it now.
+    if (!this.isConnected) return;
 
     const canvas = this.canvasHost.canvasEl;
     const config = mergeConfig(this.buildConfig());
@@ -153,33 +189,20 @@ export class SfxCropElement extends SfxCropBaseElement {
     if (this.src) this.controller.loadImage(this.src);
   }
 
+  /** @see LIVE_CONFIG_KEYS for the exact set forwarded to `controller.update()`. */
   updated(changed: PropertyValues): void {
     if (!this.controller) return;
     const delta: Partial<SfxCropConfig> = {};
     let has = false;
-
-    const forward = <K extends keyof SfxCropConfig>(prop: keyof SfxCropElement, key: K, value: SfxCropConfig[K]): void => {
-      if (changed.has(prop as PropertyKey)) {
-        delta[key] = value;
+    for (const key of LIVE_CONFIG_KEYS) {
+      if (changed.has(key)) {
+        // Keys are shared between SfxCropElement and SfxCropConfig by design;
+        // the cast removes the structural-vs-nominal friction without losing
+        // correctness (LIVE_CONFIG_KEYS is typed against both).
+        (delta as Record<string, unknown>)[key] = this[key];
         has = true;
       }
-    };
-
-    forward('src', 'src', this.src);
-    forward('cropShape', 'cropShape', this.cropShape);
-    forward('theme', 'theme', this.theme);
-    forward('minScale', 'minScale', this.minScale);
-    forward('maxScale', 'maxScale', this.maxScale);
-    forward('borderRadius', 'borderRadius', this.borderRadius);
-    forward('showBleedMargin', 'showBleedMargin', this.showBleedMargin);
-    forward('bleedMarginSize', 'bleedMarginSize', this.bleedMarginSize);
-    forward('bleedMarginColor', 'bleedMarginColor', this.bleedMarginColor);
-    forward('enableAnimations', 'enableAnimations', this.enableAnimations);
-    forward('animationSpeed', 'animationSpeed', this.animationSpeed);
-    forward('keyboard', 'keyboard', this.keyboard);
-    forward('pinchZoom', 'pinchZoom', this.pinchZoom);
-    forward('wheelZoom', 'wheelZoom', this.wheelZoom);
-
+    }
     if (has) this.controller.update(delta);
   }
 
@@ -241,8 +264,11 @@ export class SfxCropElement extends SfxCropBaseElement {
       case 'flip-h': this.controller.flipHorizontal(); break;
       case 'rotation': this.controller.setRotation(detail.value); break;
       case 'shape':
+        // Assign the property only — `updated()` forwards the delta to
+        // `controller.update({ cropShape })`, which in turn calls
+        // `setCropShape`. No explicit `controller.setCropShape(...)` here,
+        // or the change/cropChange events fire twice per click.
         this.cropShape = detail.value;
-        this.controller.setCropShape(detail.value);
         break;
     }
   };
@@ -251,15 +277,20 @@ export class SfxCropElement extends SfxCropBaseElement {
 
   loadImage(src: string): Promise<void> { return this.ensure().loadImage(src); }
   getTransformState(): TransformState { return this.ensure().getTransformState(); }
+  /**
+   * Sets the crop shape. Internally assigns `this.cropShape`, which Lit
+   * reflects through `updated()` into `controller.update({ cropShape })`.
+   * Exposed as an imperative method purely for ergonomic parity with
+   * `rotateLeft()`, `setScale()`, etc.
+   */
   setCropShape(shape: CropShapeName): void {
+    this.ensure(); // assert controller exists; throws with helpful message otherwise
     this.cropShape = shape;
-    this.ensure().setCropShape(shape);
   }
   setCropRect(rect: CropRect): void { this.ensure().setCropRect(rect); }
   getCropRect(): CropRect { return this.ensure().getCropRect(); }
   rotateLeft(): void { this.ensure().rotateLeft(); }
   flipHorizontal(): void { this.ensure().flipHorizontal(); }
-  flipVertical(): void { this.ensure().flipVertical(); }
   setRotation(deg: number): void { this.ensure().setRotation(deg); }
   setScale(scale: number): void { this.ensure().setScale(scale); }
   reset(): void { this.ensure().reset(); }
@@ -282,27 +313,14 @@ export class SfxCropElement extends SfxCropBaseElement {
   // === Internals ===
 
   private ensure(): CropController {
-    if (!this.controller) throw new Error('<sfx-crop> not connected — wait for "sfx-crop-ready" or firstUpdated().');
+    if (!this.controller) {
+      throw new Error('<sfx-crop> not connected — wait for "sfx-crop-ready" or firstUpdated().');
+    }
     return this.controller;
   }
 
   private dispatch(type: string, detail: unknown): void {
     this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));
-  }
-
-  private parseShowGrid(): boolean | 'interaction' {
-    const v = this.showGridAttr;
-    if (v === true || v === 'true' || v === '') return true;
-    if (v === false || v === 'false') return false;
-    return 'interaction';
-  }
-
-  private parseAvailableShapes(): CropShapeName[] {
-    if (Array.isArray(this.availableShapes)) return this.availableShapes;
-    if (typeof this.availableShapes === 'string' && this.availableShapes.trim()) {
-      return this.availableShapes.split(/[\s,]+/).filter(Boolean) as CropShapeName[];
-    }
-    return ['free', 'square', 'circle', 'rounded-rect', '16:9', '4:3', '3:2'];
   }
 
   private parseInitialCrop(): CropRect | null {
@@ -323,7 +341,7 @@ export class SfxCropElement extends SfxCropBaseElement {
       minScale: this.minScale,
       maxScale: this.maxScale,
       minCropSize: this.minCropSize,
-      availableShapes: this.parseAvailableShapes(),
+      availableShapes: parseAvailableShapes(this.availableShapes) ?? [...DEFAULT_SHAPES],
       handleSize: this.handleSize,
       handleColor: this.handleColor,
       borderRadius: this.borderRadius,
@@ -332,14 +350,13 @@ export class SfxCropElement extends SfxCropBaseElement {
       maxOutputWidth: this.maxOutputWidth,
       maxOutputHeight: this.maxOutputHeight,
       overlayColor: this.overlayColor,
-      showGrid: this.parseShowGrid(),
+      showGrid: this.showGrid,
       showToolbar: this.showToolbar,
       showRotateSlider: this.showRotateSlider,
       showZoomSlider: this.showZoomSlider,
       showShapeSelector: this.showShapeSelector,
       showRotateButton: this.showRotateButton,
       showFlipButton: this.showFlipButton,
-      showFlipVButton: this.showFlipVButton,
       toolbarPosition: this.toolbarPosition,
       showBleedMargin: this.showBleedMargin,
       bleedMarginSize: this.bleedMarginSize,
@@ -352,6 +369,24 @@ export class SfxCropElement extends SfxCropBaseElement {
     };
   }
 }
+
+/**
+ * Element properties whose runtime mutations the controller cares about. The
+ * intersection typing ensures the key is spelled identically on both sides —
+ * a misspelling fails the build.
+ *
+ * Init-only keys (`initialRotation`, `initialScale`, `initialCrop`) and
+ * template-driven keys (`showToolbar`, `availableShapes`, …) are intentionally
+ * excluded — Lit's diff already re-renders the shadow DOM when they change.
+ */
+const LIVE_CONFIG_KEYS = [
+  'src', 'cropShape', 'theme',
+  'minScale', 'maxScale', 'minCropSize', 'borderRadius',
+  'handleSize', 'handleColor', 'overlayColor',
+  'showGrid', 'showBleedMargin', 'bleedMarginSize', 'bleedMarginColor',
+  'enableAnimations', 'animationSpeed',
+  'keyboard', 'pinchZoom', 'wheelZoom',
+] as const satisfies ReadonlyArray<keyof SfxCropConfig & keyof SfxCropElement>;
 
 declare global {
   interface HTMLElementTagNameMap {

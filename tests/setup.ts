@@ -1,5 +1,18 @@
 import '@testing-library/jest-dom';
 
+// ResizeObserver polyfill — jsdom ships without it and the crop controller
+// observes its layout container on boot. A no-op implementation is enough:
+// the observer never fires in tests, which is correct because layout doesn't
+// happen in jsdom.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class ResizeObserverStub {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (globalThis as unknown as { ResizeObserver: typeof ResizeObserverStub }).ResizeObserver = ResizeObserverStub;
+}
+
 // DOMMatrix/DOMPoint polyfill for JSDOM
 if (typeof globalThis.DOMMatrix === 'undefined') {
   class DOMMatrixPolyfill {

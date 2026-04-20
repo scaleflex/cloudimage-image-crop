@@ -57,6 +57,7 @@ export class SfxCropShapesElement extends SfxCropBaseElement {
 
   @state() private open = false;
   @state() private focusedIndex = -1;
+  private focusRafId: number | null = null;
 
   private docClickHandler = (): void => {
     if (this.open) this.close();
@@ -71,12 +72,18 @@ export class SfxCropShapesElement extends SfxCropBaseElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     document.removeEventListener('click', this.docClickHandler);
+    if (this.focusRafId !== null) {
+      cancelAnimationFrame(this.focusRafId);
+      this.focusRafId = null;
+    }
   }
 
   updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
-      // Focus current selection after paint.
-      requestAnimationFrame(() => {
+      // Focus current selection after paint. Cancellable so a quick close →
+      // disconnect doesn't call focusOption() on a detached node.
+      this.focusRafId = requestAnimationFrame(() => {
+        this.focusRafId = null;
         const idx = this.focusedIndex >= 0 ? this.focusedIndex : 0;
         this.focusOption(idx);
       });

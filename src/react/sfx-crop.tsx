@@ -5,13 +5,12 @@ import {
   useImperativeHandle,
   useRef,
   type CSSProperties,
-  type ForwardedRef,
 } from 'react';
 import type { SfxCropElement } from '../elements/sfx-crop';
 import type { CropShapeName, CropRect, TransformState, TransformParams } from '../core/types';
 
 // Auto-register the custom element as soon as this module loads in the
-// browser. Wrapped in a feature check so SSR imports don't explode.
+// browser. Guarded for SSR.
 if (typeof customElements !== 'undefined') {
   void import('../define');
 }
@@ -53,7 +52,6 @@ export interface SfxCropProps {
   showShapeSelector?: boolean;
   showRotateButton?: boolean;
   showFlipButton?: boolean;
-  showFlipVButton?: boolean;
   toolbarPosition?: 'top' | 'bottom';
   showBleedMargin?: boolean;
   bleedMarginSize?: number;
@@ -84,21 +82,19 @@ export interface SfxCropProps {
 /**
  * Writes a property on the underlying element *if* the property key exists on
  * the custom-element class. Falls back to setAttribute for values that survive
- * as strings (numbers, strings, the empty-string boolean shorthand).
+ * as strings.
  *
- * Using properties for arrays/objects (e.g. `availableShapes`) keeps identity
- * intact so Lit's diffing doesn't thrash.
+ * Using properties (not attributes) for arrays/objects keeps identity intact
+ * so Lit's diff doesn't thrash.
  */
 function applyPropOrAttr(el: SfxCropElement, key: string, value: unknown): void {
   if (value === undefined) return;
 
   if (key in el) {
-    // Property path — Lit reads the raw value (string/number/boolean/array).
     (el as unknown as Record<string, unknown>)[key] = value;
     return;
   }
 
-  // Fallback to attribute — kebab-case the camelCase key.
   const attr = key.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase());
   if (value === null || value === false) {
     el.removeAttribute(attr);
@@ -109,41 +105,42 @@ function applyPropOrAttr(el: SfxCropElement, key: string, value: unknown): void 
   }
 }
 
-/** Property names (camelCase) that `<sfx-crop>` reads directly. Listed once so
- *  the React wrapper stays in sync with the element class. Mirrors the
- *  `@property` declarations in `src/elements/sfx-crop.ts`. */
+/**
+ * Property names (camelCase) that `<sfx-crop>` reads directly. Listed once so
+ * the React wrapper stays in sync with the element class. `src` is omitted on
+ * purpose — it's applied separately AFTER this loop so a src change kicks off
+ * `loadImage()` with all other config already in place.
+ */
 const FORWARDED_PROPS: readonly (keyof SfxCropProps)[] = [
-  'src', 'cropShape', 'theme', 'initialRotation', 'initialScale', 'initialCrop',
+  'cropShape', 'theme', 'initialRotation', 'initialScale', 'initialCrop',
   'minScale', 'maxScale', 'minCropSize', 'availableShapes', 'handleSize', 'handleColor',
   'borderRadius', 'overlayColor', 'outputType', 'outputQuality', 'maxOutputWidth',
-  'maxOutputHeight',
+  'maxOutputHeight', 'showGrid',
   'showToolbar', 'showRotateSlider', 'showZoomSlider', 'showShapeSelector',
-  'showRotateButton', 'showFlipButton', 'showFlipVButton', 'toolbarPosition',
+  'showRotateButton', 'showFlipButton', 'toolbarPosition',
   'showBleedMargin', 'bleedMarginSize', 'bleedMarginColor', 'enableAnimations',
   'animationSpeed', 'keyboard', 'pinchZoom', 'wheelZoom',
 ];
-
-/**
- * Maps a React prop onto the `<sfx-crop>` element's `show-grid` attribute,
- * which accepts 'true' | 'false' | 'interaction' (not a boolean).
- */
-function applyShowGrid(el: SfxCropElement, value: boolean | 'interaction' | undefined): void {
-  if (value === undefined) return;
-  // The element keeps the raw string on `showGridAttr`.
-  (el as unknown as { showGridAttr: boolean | string }).showGridAttr =
-    value === true ? 'true' : value === false ? 'false' : 'interaction';
-}
 
 /**
  * `<SfxCrop>` — React wrapper around the `<sfx-crop>` custom element.
  *
  * Pattern follows `@scaleflex/uploader`'s React wrapper: hand-rolled
  * `forwardRef` + dynamic `import('../define')` at module load to auto-register
- * the element, + `useEffect` bridges from CustomEvent to prop callbacks with
- * stable handler identities so re-renders don't thrash listeners.
+ * the element, + `useEffect` bridges from CustomEvent to prop callbacks.
  *
- * The ref is the bare element — call imperative methods via
- * `ref.current.rotateLeft()`, `ref.current.toBlob()`, etc.
+ * Stale-closure avoidance: the latest props sit in a mutable ref updated on
+ * every render. The event-bridge `useEffect` attaches listeners once and
+ * reads `cbRef.current.on*` at fire time — no re-subscription on re-render.
+ *
+ * Prop sync: runs on every render without a deps array. Operations are
+ * idempotent (Lit compares before assigning), so the cost is a cheap walk
+ * of FORWARDED_PROPS.
+ *
+ * The ref is the bare element. The factory runs after React's commit phase,
+ * so `ref.current` is non-null once a parent component can actually read it.
+ * If you need to access methods before the first commit (e.g. during render),
+ * guard with `ref.current?.method?.()` or wait for `sfx-crop-ready`.
  */
 export const SfxCrop = forwardRef<SfxCropElement, SfxCropProps>(function SfxCrop(
   props,
@@ -155,19 +152,19 @@ export const SfxCrop = forwardRef<SfxCropElement, SfxCropProps>(function SfxCrop
 
   useImperativeHandle(forwardedRef, () => elRef.current as SfxCropElement, []);
 
-  // --- Event bridge ---
+  // --- Event bridge (attached once; reads latest callbacks via cbRef) ---
   useEffect(() => {
     const el = elRef.current;
     if (!el) return;
 
     const handlers: Array<[string, EventListener]> = [
-      ['sfx-crop-ready',        (e) => cbRef.current.onReady?.((e as CustomEvent).detail)],
-      ['sfx-crop-image-load',   (e) => cbRef.current.onImageLoad?.((e as CustomEvent).detail)],
-      ['sfx-crop-change',       (e) => cbRef.current.onChange?.((e as CustomEvent).detail)],
-      ['sfx-crop-crop-change',  (e) => cbRef.current.onCropChange?.((e as CustomEvent).detail)],
-      ['sfx-crop-save',         (e) => cbRef.current.onSave?.((e as CustomEvent).detail)],
-      ['sfx-crop-cancel',       () => cbRef.current.onCancel?.()],
-      ['sfx-crop-error',        (e) => cbRef.current.onError?.((e as CustomEvent).detail)],
+      ['sfx-crop-ready',       (e) => cbRef.current.onReady?.((e as CustomEvent).detail)],
+      ['sfx-crop-image-load',  (e) => cbRef.current.onImageLoad?.((e as CustomEvent).detail)],
+      ['sfx-crop-change',      (e) => cbRef.current.onChange?.((e as CustomEvent).detail)],
+      ['sfx-crop-crop-change', (e) => cbRef.current.onCropChange?.((e as CustomEvent).detail)],
+      ['sfx-crop-save',        (e) => cbRef.current.onSave?.((e as CustomEvent).detail)],
+      ['sfx-crop-cancel',      () => cbRef.current.onCancel?.()],
+      ['sfx-crop-error',       (e) => cbRef.current.onError?.((e as CustomEvent).detail)],
     ];
 
     for (const [name, h] of handlers) el.addEventListener(name, h);
@@ -176,13 +173,12 @@ export const SfxCrop = forwardRef<SfxCropElement, SfxCropProps>(function SfxCrop
     };
   }, []);
 
-  // --- Property / attribute sync ---
+  // --- Property sync (every render; idempotent) ---
   useEffect(() => {
     const el = elRef.current;
     if (!el) return;
     for (const k of FORWARDED_PROPS) applyPropOrAttr(el, k as string, props[k]);
-    applyShowGrid(el, props.showGrid);
-    // `src` last so a change triggers `loadImage` after other props apply.
+    // `src` last so a change triggers `loadImage` after other config applies.
     applyPropOrAttr(el, 'src', props.src);
   });
 

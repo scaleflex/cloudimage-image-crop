@@ -1,7 +1,9 @@
 // SVG icons as inline strings (24×24 viewBox, stroke-based).
 //
-// Canonical location since P3. `src/ui/icons.ts` re-exports from here for the
-// benefit of the legacy `CICropView` light-DOM pipeline until P5.
+// INVARIANT: these strings are injected into element innerHTML without
+// escaping — they MUST stay as static, maintainer-authored content. Never
+// concatenate user input, attribute values, or template variables into
+// anything exported from this file.
 
 export const ICON_ROTATE_LEFT = '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
 

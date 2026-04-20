@@ -13,11 +13,11 @@
 
 /* === Design tokens (dark theme — default) ===
  *
- * Authoritative on `:host` so external consumers can override any
- * `--sfx-cr-*` property from light DOM. `.ci-crop-container` mirrors the
- * same values for internal structural use. */
-:host,
-.ci-crop-container {
+ * Declared on `:host` so external consumers can override any `--sfx-cr-*`
+ * property from light DOM. Custom properties cascade through the shadow tree
+ * via CSS inheritance, so descendants (.ci-crop-container, .ci-crop-toolbar,
+ * canvas, sliders…) all see the same values with a single declaration. */
+:host {
   --sfx-cr-bg: #1a1a1a;
   --sfx-cr-canvas-bg: #111111;
   --sfx-cr-toolbar-bg: rgba(28, 28, 30, 0.92);
@@ -58,8 +58,7 @@
 }
 
 /* === Light Theme === */
-:host([theme="light"]),
-.ci-crop-theme-light.ci-crop-container {
+:host([theme="light"]) {
   --sfx-cr-bg: #f5f5f7;
   --sfx-cr-canvas-bg: #e8e8e8;
   --sfx-cr-toolbar-bg: rgba(255, 255, 255, 0.92);
