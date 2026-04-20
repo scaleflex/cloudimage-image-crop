@@ -4,7 +4,7 @@ import type { TransformState } from '../core/types';
 export function setupAria(container: HTMLElement): void {
   container.setAttribute('role', 'application');
   container.setAttribute('aria-roledescription', 'image crop tool');
-  container.setAttribute('aria-label', 'Image crop tool — use arrow keys to move crop, R to rotate, F to flip horizontal, V to flip vertical, +/- to zoom');
+  container.setAttribute('aria-label', 'Image crop tool — use arrow keys to move crop, R to rotate, F to flip horizontal, +/- to zoom');
   container.setAttribute('tabindex', '0');
 }
 
@@ -26,7 +26,6 @@ export function announceState(
   const scale = Math.round(state.scale * 100);
   const shape = cropShape;
   const flipH = state.flipH ? ', flipped horizontal' : '';
-  const flipV = state.flipV ? ', flipped vertical' : '';
 
-  liveRegion.textContent = `Crop: ${shape}, rotation ${rotation.toFixed(1)}°${flipH}${flipV}, zoom ${scale}%`;
+  liveRegion.textContent = `Crop: ${shape}, rotation ${rotation.toFixed(1)}°${flipH}, zoom ${scale}%`;
 }

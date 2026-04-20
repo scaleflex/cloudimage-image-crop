@@ -21,6 +21,7 @@ export interface PointerTrackerCallbacks {
   onPointerDown(pointer: PointerInfo, pointers: PointerInfo[]): void;
   onPointerMove(pointer: PointerInfo, pointers: PointerInfo[]): void;
   onPointerUp(pointer: PointerInfo, pointers: PointerInfo[]): void;
+  onHover?(pointer: PointerInfo): void;
   onPinch?(e: PinchEvent): void;
   onWheel?(e: WheelEvent): void;
 }
@@ -72,7 +73,24 @@ export function createPointerTracker(
 
   function onPointerMove(e: PointerEvent): void {
     const existing = activePointers.get(e.pointerId);
-    if (!existing) return;
+    if (!existing) {
+      // No button pressed — fire hover callback for cursor updates
+      if (callbacks.onHover) {
+        const pos = getPointerPos(e);
+        callbacks.onHover({
+          id: e.pointerId,
+          x: pos.x,
+          y: pos.y,
+          startX: pos.x,
+          startY: pos.y,
+          pressure: 0,
+          pointerType: e.pointerType as 'mouse' | 'touch' | 'pen',
+          shiftKey: e.shiftKey,
+          altKey: e.altKey,
+        });
+      }
+      return;
+    }
 
     const pos = getPointerPos(e);
     existing.x = pos.x;
@@ -138,7 +156,10 @@ export function createPointerTracker(
   const preventContext = (e: Event) => e.preventDefault();
   element.addEventListener('contextmenu', preventContext);
 
-  // Prevent default touch behaviors
+  // Prevent default touch behaviors. Ideally this comes from the owning
+  // element's CSS (e.g. `:host { touch-action: none }` on <sfx-crop-canvas>);
+  // the imperative write stays as an idempotent safety net so consumers who
+  // pass a raw canvas without scoped styles still get correct behavior.
   element.style.touchAction = 'none';
 
   return {

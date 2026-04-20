@@ -31,10 +31,11 @@ export function updateDragCrop(
   const dx = (pointerX - drag.startX) / imageWidth;
   const dy = (pointerY - drag.startY) / imageHeight;
 
+  // Invert direction: dragging moves the image under the crop, not the crop itself
   const { startCrop } = drag;
   return {
-    x: clamp(startCrop.x + dx, 0, 1 - startCrop.width),
-    y: clamp(startCrop.y + dy, 0, 1 - startCrop.height),
+    x: clamp(startCrop.x - dx, 0, 1 - startCrop.width),
+    y: clamp(startCrop.y - dy, 0, 1 - startCrop.height),
     width: startCrop.width,
     height: startCrop.height,
   };

@@ -1,7 +1,6 @@
 export interface KeyboardCallbacks {
   onRotateLeft(): void;
   onFlipH(): void;
-  onFlipV(): void;
   onZoomIn(): void;
   onZoomOut(): void;
   onResetZoom(): void;
@@ -54,11 +53,6 @@ export function setupKeyboard(
       case 'F':
         e.preventDefault();
         callbacks.onFlipH();
-        break;
-      case 'v':
-      case 'V':
-        e.preventDefault();
-        callbacks.onFlipV();
         break;
       case '+':
       case '=':

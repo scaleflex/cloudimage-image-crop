@@ -61,11 +61,11 @@ export function drawCropFrame(
     ctx.strokeRect(x, y, width, height);
   }
 
-  // Draw corner handles (12×12px white squares with 2px border-radius)
+  // Draw corner handles (circles)
   ctx.fillStyle = '#ffffff';
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
   ctx.lineWidth = 1;
-  const hs = Math.min(CORNER_HANDLE_SIZE, width / 3, height / 3);
+  const hr = Math.min(CORNER_HANDLE_SIZE / 2, width / 6, height / 6);
 
   const corners = [
     { cx: x, cy: y },             // NW
@@ -75,37 +75,8 @@ export function drawCropFrame(
   ];
 
   for (const corner of corners) {
-    drawRoundedRect(ctx, corner.cx - hs / 2, corner.cy - hs / 2, hs, hs, 2);
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  // Draw edge handles (24×6px or 6×24px white rectangles at midpoints)
-  if (!isCircle && !isRoundedRect) {
-    const ew = Math.min(EDGE_HANDLE_W, width / 3);
-    const eh = EDGE_HANDLE_H;
-    const evw = EDGE_HANDLE_H;
-    const evh = Math.min(EDGE_HANDLE_W, height / 3);
-    const midX = x + width / 2;
-    const midY = y + height / 2;
-
-    // Top edge
-    drawRoundedRect(ctx, midX - ew / 2, y - eh / 2, ew, eh, 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Bottom edge
-    drawRoundedRect(ctx, midX - ew / 2, y + height - eh / 2, ew, eh, 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Left edge
-    drawRoundedRect(ctx, x - evw / 2, midY - evh / 2, evw, evh, 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Right edge
-    drawRoundedRect(ctx, x + width - evw / 2, midY - evh / 2, evw, evh, 2);
+    ctx.beginPath();
+    ctx.arc(corner.cx, corner.cy, hr, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
   }
@@ -139,13 +110,15 @@ export function getHandleRects(
   const pad = HIT_AREA_PAD;
 
   return [
+    // Corner handles (highest priority — checked first)
     { target: 'handle-nw', rect: { x: x - pad, y: y - pad, w: pad * 2, h: pad * 2 } },
-    { target: 'handle-n', rect: { x: x + pad, y: y - pad, w: width - pad * 2, h: pad * 2 } },
     { target: 'handle-ne', rect: { x: x + width - pad, y: y - pad, w: pad * 2, h: pad * 2 } },
-    { target: 'handle-e', rect: { x: x + width - pad, y: y + pad, w: pad * 2, h: height - pad * 2 } },
     { target: 'handle-se', rect: { x: x + width - pad, y: y + height - pad, w: pad * 2, h: pad * 2 } },
-    { target: 'handle-s', rect: { x: x + pad, y: y + height - pad, w: width - pad * 2, h: pad * 2 } },
     { target: 'handle-sw', rect: { x: x - pad, y: y + height - pad, w: pad * 2, h: pad * 2 } },
+    // Edge hit zones (no visual handle, but cursor + resize still work)
+    { target: 'handle-n', rect: { x: x + pad, y: y - pad, w: width - pad * 2, h: pad * 2 } },
+    { target: 'handle-s', rect: { x: x + pad, y: y + height - pad, w: width - pad * 2, h: pad * 2 } },
+    { target: 'handle-e', rect: { x: x + width - pad, y: y + pad, w: pad * 2, h: height - pad * 2 } },
     { target: 'handle-w', rect: { x: x - pad, y: y + pad, w: pad * 2, h: height - pad * 2 } },
   ];
 }
