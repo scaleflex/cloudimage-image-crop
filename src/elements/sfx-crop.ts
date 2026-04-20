@@ -4,7 +4,6 @@ import { classMap } from 'lit/directives/class-map.js';
 import { createCropController, type CropController } from '../core/crop-controller';
 import { mergeConfig } from '../core/config';
 import { setupAria } from '../a11y/aria';
-import { createZoomSlider, type ZoomSliderHandle } from '../ui/zoom-slider';
 import type {
   CICropViewConfig,
   CropShapeName,
@@ -14,6 +13,8 @@ import type {
 } from '../core/types';
 import type { SfxCropCanvasElement } from './sfx-crop-canvas';
 import type { SfxCropToolbarElement, SfxCropToolbarCommand } from './sfx-crop-toolbar';
+import type { SfxCropZoomElement } from './sfx-crop-zoom';
+import './sfx-crop-zoom';
 import { SfxCropBaseElement } from './base';
 // Legacy stylesheet re-used unchanged in P2. CSS token rename (--ci-crop-* →
 // --sfx-cr-*) and per-element `static styles` split happen in P5.
@@ -107,12 +108,11 @@ export class SfxCropElement extends SfxCropBaseElement {
   // === Queries ===
   @query('sfx-crop-canvas') private canvasHost!: SfxCropCanvasElement;
   @query('sfx-crop-toolbar') private toolbarHost?: SfxCropToolbarElement;
-  @query('.ci-crop-zoom-slider-mount') private zoomMount?: HTMLDivElement;
+  @query('sfx-crop-zoom') private zoomHost?: SfxCropZoomElement;
   @query('.ci-crop-container') private containerEl!: HTMLDivElement;
 
   // === Runtime references ===
   private controller: CropController | null = null;
-  private zoomSlider: ZoomSliderHandle | null = null;
 
   // === Lifecycle ===
 
@@ -134,23 +134,13 @@ export class SfxCropElement extends SfxCropBaseElement {
         onCropChange: (c) => this.dispatch('sfx-crop-crop-change', c),
         onRotationSync: (deg) => this.toolbarHost?.setRotationValue(deg),
         onShapeSync: (shape) => this.toolbarHost?.setShapeValue(shape),
-        onScaleSync: (scale) => this.zoomSlider?.setValue(scale),
+        onScaleSync: (scale) => this.zoomHost?.setValue(scale),
         onLoadingChange: (loading, error) => {
           this.loading = loading;
           this.errorMessage = error;
         },
       },
     });
-
-    // Zoom slider — legacy factory inside a dedicated mount. Ported to Lit in P3.
-    if (this.showZoomSlider && this.zoomMount) {
-      this.zoomSlider = createZoomSlider(
-        this.zoomMount,
-        this.minScale,
-        this.maxScale,
-        (scale) => this.controller?.setScale(scale),
-      );
-    }
 
     if (this.src) this.controller.loadImage(this.src);
   }
@@ -187,8 +177,6 @@ export class SfxCropElement extends SfxCropBaseElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.zoomSlider?.destroy();
-    this.zoomSlider = null;
     this.controller?.destroy();
     this.controller = null;
   }
@@ -216,7 +204,14 @@ export class SfxCropElement extends SfxCropBaseElement {
             @sfx-crop-toolbar-command=${this.onToolbarCommand}
           ></sfx-crop-toolbar>
         ` : null}
-        ${this.showZoomSlider ? html`<div class="ci-crop-zoom-slider-mount" part="zoom"></div>` : null}
+        ${this.showZoomSlider ? html`
+          <sfx-crop-zoom
+            part="zoom"
+            .min=${this.minScale}
+            .max=${this.maxScale}
+            @sfx-crop-zoom-change=${(e: CustomEvent<{ scale: number }>) => this.controller?.setScale(e.detail.scale)}
+          ></sfx-crop-zoom>
+        ` : null}
         <div class=${classMap({ 'ci-crop-loading': true, 'ci-crop-loading--hidden': !this.loading })} part="loading">
           <div class="ci-crop-loading-spinner"></div>
           <div class="ci-crop-loading-text">Loading…</div>

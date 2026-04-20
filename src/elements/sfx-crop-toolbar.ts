@@ -1,13 +1,16 @@
 import { html, css } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, query } from 'lit/decorators.js';
 import { SfxCropBaseElement } from './base';
-import { createToolbar, type ToolbarHandle } from '../ui/toolbar';
 import type { CropShapeName } from '../core/types';
+import { ICON_ROTATE_LEFT, ICON_FLIP_H } from './icons';
+import './sfx-crop-rotate';
+import './sfx-crop-shapes';
+import type { SfxCropRotateElement } from './sfx-crop-rotate';
+import type { SfxCropShapesElement } from './sfx-crop-shapes';
 
 /**
- * Command descriptor dispatched as the `detail` of `sfx-crop-toolbar-command`.
- * One event shape for every toolbar interaction keeps the host's command
- * router trivial.
+ * Unified descriptor dispatched on `sfx-crop-toolbar-command` so the host
+ * `<sfx-crop>` routes interactions through a single handler.
  */
 export type SfxCropToolbarCommand =
   | { type: 'rotate-left' }
@@ -16,16 +19,12 @@ export type SfxCropToolbarCommand =
   | { type: 'shape'; value: CropShapeName };
 
 /**
- * `<sfx-crop-toolbar>` — P2 transitional wrapper around the existing
- * imperative {@link createToolbar} factory.
+ * `<sfx-crop-toolbar>` — composes rotate/flip buttons + `<sfx-crop-rotate>` +
+ * `<sfx-crop-shapes>` into the editor's action bar. Fully Lit-native since P3;
+ * the legacy imperative `createToolbar` factory is no longer called.
  *
- * Light DOM so the parent `<sfx-crop>`'s shadow stylesheet (with the legacy
- * `.ci-crop-toolbar*` rules) applies directly. Toolbar callbacks are bridged
- * to a single `sfx-crop-toolbar-command` CustomEvent (bubbles + composed) so
- * the host routes commands without holding function references.
- *
- * P3 will replace the imperative factory with full Lit sub-elements
- * (`<sfx-crop-rotate>`, `<sfx-crop-shapes>`).
+ * Light DOM so the parent `<sfx-crop>`'s shadow stylesheet (carrying the
+ * `.ci-crop-toolbar*` rules) applies without duplication.
  */
 export class SfxCropToolbarElement extends SfxCropBaseElement {
   protected createRenderRoot(): HTMLElement {
@@ -43,53 +42,80 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
   @property({ type: Boolean, attribute: 'show-shape-selector' }) showShapeSelector = true;
   @property({ type: String, attribute: 'toolbar-position' }) toolbarPosition: 'top' | 'bottom' = 'bottom';
 
-  /** JSON-serialized array, or a CropShapeName[] set via property. */
+  /** JSON-serialized or CSV string on the attribute; `CropShapeName[]` via property. */
   @property({ attribute: 'available-shapes' })
   availableShapes: CropShapeName[] | string | null = null;
 
-  private toolbar: ToolbarHandle | null = null;
-
-  firstUpdated(): void {
-    this.toolbar = createToolbar(this, this.shape, {
-      onRotateLeft: () => this.dispatchCommand({ type: 'rotate-left' }),
-      onFlipH: () => this.dispatchCommand({ type: 'flip-h' }),
-      onRotationChange: (value) => this.dispatchCommand({ type: 'rotation', value }),
-      onShapeChange: (value) => this.dispatchCommand({ type: 'shape', value }),
-    }, {
-      showRotateButton: this.showRotateButton,
-      showFlipButton: this.showFlipButton,
-      showFlipVButton: this.showFlipVButton,
-      showRotateSlider: this.showRotateSlider,
-      showShapeSelector: this.showShapeSelector,
-      toolbarPosition: this.toolbarPosition,
-      availableShapes: this.parseAvailableShapes(),
-    });
-  }
-
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.toolbar?.destroy();
-    this.toolbar = null;
-  }
+  @query('sfx-crop-rotate') private rotateEl?: SfxCropRotateElement;
+  @query('sfx-crop-shapes') private shapesEl?: SfxCropShapesElement;
 
   render(): unknown {
-    // Legacy factory owns the DOM; Lit just provides the host shell + lifecycle.
-    return html``;
+    const hasLeftButtons = this.showRotateButton || this.showFlipButton;
+    const cls = `ci-crop-toolbar${this.toolbarPosition === 'top' ? ' ci-crop-toolbar--top' : ''}`;
+    const shapes = this.parseAvailableShapes() ?? ['free', 'square', 'circle', 'rounded-rect', '16:9', '4:3', '3:2'];
+
+    return html`
+      <div class=${cls}>
+        ${hasLeftButtons ? html`
+          <div class="ci-crop-toolbar-group">
+            ${this.showRotateButton ? html`
+              <button
+                type="button"
+                class="ci-crop-toolbar-btn"
+                aria-label="Rotate left 90°"
+                .innerHTML=${ICON_ROTATE_LEFT}
+                @click=${() => this.emit({ type: 'rotate-left' })}
+              ></button>
+            ` : null}
+            ${this.showFlipButton ? html`
+              <button
+                type="button"
+                class="ci-crop-toolbar-btn"
+                aria-label="Flip horizontal"
+                .innerHTML=${ICON_FLIP_H}
+                @click=${() => this.emit({ type: 'flip-h' })}
+              ></button>
+            ` : null}
+          </div>
+        ` : null}
+
+        ${hasLeftButtons && this.showRotateSlider ? html`<div class="ci-crop-toolbar-separator"></div>` : null}
+
+        ${this.showRotateSlider ? html`
+          <sfx-crop-rotate
+            .value=${this.rotation}
+            @sfx-crop-rotate-change=${(e: CustomEvent<{ degrees: number }>) =>
+              this.emit({ type: 'rotation', value: e.detail.degrees })}
+          ></sfx-crop-rotate>
+        ` : null}
+
+        ${this.showRotateSlider && this.showShapeSelector ? html`<div class="ci-crop-toolbar-separator"></div>` : null}
+
+        ${this.showShapeSelector ? html`
+          <sfx-crop-shapes
+            .value=${this.shape}
+            .shapes=${shapes}
+            @sfx-crop-shape-change=${(e: CustomEvent<{ shape: CropShapeName }>) =>
+              this.emit({ type: 'shape', value: e.detail.shape })}
+          ></sfx-crop-shapes>
+        ` : null}
+      </div>
+    `;
   }
 
-  /** Sync the rotation slider to match controller state (no event fired). */
+  /** Sync the rotation slider without firing an event. */
   setRotationValue(degrees: number): void {
     this.rotation = degrees;
-    this.toolbar?.setRotation(degrees);
+    this.rotateEl?.setValue(degrees);
   }
 
-  /** Sync the shape selector to match controller state (no event fired). */
+  /** Sync the shape selector without firing an event. */
   setShapeValue(shape: CropShapeName): void {
     this.shape = shape;
-    this.toolbar?.setShape(shape);
+    this.shapesEl?.setValue(shape);
   }
 
-  private dispatchCommand(detail: SfxCropToolbarCommand): void {
+  private emit(detail: SfxCropToolbarCommand): void {
     this.dispatchEvent(new CustomEvent('sfx-crop-toolbar-command', {
       detail,
       bubbles: true,
