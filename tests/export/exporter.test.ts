@@ -16,12 +16,13 @@ describe('getTransformParams', () => {
     expect(params.outputHeight).toBe(1080);
   });
 
-  it('should include rotation in total rotation', () => {
+  it('should include fine rotation on top of 90° quarter turns', () => {
+    // One CCW turn lands at 270°; adding 10° fine rotation gives 280°.
     let state = createInitialState();
     state = applyRotateLeft(state);
     state = applyRotation(state, 10);
     const params = getTransformParams(state, 1920, 1080);
-    expect(params.rotation).toBe(100); // 90 + 10
+    expect(params.rotation).toBe(280);
   });
 
   it('should swap output dimensions for 90° rotation', () => {

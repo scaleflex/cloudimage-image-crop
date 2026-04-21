@@ -35,18 +35,27 @@ describe('createInitialState', () => {
 });
 
 describe('applyRotateLeft', () => {
-  it('should rotate by 90°', () => {
+  it('should rotate by 90° counter-clockwise', () => {
+    // CCW: 0 → 270 → 180 → 90 → 0. Normalised to [0, 360).
     const state = createInitialState();
     const rotated = applyRotateLeft(state);
-    expect(rotated.quarterTurns).toBe(90);
+    expect(rotated.quarterTurns).toBe(270);
   });
 
-  it('should wrap rotation at 360°', () => {
+  it('should wrap rotation after four 90° turns', () => {
     let state = createInitialState();
     for (let i = 0; i < 4; i++) {
       state = applyRotateLeft(state);
     }
     expect(state.quarterTurns).toBe(0);
+  });
+
+  it('should cycle through the CCW sequence', () => {
+    let state = createInitialState();
+    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(270);
+    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(180);
+    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(90);
+    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(0);
   });
 
   it('should reset pan on rotation', () => {

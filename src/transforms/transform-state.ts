@@ -1,5 +1,5 @@
 import type { TransformState, CropRect, CropShapeName, HandlePosition } from '../core/types';
-import { clamp } from '../utils/math';
+import { clamp, normalizeAngle } from '../utils/math';
 import { getAspectRatio, clampCropToImage, enforceAspectRatio } from './constrain';
 
 export function createInitialState(cropShape: CropShapeName = 'free'): TransformState {
@@ -34,7 +34,9 @@ export function createInitialState(cropShape: CropShapeName = 'free'): Transform
 }
 
 export function applyRotateLeft(state: TransformState): TransformState {
-  const newRotation = state.quarterTurns - 90;
+  // Counter-clockwise 90° step, normalized to `[0, 360)` so repeated
+  // rotations wrap cleanly (0 → 270 → 180 → 90 → 0).
+  const newRotation = normalizeAngle(state.quarterTurns - 90);
 
   // Swap crop dimensions when rotating 90°
   const { cropRect } = state;
