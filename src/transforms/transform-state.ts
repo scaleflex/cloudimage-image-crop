@@ -1,24 +1,66 @@
 import type { TransformState, CropRect, CropShapeName, HandlePosition } from '../core/types';
-import { clamp, normalizeAngle } from '../utils/math';
+import { clamp } from '../utils/math';
 import { getAspectRatio, clampCropToImage, enforceAspectRatio } from './constrain';
 
-export function createInitialState(cropShape: CropShapeName = 'free'): TransformState {
-  const ratio = getAspectRatio(cropShape);
+/**
+ * Default crop-rect inset from the image edge, in normalized units. The
+ * initial crop fits inside a 0.8 × 0.8 centered box so the frame is
+ * visually smaller than the photo and the handles sit on image pixels
+ * instead of the canvas edge. Consumer can always replace via the
+ * `initialCrop` option / attribute.
+ */
+const DEFAULT_CROP_SIZE = 0.8;
+
+/**
+ * Convert a target "screen" aspect ratio (W:H as the user sees it on the
+ * canvas) into normalized-space ratio. The normalized rect `[0,1]²` maps
+ * onto a canvas whose pixel aspect equals the image aspect, so a stored
+ * normalized ratio `r_norm` renders on screen as `r_norm × imageAspect`.
+ * To make a frame render at `targetRatio` we store `targetRatio / imageAspect`.
+ */
+function toNormalizedRatio(targetRatio: number, imageWidth: number, imageHeight: number): number {
+  if (!imageWidth || !imageHeight) return targetRatio;
+  return targetRatio / (imageWidth / imageHeight);
+}
+
+export function createInitialState(
+  cropShape: CropShapeName = 'free',
+  imageWidth: number = 1,
+  imageHeight: number = 1,
+): TransformState {
+  const screenRatio = getAspectRatio(cropShape);
   let cropRect: CropRect;
 
-  if (ratio !== null) {
-    // Center a crop rect with the given aspect ratio, fitting within the image
+  if (screenRatio !== null) {
+    const ratio = toNormalizedRatio(screenRatio, imageWidth, imageHeight);
+    // Fit the ratio inside the 0.8 × 0.8 centered box, then center.
+    let w: number;
+    let h: number;
     if (ratio >= 1) {
-      // Landscape or square
-      const h = 1 / ratio;
-      cropRect = { x: 0, y: (1 - h) / 2, width: 1, height: h };
+      w = DEFAULT_CROP_SIZE;
+      h = w / ratio;
+      if (h > DEFAULT_CROP_SIZE) {
+        h = DEFAULT_CROP_SIZE;
+        w = h * ratio;
+      }
     } else {
-      // Portrait
-      const w = ratio;
-      cropRect = { x: (1 - w) / 2, y: 0, width: w, height: 1 };
+      h = DEFAULT_CROP_SIZE;
+      w = h * ratio;
+      if (w > DEFAULT_CROP_SIZE) {
+        w = DEFAULT_CROP_SIZE;
+        h = w / ratio;
+      }
     }
+    cropRect = {
+      x: (1 - w) / 2,
+      y: (1 - h) / 2,
+      width: w,
+      height: h,
+    };
   } else {
-    cropRect = { x: 0, y: 0, width: 1, height: 1 };
+    // Free / rounded-rect — 0.8 × 0.8 centered square.
+    const s = DEFAULT_CROP_SIZE;
+    cropRect = { x: (1 - s) / 2, y: (1 - s) / 2, width: s, height: s };
   }
 
   return {
@@ -34,57 +76,47 @@ export function createInitialState(cropShape: CropShapeName = 'free'): Transform
 }
 
 export function applyRotateLeft(state: TransformState): TransformState {
-  // Counter-clockwise 90° step, normalized to `[0, 360)` so repeated
-  // rotations wrap cleanly (0 → 270 → 180 → 90 → 0).
-  const newRotation = normalizeAngle(state.quarterTurns - 90);
+  // Counter-clockwise 90° step. Kept unbounded (no modulo) so the spring
+  // that drives `displayState.quarterTurns` always animates a single -90°
+  // tick instead of snapping backwards by 270° when the normalized value
+  // wraps around the `[0, 360)` boundary.
+  const newRotation = state.quarterTurns - 90;
 
-  // Swap crop dimensions when rotating 90°
-  const { cropRect } = state;
-  const newCrop: CropRect = {
-    x: cropRect.y,
-    y: 1 - cropRect.x - cropRect.width,
-    width: cropRect.height,
-    height: cropRect.width,
-  };
-
+  // Keep the crop rect anchored to the canvas (screen) rather than the
+  // photo: a 90° rotation only spins the image in place — the frame size
+  // and position on screen stay as the user left them.
   return {
     ...state,
     quarterTurns: newRotation,
-    cropRect: newCrop,
     panX: 0,
     panY: 0,
   };
 }
 
 export function applyFlipH(state: TransformState): TransformState {
-  const { cropRect } = state;
-  return {
-    ...state,
-    flipH: !state.flipH,
-    cropRect: {
-      ...cropRect,
-      x: 1 - cropRect.x - cropRect.width,
-    },
-  };
+  // Flip happens around the crop-rect center (see image-layer.ts), so
+  // the frame stays put — no cropRect mutation needed.
+  return { ...state, flipH: !state.flipH };
 }
 
 export function applyFlipV(state: TransformState): TransformState {
-  const { cropRect } = state;
-  return {
-    ...state,
-    flipV: !state.flipV,
-    cropRect: {
-      ...cropRect,
-      y: 1 - cropRect.y - cropRect.height,
-    },
-  };
+  return { ...state, flipV: !state.flipV };
 }
 
 export function applyRotation(state: TransformState, degrees: number): TransformState {
-  return {
-    ...state,
-    rotation: clamp(degrees, -45, 45),
-  };
+  const rotation = clamp(degrees, -45, 45);
+  // Capture the tilt pivot once at the moment the user leaves 0°, so the
+  // subject the user centred in the frame stays under the frame while
+  // tilting. Keep it fixed across unrelated edits (e.g. resizing the crop
+  // frame) so the photo doesn't drift. Clear it when tilt snaps back to 0.
+  let rotationPivot = state.rotationPivot;
+  if (rotation === 0) {
+    rotationPivot = undefined;
+  } else if (!rotationPivot) {
+    const c = state.cropRect;
+    rotationPivot = { x: c.x + c.width / 2, y: c.y + c.height / 2 };
+  }
+  return { ...state, rotation, rotationPivot };
 }
 
 export function applyScale(state: TransformState, scale: number, minScale: number, maxScale: number): TransformState {
@@ -106,31 +138,39 @@ export function applyCropMove(state: TransformState, cropRect: CropRect): Transf
   };
 }
 
-export function applyShapeChange(state: TransformState, shape: CropShapeName): TransformState {
-  const ratio = getAspectRatio(shape);
+export function applyShapeChange(
+  state: TransformState,
+  shape: CropShapeName,
+  imageWidth: number = 1,
+  imageHeight: number = 1,
+): TransformState {
+  const screenRatio = getAspectRatio(shape);
   let newCrop: CropRect;
 
-  if (ratio === null) {
+  if (screenRatio === null) {
     newCrop = { ...state.cropRect };
   } else {
-    // Fit new ratio within current crop area, centered
+    const ratio = toNormalizedRatio(screenRatio, imageWidth, imageHeight);
+    // Fit new ratio inside a fixed DEFAULT_CROP_SIZE box so repeated ratio
+    // switches don't progressively shrink the frame. Centered on the
+    // current crop's center.
     const { cropRect } = state;
     const cx = cropRect.x + cropRect.width / 2;
     const cy = cropRect.y + cropRect.height / 2;
 
     let w: number, h: number;
     if (ratio >= 1) {
-      w = cropRect.width;
+      w = DEFAULT_CROP_SIZE;
       h = w / ratio;
-      if (h > cropRect.height) {
-        h = cropRect.height;
+      if (h > DEFAULT_CROP_SIZE) {
+        h = DEFAULT_CROP_SIZE;
         w = h * ratio;
       }
     } else {
-      h = cropRect.height;
+      h = DEFAULT_CROP_SIZE;
       w = h * ratio;
-      if (w > cropRect.width) {
-        w = cropRect.width;
+      if (w > DEFAULT_CROP_SIZE) {
+        w = DEFAULT_CROP_SIZE;
         h = w / ratio;
       }
     }

@@ -4,11 +4,11 @@ import { mergeConfig, validateConfig, DEFAULT_CONFIG } from '../../src/core/conf
 describe('DEFAULT_CONFIG', () => {
   it('should have correct default values', () => {
     expect(DEFAULT_CONFIG.src).toBe('');
-    expect(DEFAULT_CONFIG.cropShape).toBe('free');
+    expect(DEFAULT_CONFIG.cropShape).toBe('16:9');
     expect(DEFAULT_CONFIG.minCropSize).toBe(20);
     expect(DEFAULT_CONFIG.minScale).toBe(0.5);
     expect(DEFAULT_CONFIG.maxScale).toBe(5);
-    expect(DEFAULT_CONFIG.theme).toBe('dark');
+    expect(DEFAULT_CONFIG.theme).toBe('light');
     expect(DEFAULT_CONFIG.showGrid).toBe('interaction');
     expect(DEFAULT_CONFIG.showRotateSlider).toBe(true);
     expect(DEFAULT_CONFIG.showZoomSlider).toBe(true);

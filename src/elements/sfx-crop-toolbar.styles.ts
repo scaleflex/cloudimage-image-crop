@@ -9,66 +9,72 @@ import { css } from 'lit';
 export const sfxCropToolbarStyles = css`
   :host {
     position: absolute;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 16px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
     z-index: 5;
     animation: sfx-cr-toolbar-enter 300ms ease forwards;
+    pointer-events: none;
   }
 
-  :host([toolbar-position="top"]) {
-    bottom: auto;
-    top: 16px;
+  :host([toolbar-position="bottom"]) {
+    top: auto;
+    bottom: 16px;
+  }
+
+  .sfx-cr-toolbar {
+    pointer-events: auto;
   }
 
   .sfx-cr-toolbar {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background: var(--sfx-cr-toolbar-bg);
+    gap: 16px;
+    padding: 4px 8px;
+    background: transparent;
     color: var(--sfx-cr-toolbar-color);
-    border: 1px solid var(--sfx-cr-toolbar-border);
-    border-radius: 50px;
-    box-shadow: var(--sfx-cr-toolbar-shadow);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .sfx-cr-toolbar-group {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 4px;
+    gap: 10px;
   }
 
   .sfx-cr-toolbar-btn {
-    width: 36px;
+    width: 52px;
     height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: transparent;
     color: var(--sfx-cr-text-secondary);
-    border: none;
-    border-radius: 50%;
+    /* Transparent default border → hover swaps in a colored ring without
+       the layout shifting from 0 → 1 px. */
+    border: 1px solid transparent;
+    border-radius: 999px;
     cursor: pointer;
     padding: 0;
     transition:
-      background var(--sfx-cr-transition),
+      border-color var(--sfx-cr-transition),
       color var(--sfx-cr-transition),
       transform var(--sfx-cr-transition);
   }
 
   .sfx-cr-toolbar-btn:hover {
-    background: var(--sfx-cr-btn-hover-bg);
+    border-color: var(--sfx-cr-primary);
     color: var(--sfx-cr-primary);
     transform: translateY(-1px);
   }
 
   .sfx-cr-toolbar-btn:active {
-    background: var(--sfx-cr-btn-active-bg);
     transform: translateY(0) scale(0.96);
   }
 
@@ -78,7 +84,7 @@ export const sfxCropToolbarStyles = css`
   }
 
   .sfx-cr-toolbar-btn:disabled:hover {
-    background: transparent;
+    border-color: transparent;
     color: var(--sfx-cr-text-muted);
     transform: none;
   }
@@ -89,38 +95,74 @@ export const sfxCropToolbarStyles = css`
   }
 
   .sfx-cr-toolbar-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
+    display: block;
   }
 
-  .sfx-cr-toolbar-separator {
-    width: 1px;
-    height: 22px;
-    margin: 0 4px;
-    background: var(--sfx-cr-separator-color);
-    flex-shrink: 0;
+  /* Reset pill — mirrors the shape-selector trigger visual language:
+     capsule border, transparent fill, primary-blue tint on hover. Lives
+     before every other control so the user can wipe back to the initial
+     state in one click. */
+  .sfx-cr-reset-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    min-width: 84px;
+    height: 36px;
+    background: transparent;
+    color: var(--sfx-cr-text-secondary);
+    border: 1.5px solid var(--sfx-cr-border);
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: var(--sfx-cr-font);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
+    white-space: nowrap;
+    transition:
+      background var(--sfx-cr-transition),
+      border-color var(--sfx-cr-transition),
+      color var(--sfx-cr-transition),
+      transform var(--sfx-cr-transition),
+      box-shadow var(--sfx-cr-transition);
+  }
+  .sfx-cr-reset-btn:hover {
+    border-color: var(--sfx-cr-primary);
+    color: var(--sfx-cr-primary);
+    transform: translateY(-1px);
+  }
+  .sfx-cr-reset-btn:focus-visible {
+    outline: 2px solid var(--sfx-cr-ring);
+    outline-offset: 2px;
+  }
+  .sfx-cr-reset-btn svg {
+    width: 18px;
+    height: 18px;
+    display: block;
   }
 
   @media (max-width: 768px) {
     .sfx-cr-toolbar {
       flex-wrap: wrap;
       justify-content: center;
-      border-radius: 20px;
     }
   }
 
   @media (max-width: 480px) {
     .sfx-cr-toolbar {
       padding: 6px 8px;
-      gap: 2px;
+      gap: 8px;
     }
     .sfx-cr-toolbar-btn {
-      width: 32px;
+      width: 40px;
       height: 32px;
     }
     .sfx-cr-toolbar-btn svg {
-      width: 16px;
-      height: 16px;
+      width: 18px;
+      height: 18px;
+      display: block;
     }
   }
 `;

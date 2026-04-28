@@ -1,17 +1,28 @@
 import type { SfxCropConfig } from './types';
 
+/**
+ * Vertical space (in CSS px) reserved below the canvas for the toolbar when
+ * fitting the image to the host container. Both the controller and the
+ * renderer reach for this; keep them in sync by importing from here.
+ */
+export const TOOLBAR_RESERVE_PX = 80;
+
 export const DEFAULT_CONFIG: SfxCropConfig = {
   src: '',
-  cropShape: 'free',
+  cropShape: '16:9',
   initialCrop: null,
   initialRotation: 0,
   initialScale: 1,
   customAspectRatios: [],
   minCropSize: 20,
-  availableShapes: ['free', 'square', 'circle', 'rounded-rect', '16:9', '4:3', '3:2'],
+  availableShapes: [
+    'free', 'square',
+    '16:9', '4:3', '3:2', '5:4', '2:1',
+    '9:16', '3:4', '2:3', '4:5', '1:2',
+  ],
   minScale: 0.5,
   maxScale: 5,
-  theme: 'dark',
+  theme: 'light',
   showGrid: 'interaction',
   showRotateSlider: true,
   showZoomSlider: true,

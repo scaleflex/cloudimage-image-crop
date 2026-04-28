@@ -2,12 +2,31 @@ const CORNER_HANDLE_SIZE = 12;
 const EDGE_HANDLE_W = 24;
 const EDGE_HANDLE_H = 6;
 const HIT_AREA_PAD = 22; // 44px / 2 for 44×44 hit area
+/** Diagonal offset of the move-handle from the NW corner, in canvas px. */
+const MOVE_HANDLE_OFFSET = 11;
+/** Hit radius for the move-handle, in canvas px. */
+const MOVE_HANDLE_HIT = 9;
+
+export interface FrameTheme {
+  frame: string;
+  frameShadow: string;
+  handleFill: string;
+  handleStroke: string;
+}
+
+const DEFAULT_THEME: FrameTheme = {
+  frame: '#ffffff',
+  frameShadow: 'rgba(0, 0, 0, 0.3)',
+  handleFill: '#ffffff',
+  handleStroke: 'rgba(0, 0, 0, 0.25)',
+};
 
 export function drawCropFrame(
   ctx: CanvasRenderingContext2D,
   cropRect: { x: number; y: number; width: number; height: number },
   shapeType: 'rect' | 'circle' | 'rounded-rect' = 'rect',
   borderRadius: number = 20,
+  theme: FrameTheme = DEFAULT_THEME,
 ): void {
   const isCircle = shapeType === 'circle';
   const isRoundedRect = shapeType === 'rounded-rect';
@@ -15,8 +34,8 @@ export function drawCropFrame(
 
   ctx.save();
 
-  // Draw inner shadow (1px dark outline for contrast on bright images)
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+  // Draw inner shadow (1px contrast outline)
+  ctx.strokeStyle = theme.frameShadow;
   ctx.lineWidth = 1;
   if (isCircle) {
     const cx = x + width / 2;
@@ -33,8 +52,8 @@ export function drawCropFrame(
     ctx.strokeRect(x + 1, y + 1, width - 2, height - 2);
   }
 
-  // Draw border (2px white)
-  ctx.strokeStyle = '#ffffff';
+  // Draw primary frame border
+  ctx.strokeStyle = theme.frame;
   ctx.lineWidth = 2;
   if (isCircle) {
     const cx = x + width / 2;
@@ -47,7 +66,7 @@ export function drawCropFrame(
 
     // Dashed circular guideline inside crop area
     ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.strokeStyle = theme.frameShadow;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.ellipse(cx, cy, rx - 1, ry - 1, 0, 0, Math.PI * 2);
@@ -62,16 +81,16 @@ export function drawCropFrame(
   }
 
   // Draw corner handles (circles)
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+  ctx.fillStyle = theme.handleFill;
+  ctx.strokeStyle = theme.handleStroke;
   ctx.lineWidth = 1;
   const hr = Math.min(CORNER_HANDLE_SIZE / 2, width / 6, height / 6);
 
   const corners = [
-    { cx: x, cy: y },             // NW
-    { cx: x + width, cy: y },     // NE
-    { cx: x + width, cy: y + height }, // SE
-    { cx: x, cy: y + height },    // SW
+    { cx: x, cy: y },
+    { cx: x + width, cy: y },
+    { cx: x + width, cy: y + height },
+    { cx: x, cy: y + height },
   ];
 
   for (const corner of corners) {
@@ -80,6 +99,20 @@ export function drawCropFrame(
     ctx.fill();
     ctx.stroke();
   }
+
+  // Move-handle: a separate circle offset diagonally outward from the NW
+  // corner — dragging it slides the whole frame without resizing.
+  const moveCx = x - MOVE_HANDLE_OFFSET;
+  const moveCy = y - MOVE_HANDLE_OFFSET;
+  ctx.beginPath();
+  ctx.arc(moveCx, moveCy, hr, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Inner dot to visually distinguish from the resize corners.
+  ctx.fillStyle = theme.handleStroke;
+  ctx.beginPath();
+  ctx.arc(moveCx, moveCy, Math.max(2, hr * 0.35), 0, Math.PI * 2);
+  ctx.fill();
 
   ctx.restore();
 }
@@ -110,6 +143,17 @@ export function getHandleRects(
   const pad = HIT_AREA_PAD;
 
   return [
+    // Move-handle (NW diagonal) — checked first so it wins over the NW
+    // corner's hit area where they overlap.
+    {
+      target: 'move-handle',
+      rect: {
+        x: x - MOVE_HANDLE_OFFSET - MOVE_HANDLE_HIT,
+        y: y - MOVE_HANDLE_OFFSET - MOVE_HANDLE_HIT,
+        w: MOVE_HANDLE_HIT * 2,
+        h: MOVE_HANDLE_HIT * 2,
+      },
+    },
     // Corner handles (highest priority — checked first)
     { target: 'handle-nw', rect: { x: x - pad, y: y - pad, w: pad * 2, h: pad * 2 } },
     { target: 'handle-ne', rect: { x: x + width - pad, y: y - pad, w: pad * 2, h: pad * 2 } },

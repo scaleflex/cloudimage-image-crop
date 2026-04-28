@@ -20,11 +20,12 @@ export function drawOverlayLayer(
   cropRect: { x: number; y: number; width: number; height: number },
   shapeType: 'rect' | 'circle' | 'rounded-rect' = 'rect',
   borderRadius: number = 20,
+  overlayColor: string = 'rgba(0, 0, 0, 0.55)',
 ): void {
   // Draw overlay on offscreen canvas so destination-out doesn't erase the image
   const off = getOffscreen(canvasWidth, canvasHeight);
 
-  off.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  off.fillStyle = overlayColor;
   off.fillRect(0, 0, canvasWidth, canvasHeight);
 
   // Cut out crop area

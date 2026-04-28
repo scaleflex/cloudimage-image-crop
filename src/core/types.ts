@@ -12,7 +12,86 @@ export interface Size {
 
 // === Crop Shapes ===
 
-export type CropShapeName = 'free' | 'square' | 'circle' | 'rounded-rect' | '16:9' | '9:16' | '4:3' | '3:4' | '3:2' | '2:3';
+/**
+ * Built-in shape presets. `CropShapeName` below widens this to accept any
+ * free-form `"W:H"` string while keeping autocomplete on the known values
+ * — the classic `T | (string & {})` idiom preserves IntelliSense but lets
+ * consumers pass ad-hoc ratios like `'7:2'` or `'11:8'` without extending
+ * the library.
+ */
+export type CropShapeBuiltin =
+  // Geometry (not aspect-driven)
+  | 'free'
+  | 'square'
+  | 'circle'
+  | 'rounded-rect'
+  // Canonical ratio set. Anything else — `"2.35:1"`, `"11:8"`, `"21:9"` —
+  // is passed in via `availableShapes` and parsed on the fly.
+  // Landscape
+  | '16:9'
+  | '4:3'
+  | '3:2'
+  | '5:4'
+  | '2:1'
+  // Portrait
+  | '9:16'
+  | '3:4'
+  | '2:3'
+  | '4:5'
+  | '1:2';
+
+/**
+ * The full shape-name API — a built-in preset OR any consumer-supplied
+ * `"W:H"` string. Runtime validation lives in `parseRatio()` and
+ * `isValidShape()`.
+ */
+export type CropShapeName = CropShapeBuiltin | (string & {});
+
+/**
+ * Named icon slots a consumer can override. Values are raw SVG strings —
+ * they're inserted via `unsafeHTML`, so treat them the same way as the
+ * built-in icons: static, author-trusted content. Never pass user input.
+ * Any slot left undefined falls back to the library's default SVG.
+ *
+ * Use from React:
+ * ```tsx
+ * <SfxCrop icons={{ rotateLeft: '<svg>…</svg>', loupe: '<svg>…</svg>' }} />
+ * ```
+ * From HTML:
+ * ```js
+ * document.querySelector('sfx-crop').icons = { rotateLeft: '<svg>…</svg>' };
+ * ```
+ */
+export type CropIconOverrides = Partial<{
+  /** 90° counter-clockwise rotate button in the toolbar. */
+  rotateLeft: string;
+  /** Flip horizontal button in the toolbar. */
+  flipHorizontal: string;
+  /** Collapsed fine-rotation (±45°) trigger. */
+  tilt: string;
+  /** Collapsed zoom trigger (magnifying glass). */
+  loupe: string;
+  /** `+` button inside the expanded zoom popover. */
+  zoomIn: string;
+  /** `−` button inside the expanded zoom popover. */
+  zoomOut: string;
+  /** Shape-selector trigger (generic "aspect / crop shape"). */
+  cropAspect: string;
+  /** "Custom" (Free) option icon in the shape dropdown. */
+  cropCustom: string;
+  /** Circle shape option icon. */
+  cropCircle: string;
+  /** Rounded-rect shape option icon. */
+  cropRoundedRect: string;
+  /** Landscape orientation tab icon. */
+  orientLandscape: string;
+  /** Portrait orientation tab icon. */
+  orientPortrait: string;
+  /** Chevron used on the shape-selector trigger. */
+  chevronDown: string;
+  /** "Reset" button in the toolbar. */
+  reset: string;
+}>;
 
 /** @deprecated Use CropShapeName instead */
 export type CropShape = CropShapeName;
@@ -63,6 +142,12 @@ export interface TransformState {
   panY: number;
   /** Crop rectangle in normalized coordinates */
   cropRect: NormalizedRect;
+  /**
+   * Pivot for fine-rotation, in normalized image-space. Captured when the
+   * user tilts from 0°; kept stable across crop-rect edits so resizing
+   * the frame does not drag the tilted photo along. Cleared on reset to 0°.
+   */
+  rotationPivot?: { x: number; y: number };
 }
 
 // === Display State (animated) ===
@@ -76,13 +161,20 @@ export interface DisplayState {
   panX: number;
   panY: number;
   cropRect: NormalizedRect;
+  rotationPivot?: { x: number; y: number };
   gridOpacity: number;
+  /**
+   * True while the user is actively dragging/resizing/panning. The renderer
+   * snaps cropRect and pan directly to target instead of lerping, so the
+   * frame follows the cursor 1:1 instead of drifting behind it.
+   */
+  interactive?: boolean;
 }
 
 // === Hit Test ===
 
 export interface HitTarget {
-  type: 'handle' | 'crop-area' | 'outside' | 'none';
+  type: 'handle' | 'crop-area' | 'move-handle' | 'outside' | 'none';
   position?: HandlePosition;
 }
 

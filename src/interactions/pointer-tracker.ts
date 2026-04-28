@@ -38,6 +38,10 @@ export function createPointerTracker(
   let pinchInitialDist = 0;
   let pinchActive = false;
 
+  function normalizePointerType(t: string): 'mouse' | 'touch' | 'pen' {
+    return t === 'touch' || t === 'pen' ? t : 'mouse';
+  }
+
   function getPointerPos(e: PointerEvent): { x: number; y: number } {
     const rect = element.getBoundingClientRect();
     return {
@@ -54,7 +58,13 @@ export function createPointerTracker(
     // Only track primary button (left click) for mouse
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
-    element.setPointerCapture(e.pointerId);
+    try {
+      element.setPointerCapture(e.pointerId);
+    } catch {
+      // Safari / rare WebKit edge cases throw InvalidPointerId when the
+      // pointer has already been released by the time the listener fires;
+      // drop the capture silently and continue tracking logically.
+    }
     const pos = getPointerPos(e);
     const info: PointerInfo = {
       id: e.pointerId,
@@ -63,7 +73,7 @@ export function createPointerTracker(
       startX: pos.x,
       startY: pos.y,
       pressure: e.pressure,
-      pointerType: e.pointerType as 'mouse' | 'touch' | 'pen',
+      pointerType: normalizePointerType(e.pointerType),
       shiftKey: e.shiftKey,
       altKey: e.altKey,
     };
@@ -84,7 +94,7 @@ export function createPointerTracker(
           startX: pos.x,
           startY: pos.y,
           pressure: 0,
-          pointerType: e.pointerType as 'mouse' | 'touch' | 'pen',
+          pointerType: normalizePointerType(e.pointerType),
           shiftKey: e.shiftKey,
           altKey: e.altKey,
         });

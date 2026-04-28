@@ -10,14 +10,13 @@ import type {
   CropRect,
   TransformState,
   TransformParams,
+  CropIconOverrides,
 } from '../core/types';
 import { SfxCropCanvasElement } from './sfx-crop-canvas';
 import type { SfxCropToolbarElement, SfxCropToolbarCommand } from './sfx-crop-toolbar';
-import type { SfxCropZoomElement } from './sfx-crop-zoom';
-import './sfx-crop-zoom';
 import { SfxCropBaseElement } from './base';
 import { parseAvailableShapes, DEFAULT_SHAPES } from './parse-shapes';
-import { designTokens, baseStyles, spinKeyframes, modalInKeyframes } from '../styles/shared.css';
+import { designTokens, baseStyles, spinKeyframes } from '../styles/shared.css';
 import { sfxCropStyles } from './sfx-crop.styles';
 
 /**
@@ -59,13 +58,13 @@ const SHOW_GRID_CONVERTER = {
  * `::part(canvas-host|toolbar|zoom|loading|error|container)` from light DOM.
  */
 export class SfxCropElement extends SfxCropBaseElement {
-  static styles = [designTokens, baseStyles, spinKeyframes, modalInKeyframes, sfxCropStyles];
+  static styles = [designTokens, baseStyles, spinKeyframes, sfxCropStyles];
 
   // === Attributes mirroring SfxCropConfig ===
 
   @property({ type: String, reflect: true }) src = '';
-  @property({ type: String, attribute: 'crop-shape', reflect: true }) cropShape: CropShapeName = 'free';
-  @property({ type: String, reflect: true }) theme: 'light' | 'dark' = 'dark';
+  @property({ type: String, attribute: 'crop-shape', reflect: true }) cropShape: CropShapeName = '16:9';
+  @property({ type: String, reflect: true }) theme: 'light' | 'dark' = 'light';
 
   @property({ type: Number, attribute: 'initial-rotation' }) initialRotation = 0;
   @property({ type: Number, attribute: 'initial-scale' }) initialScale = 1;
@@ -84,7 +83,7 @@ export class SfxCropElement extends SfxCropBaseElement {
   @property({ type: String, attribute: 'overlay-color' }) overlayColor = 'rgba(0, 0, 0, 0.55)';
   @property({ type: String, attribute: 'bleed-margin-color' }) bleedMarginColor = 'rgba(255, 0, 0, 0.5)';
   @property({ type: String, attribute: 'output-type' }) outputType = 'image/png';
-  @property({ type: String, attribute: 'toolbar-position' }) toolbarPosition: 'bottom' | 'top' = 'bottom';
+  @property({ type: String, attribute: 'toolbar-position', reflect: true }) toolbarPosition: 'bottom' | 'top' = 'top';
 
   /** `true | false | 'interaction'` (default). Attribute accepts all three as strings. */
   @property({ attribute: 'show-grid', converter: SHOW_GRID_CONVERTER })
@@ -108,6 +107,14 @@ export class SfxCropElement extends SfxCropBaseElement {
   @property({ attribute: 'initial-crop' })
   initialCrop: CropRect | string | null = null;
 
+  /**
+   * Per-slot icon overrides. Values are raw SVG strings injected via
+   * `unsafeHTML` — same trust model as the library's built-in icons
+   * (static, author-trusted). Omit any slot to keep the default.
+   * Not an HTML attribute; set via DOM property only.
+   */
+  @property({ attribute: false }) icons: CropIconOverrides = {};
+
   // === Internal reactive state ===
   @state() private loading = false;
   @state() private errorMessage: string | null = null;
@@ -115,11 +122,12 @@ export class SfxCropElement extends SfxCropBaseElement {
   // === Queries ===
   @query('sfx-crop-canvas') private canvasHost!: SfxCropCanvasElement;
   @query('sfx-crop-toolbar') private toolbarHost?: SfxCropToolbarElement;
-  @query('sfx-crop-zoom') private zoomHost?: SfxCropZoomElement;
   @query('.sfx-cr-container') private containerEl!: HTMLDivElement;
 
   // === Runtime references ===
   private controller: CropController | null = null;
+  private currentImage: HTMLImageElement | null = null;
+  private parentResizeObserver: ResizeObserver | null = null;
 
   // === Lifecycle ===
 
@@ -151,23 +159,48 @@ export class SfxCropElement extends SfxCropBaseElement {
     this.controller = createCropController({
       canvas,
       host: this,
-      layoutContainer: this.containerEl,
+      // Pass the canvas host (which we size to the image's display rect)
+      // so the controller's ResizeObserver and renderer measure the tight
+      // photo box — not the outer column that also includes toolbars.
+      layoutContainer: this.canvasHost,
       config,
       callbacks: {
         onReady: () => this.dispatch('sfx-crop-ready', { element: this }),
-        onImageLoad: (image) => this.dispatch('sfx-crop-image-load', { image }),
+        onImageLoad: (image) => {
+          this.currentImage = image;
+          this.fitHostToImage();
+          this.dispatch('sfx-crop-image-load', { image });
+        },
         onError: (error) => this.dispatch('sfx-crop-error', { error }),
-        onChange: (s) => this.dispatch('sfx-crop-change', s),
+        onChange: (s) => {
+          this.dispatch('sfx-crop-change', s);
+        },
         onCropChange: (c) => this.dispatch('sfx-crop-crop-change', c),
         onRotationSync: (deg) => this.toolbarHost?.setRotationValue(deg),
-        onShapeSync: (shape) => this.toolbarHost?.setShapeValue(shape),
-        onScaleSync: (scale) => this.zoomHost?.setValue(scale),
+        onShapeSync: (shape) => {
+          // Keep the reflected attribute in step with controller-driven
+          // changes (e.g. reset()) so later attribute reads — and the
+          // toolbar's next render — see the current shape.
+          this.cropShape = shape;
+          this.toolbarHost?.setShapeValue(shape);
+        },
+        onScaleSync: (scale) => this.toolbarHost?.setScaleValue(scale),
+        onWheelZoomActivity: () => this.toolbarHost?.showZoomPopover(),
+        onWheelRotationActivity: () => this.toolbarHost?.showRotatePopover(),
         onLoadingChange: (loading, error) => {
           this.loading = loading;
           this.errorMessage = error;
         },
       },
     });
+
+    // Track the parent's width so the editor re-fits to image aspect as
+    // the surrounding layout changes (window resize, sidebar collapse, ...).
+    const parent = this.parentElement;
+    if (parent) {
+      this.parentResizeObserver = new ResizeObserver(() => this.fitHostToImage());
+      this.parentResizeObserver.observe(parent);
+    }
 
     if (this.src) this.controller.loadImage(this.src);
   }
@@ -188,6 +221,8 @@ export class SfxCropElement extends SfxCropBaseElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.parentResizeObserver?.disconnect();
+    this.parentResizeObserver = null;
     this.controller?.destroy();
     this.controller = null;
   }
@@ -203,19 +238,16 @@ export class SfxCropElement extends SfxCropBaseElement {
             ?show-rotate-button=${this.showRotateButton}
             ?show-flip-button=${this.showFlipButton}
             ?show-rotate-slider=${this.showRotateSlider}
+            ?show-zoom-slider=${this.showZoomSlider}
             ?show-shape-selector=${this.showShapeSelector}
             toolbar-position=${this.toolbarPosition}
             .availableShapes=${this.availableShapes}
+            .minScale=${this.minScale}
+            .maxScale=${this.maxScale}
+            .icons=${this.icons}
             @sfx-crop-toolbar-command=${this.onToolbarCommand}
+            @sfx-crop-rotate-active=${this.onRotateActive}
           ></sfx-crop-toolbar>
-        ` : null}
-        ${this.showZoomSlider ? html`
-          <sfx-crop-zoom
-            part="zoom"
-            .min=${this.minScale}
-            .max=${this.maxScale}
-            @sfx-crop-zoom-change=${(e: CustomEvent<{ scale: number }>) => this.controller?.setScale(e.detail.scale)}
-          ></sfx-crop-zoom>
         ` : null}
         <div class=${classMap({ 'sfx-cr-loading': true, 'sfx-cr-loading--hidden': !this.loading })} part="loading">
           <div class="sfx-cr-loading-spinner"></div>
@@ -230,13 +262,20 @@ export class SfxCropElement extends SfxCropBaseElement {
 
   // === Toolbar command router ===
 
+  private onRotateActive = (e: Event): void => {
+    const active = (e as CustomEvent<{ active: boolean }>).detail.active;
+    this.controller?.setRotationMode(active);
+  };
+
   private onToolbarCommand = (e: Event): void => {
     if (!this.controller) return;
     const detail = (e as CustomEvent<SfxCropToolbarCommand>).detail;
     switch (detail.type) {
+      case 'reset': this.controller.reset(); break;
       case 'rotate-left': this.controller.rotateLeft(); break;
       case 'flip-h': this.controller.flipHorizontal(); break;
       case 'rotation': this.controller.setRotation(detail.value); break;
+      case 'scale': this.controller.setScale(detail.value); break;
       case 'shape':
         // Property assignment only — `updated()` forwards to controller.
         this.cropShape = detail.value;
@@ -283,6 +322,83 @@ export class SfxCropElement extends SfxCropBaseElement {
     }
     return this.controller;
   }
+
+  /**
+   * Size both the canvas host (to the image's display rect, no letterbox)
+   * and the outer `<sfx-crop>` host (photo rect + measured toolbar stack).
+   *
+   * Bound order for `max-width` / `max-height`:
+   *   1. Consumer-provided values on the host's own CSS / inline style.
+   *   2. Parent's client rect as a fallback.
+   *   3. Viewport size as a last resort.
+   *
+   * Called on image-load, on state changes (90° rotation swaps aspect),
+   * and whenever the parent resizes.
+   */
+  private fitHostToImage(): void {
+    if (!this.currentImage || !this.isConnected || !this.canvasHost) return;
+
+    // Frame dimensions follow the photo's natural aspect and stay fixed
+    // across 90° rotations — only the image pixels inside the canvas
+    // spin in place.
+    const effW = this.currentImage.naturalWidth;
+    const effH = this.currentImage.naturalHeight;
+
+    // Clear inline dims before measuring so we don't read back our own
+    // previous output — classic feedback-loop gotcha in auto-sized layouts.
+    const savedW = this.style.width;
+    const savedH = this.style.height;
+    this.style.width = '';
+    this.style.height = '';
+
+    const parseMax = (raw: string): number => {
+      if (!raw || raw === 'none') return Number.POSITIVE_INFINITY;
+      const v = parseFloat(raw);
+      return Number.isFinite(v) && v > 0 ? v : Number.POSITIVE_INFINITY;
+    };
+
+    const hostStyle = getComputedStyle(this);
+    let maxW = parseMax(hostStyle.maxWidth);
+    let maxH = parseMax(hostStyle.maxHeight);
+
+    const parent = this.parentElement;
+    if (!Number.isFinite(maxW)) {
+      const w = parent?.clientWidth;
+      maxW = w && w > 0 ? w : window.innerWidth;
+    }
+    if (!Number.isFinite(maxH)) {
+      const h = parent?.clientHeight;
+      maxH = h && h > 0 ? h : window.innerHeight;
+    }
+
+    this.style.width = savedW;
+    this.style.height = savedH;
+
+    // Toolbars are absolute-positioned overlays on top of the photo, so
+    // they don't eat any canvas height — the full max-height budget goes
+    // to the image.
+    const availW = maxW;
+    const availH = maxH;
+    if (availW <= 0 || availH <= 0) return;
+
+    const fit = Math.min(availW / effW, availH / effH, 1);
+    const displayW = Math.floor(effW * fit);
+    const displayH = Math.floor(effH * fit);
+
+    // Size both the canvas host and the outer host to the photo rect —
+    // toolbars float inside on top via `position: absolute`.
+    const canvasStyle = this.canvasHost.style;
+    if (canvasStyle.width !== `${displayW}px`) canvasStyle.width = `${displayW}px`;
+    if (canvasStyle.height !== `${displayH}px`) canvasStyle.height = `${displayH}px`;
+
+    const prevW = parseFloat(savedW);
+    const prevH = parseFloat(savedH);
+    if (Number.isNaN(prevW) || Math.abs(prevW - displayW) >= 1 || Math.abs(prevH - displayH) >= 1) {
+      this.style.width = `${displayW}px`;
+      this.style.height = `${displayH}px`;
+    }
+  }
+
 
   private dispatch(type: string, detail: unknown): void {
     this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));

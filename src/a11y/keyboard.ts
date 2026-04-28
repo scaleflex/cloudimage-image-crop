@@ -17,10 +17,17 @@ export function setupKeyboard(
   callbacks: KeyboardCallbacks,
 ): KeyboardHandle {
   function onKeyDown(e: KeyboardEvent): void {
-    // Only handle when container or its children are focused
-    if (!container.contains(document.activeElement) && document.activeElement !== container) {
-      return;
-    }
+    // Only handle when focus lives inside the editor. `document.activeElement`
+    // returns the shadow host when focus is inside a shadow root, which
+    // breaks nested-shadow scenarios — `composedPath()` walks through every
+    // ShadowRoot boundary so the check works no matter how deeply the
+    // element is embedded.
+    const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+    const focusInside =
+      path.includes(container) ||
+      container.contains(document.activeElement) ||
+      document.activeElement === container;
+    if (!focusInside) return;
 
     // Don't intercept if modifier keys are held (except shift)
     if (e.ctrlKey || e.metaKey || e.altKey) return;

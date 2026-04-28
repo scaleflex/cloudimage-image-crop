@@ -7,7 +7,13 @@ import {
   type CSSProperties,
 } from 'react';
 import type { SfxCropElement } from '../elements/sfx-crop';
-import type { CropShapeName, CropRect, TransformState, TransformParams } from '../core/types';
+import type {
+  CropShapeName,
+  CropRect,
+  TransformState,
+  TransformParams,
+  CropIconOverrides,
+} from '../core/types';
 
 // Auto-register the custom element as soon as this module loads in the
 // browser. Guarded for SSR.
@@ -35,6 +41,8 @@ export interface SfxCropProps {
   maxScale?: number;
   minCropSize?: number;
   availableShapes?: CropShapeName[];
+  /** Per-slot icon overrides — see `CropIconOverrides` in the core types. */
+  icons?: CropIconOverrides;
   handleSize?: number;
   handleColor?: string;
   borderRadius?: number;
@@ -120,6 +128,7 @@ const FORWARDED_PROPS: readonly (keyof SfxCropProps)[] = [
   'showRotateButton', 'showFlipButton', 'toolbarPosition',
   'showBleedMargin', 'bleedMarginSize', 'bleedMarginColor', 'enableAnimations',
   'animationSpeed', 'keyboard', 'pinchZoom', 'wheelZoom',
+  'icons',
 ];
 
 /**

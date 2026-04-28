@@ -32,11 +32,9 @@ export const sfxCropStyles = css`
     height: 100%;
     background: var(--sfx-cr-bg);
     border-radius: var(--sfx-cr-radius);
-    box-shadow: var(--sfx-cr-card-shadow);
     font-family: var(--sfx-cr-font);
     user-select: none;
     -webkit-user-select: none;
-    animation: sfx-cr-card-in 280ms cubic-bezier(0.34, 1.2, 0.64, 1);
   }
 
   /* ====== Loading ====== */

@@ -1,6 +1,14 @@
 import type { HitTarget, CursorStyle, HandlePosition } from '../core/types';
 import { getHandleRects } from './crop-frame';
 
+const HANDLE_POSITIONS: readonly HandlePosition[] = [
+  'nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w',
+];
+
+function toHandlePosition(raw: string): HandlePosition | null {
+  return (HANDLE_POSITIONS as readonly string[]).includes(raw) ? (raw as HandlePosition) : null;
+}
+
 function pointInRect(
   px: number,
   py: number,
@@ -19,8 +27,9 @@ export function hitTest(
   const handles = getHandleRects(cropRect);
   for (const { target, rect } of handles) {
     if (pointInRect(px, py, rect)) {
-      const position = target.replace('handle-', '') as HandlePosition;
-      return { type: 'handle', position };
+      if (target === 'move-handle') return { type: 'move-handle' };
+      const position = toHandlePosition(target.replace('handle-', ''));
+      if (position) return { type: 'handle', position };
     }
   }
 
@@ -40,6 +49,7 @@ export function hitTest(
 /** Map hit target to CSS cursor style. */
 export function getCursor(target: HitTarget, isDragging: boolean): CursorStyle {
   if (isDragging && target.type === 'crop-area') return 'grabbing';
+  if (target.type === 'move-handle') return 'move';
 
   switch (target.type) {
     case 'crop-area': return 'move';

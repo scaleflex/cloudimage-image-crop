@@ -21,8 +21,14 @@ export function startResize(
   pointerX: number,
   pointerY: number,
 ): ResizeState {
+  // Normalize to the bare position ("nw", "se", …). Callers pass the full
+  // hit-test id like "handle-nw"; leaving the "handle-" prefix in place
+  // silently triggers the `includes('e')` / `includes('n')` branches below
+  // (the word "handle" itself contains 'e' and 'n'), which makes e.g. the
+  // SE handle also move the top edge.
+  const position = handle.startsWith('handle-') ? handle.slice(7) : handle;
   return {
-    handle,
+    handle: position,
     startCrop: { ...crop },
     startX: pointerX,
     startY: pointerY,

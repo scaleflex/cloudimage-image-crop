@@ -16,10 +16,12 @@ describe('createInitialState', () => {
     expect(state.rotation).toBe(0);
     expect(state.flipH).toBe(false);
     expect(state.scale).toBe(1);
-    expect(state.cropRect.x).toBe(0);
-    expect(state.cropRect.y).toBe(0);
-    expect(state.cropRect.width).toBe(1);
-    expect(state.cropRect.height).toBe(1);
+    // Default crop is a 0.8 × 0.8 centered box — keeps the frame inset from
+    // the image edge so handles sit on image pixels.
+    expect(state.cropRect.x).toBeCloseTo(0.1);
+    expect(state.cropRect.y).toBeCloseTo(0.1);
+    expect(state.cropRect.width).toBeCloseTo(0.8);
+    expect(state.cropRect.height).toBeCloseTo(0.8);
   });
 
   it('should create state for square crop', () => {
@@ -36,26 +38,27 @@ describe('createInitialState', () => {
 
 describe('applyRotateLeft', () => {
   it('should rotate by 90° counter-clockwise', () => {
-    // CCW: 0 → 270 → 180 → 90 → 0. Normalised to [0, 360).
+    // CCW: quarterTurns decrements unbounded so the spring animates a
+    // single -90° tick per click.
     const state = createInitialState();
     const rotated = applyRotateLeft(state);
-    expect(rotated.quarterTurns).toBe(270);
+    expect(rotated.quarterTurns).toBe(-90);
   });
 
-  it('should wrap rotation after four 90° turns', () => {
+  it('should accumulate a full turn after four 90° clicks', () => {
     let state = createInitialState();
     for (let i = 0; i < 4; i++) {
       state = applyRotateLeft(state);
     }
-    expect(state.quarterTurns).toBe(0);
+    expect(state.quarterTurns).toBe(-360);
   });
 
   it('should cycle through the CCW sequence', () => {
     let state = createInitialState();
-    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(270);
-    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(180);
-    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(90);
-    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(0);
+    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(-90);
+    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(-180);
+    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(-270);
+    state = applyRotateLeft(state); expect(state.quarterTurns).toBe(-360);
   });
 
   it('should reset pan on rotation', () => {
@@ -77,11 +80,13 @@ describe('applyFlipH', () => {
     expect(unflipped.flipH).toBe(false);
   });
 
-  it('should mirror crop rect horizontally', () => {
+  it('should keep crop rect in place when flipping', () => {
+    // Flip pivots around the crop-rect center visually, so the frame
+    // itself doesn't move.
     let state = createInitialState();
     state = { ...state, cropRect: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 } };
     const flipped = applyFlipH(state);
-    expect(flipped.cropRect.x).toBeCloseTo(0.6);
+    expect(flipped.cropRect.x).toBeCloseTo(0.1);
     expect(flipped.cropRect.width).toBeCloseTo(0.3);
   });
 });
@@ -132,32 +137,33 @@ describe('applyShapeChange', () => {
 });
 
 describe('applyCropResize', () => {
+  // Default state is now a 0.8×0.8 crop inset by 0.1 on each side.
   it('should resize east handle', () => {
     const state = createInitialState();
     const result = applyCropResize(state, 'e', -0.2, 0);
-    expect(result.cropRect.width).toBeCloseTo(0.8);
-    expect(result.cropRect.x).toBe(0);
+    expect(result.cropRect.width).toBeCloseTo(0.6);
+    expect(result.cropRect.x).toBeCloseTo(0.1);
   });
 
   it('should resize south handle', () => {
     const state = createInitialState();
     const result = applyCropResize(state, 's', 0, -0.3);
-    expect(result.cropRect.height).toBeCloseTo(0.7);
-    expect(result.cropRect.y).toBe(0);
+    expect(result.cropRect.height).toBeCloseTo(0.5);
+    expect(result.cropRect.y).toBeCloseTo(0.1);
   });
 
   it('should resize west handle', () => {
     const state = createInitialState();
     const result = applyCropResize(state, 'w', 0.2, 0);
-    expect(result.cropRect.x).toBeCloseTo(0.2);
-    expect(result.cropRect.width).toBeCloseTo(0.8);
+    expect(result.cropRect.x).toBeCloseTo(0.3);
+    expect(result.cropRect.width).toBeCloseTo(0.6);
   });
 
   it('should resize north handle', () => {
     const state = createInitialState();
     const result = applyCropResize(state, 'n', 0, 0.2);
-    expect(result.cropRect.y).toBeCloseTo(0.2);
-    expect(result.cropRect.height).toBeCloseTo(0.8);
+    expect(result.cropRect.y).toBeCloseTo(0.3);
+    expect(result.cropRect.height).toBeCloseTo(0.6);
   });
 
   it('should enforce minimum size', () => {

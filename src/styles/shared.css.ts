@@ -32,7 +32,17 @@ export const designTokens = css`
 
     --sfx-cr-bg: #ffffff;
     --sfx-cr-surface: #f8fafc;
-    --sfx-cr-canvas-bg: #f1f5f9;
+    --sfx-cr-canvas-bg: #fafbfc;
+    /* Dimming overlay for pixels outside the crop rect. Light theme uses a
+       very soft, near-white tint so the whole surround stays bright; dark
+       theme keeps the classic black dim for contrast against the photo. */
+    --sfx-cr-overlay-color: rgba(255, 255, 255, 0.72);
+    /* Crop frame + handle colors, theme-aware so the rectangle reads
+       against both a washed-out light background and a dimmed dark one. */
+    --sfx-cr-frame-color: #1e293b;
+    --sfx-cr-frame-shadow: rgba(255, 255, 255, 0.7);
+    --sfx-cr-handle-fill: #1e293b;
+    --sfx-cr-handle-stroke: rgba(255, 255, 255, 0.95);
 
     --sfx-cr-ring: oklch(0.578 0.198 268.129 / 0.7);
     --sfx-cr-shadow: rgba(0, 0, 0, 0.1);
@@ -75,6 +85,11 @@ export const designTokens = css`
     --sfx-cr-bg: #0f172a;
     --sfx-cr-surface: #1e293b;
     --sfx-cr-canvas-bg: #0b1220;
+    --sfx-cr-overlay-color: rgba(0, 0, 0, 0.55);
+    --sfx-cr-frame-color: #ffffff;
+    --sfx-cr-frame-shadow: rgba(0, 0, 0, 0.6);
+    --sfx-cr-handle-fill: #ffffff;
+    --sfx-cr-handle-stroke: rgba(0, 0, 0, 0.25);
 
     --sfx-cr-toolbar-bg: rgba(15, 23, 42, 0.85);
     --sfx-cr-toolbar-color: #f1f5f9;
@@ -124,11 +139,9 @@ export const toolbarEnterKeyframes = css`
   @keyframes sfx-cr-toolbar-enter {
     from {
       opacity: 0;
-      transform: translateX(-50%) translateY(12px);
     }
     to {
       opacity: 1;
-      transform: translateX(-50%) translateY(0);
     }
   }
 `;

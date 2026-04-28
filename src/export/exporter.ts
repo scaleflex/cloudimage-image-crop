@@ -1,6 +1,12 @@
 import type { TransformState, TransformParams } from '../core/types';
 import { degreesToRadians } from '../utils/math';
 
+function get2DContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('2D canvas context unavailable');
+  return ctx;
+}
+
 /** Calculate transform params in original image pixel coordinates. */
 export function getTransformParams(
   state: TransformState,
@@ -63,7 +69,7 @@ export function renderToCanvas(
   const canvas = document.createElement('canvas');
   canvas.width = outW;
   canvas.height = outH;
-  const ctx = canvas.getContext('2d')!;
+  const ctx = get2DContext(canvas);
 
   ctx.save();
 
@@ -106,7 +112,7 @@ export function renderToCanvas(
 }
 
 function applyRoundedRectMask(canvas: HTMLCanvasElement, borderRadius: number): void {
-  const ctx = canvas.getContext('2d')!;
+  const ctx = get2DContext(canvas);
   const w = canvas.width;
   const h = canvas.height;
   const r = Math.min(borderRadius, w / 2, h / 2);
@@ -128,7 +134,7 @@ function applyRoundedRectMask(canvas: HTMLCanvasElement, borderRadius: number): 
 }
 
 function applyCircleMask(canvas: HTMLCanvasElement): void {
-  const ctx = canvas.getContext('2d')!;
+  const ctx = get2DContext(canvas);
   const w = canvas.width;
   const h = canvas.height;
 
@@ -146,16 +152,31 @@ export async function canvasToBlob(
   quality: number,
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error('Failed to create blob'));
-        }
-      },
-      type,
-      quality,
-    );
+    let handled = false;
+    try {
+      canvas.toBlob(
+        (blob) => {
+          if (handled) return;
+          handled = true;
+          if (blob) {
+            resolve(blob);
+          } else {
+            // `toBlob` hands back null when the encoder fails or the canvas
+            // is empty; surface a descriptive error to the caller.
+            reject(new Error('Failed to create blob (canvas may be empty or tainted)'));
+          }
+        },
+        type,
+        quality,
+      );
+    } catch (err) {
+      // `toBlob` synchronously throws SecurityError on tainted canvases in
+      // some browsers. Normalize the rejection path so every failure mode
+      // ends up in the same `.catch(...)`.
+      if (!handled) {
+        handled = true;
+        reject(err instanceof Error ? err : new Error(String(err)));
+      }
+    }
   });
 }

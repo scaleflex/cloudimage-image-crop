@@ -1,20 +1,37 @@
 import type { CropRect, CropShapeName } from '../core/types';
 import { clamp } from '../utils/math';
 
-/** Get the numeric aspect ratio for a crop shape. null = free. */
-export function getAspectRatio(shape: CropShapeName): number | null {
+/**
+ * Parse a free-form aspect-ratio string like `"16:9"`, `"7:2"`, or `"11:8"`
+ * into a numeric ratio. Supports positive integers or decimals. Returns
+ * `null` if the input isn't a valid W:H pair — consumers can then treat it
+ * as a named shape (`'free'`, `'square'`, …) or reject it.
+ */
+export function parseRatio(name: string): number | null {
+  const m = /^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/.exec(name.trim());
+  if (!m) return null;
+  const w = Number(m[1]);
+  const h = Number(m[2]);
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+  return w / h;
+}
+
+/**
+ * Get the numeric aspect ratio for a crop shape. Handles the named shapes
+ * (`free`, `square`, `circle`, `rounded-rect`) and every built-in preset
+ * (`"16:9"`, etc.), plus any other `"W:H"` string a consumer passes in.
+ * Returns `null` for free-form (no ratio constraint).
+ */
+export function getAspectRatio(shape: CropShapeName | string): number | null {
   switch (shape) {
     case 'free': return null;
-    case 'square': return 1;
-    case 'circle': return 1;
     case 'rounded-rect': return null;
-    case '16:9': return 16 / 9;
-    case '9:16': return 9 / 16;
-    case '4:3': return 4 / 3;
-    case '3:4': return 3 / 4;
-    case '3:2': return 3 / 2;
-    case '2:3': return 2 / 3;
-    default: return null;
+    case 'square':
+    case 'circle': return 1;
+    // Everything else — `"16:9"`, `"4:3"`, `"7:2"`, `"2.35:1"` — goes
+    // through `parseRatio`. The switch intentionally doesn't enumerate
+    // the named ratios so the library stays a parser, not a catalog.
+    default: return parseRatio(shape);
   }
 }
 
