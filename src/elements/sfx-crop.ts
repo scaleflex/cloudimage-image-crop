@@ -388,19 +388,17 @@ export class SfxCropElement extends SfxCropBaseElement {
     const parentW = parentInnerWidth();
     if (parentW > 0) maxW = Math.min(maxW, parentW);
     else if (!Number.isFinite(maxW)) maxW = window.innerWidth;
-    // Height: clamp by parent.clientHeight ONLY when the parent has a
-    // definite (non-auto) height — flex/grid cells, fixed-vh modals,
-    // <dialog>. For the common `height: auto` case the parent's
-    // clientHeight echoes our own previous content height and creates a
-    // one-way shrink loop, so we trust the consumer's CSS max-height
-    // (or fall back to viewport height) instead.
-    if (parent && parentStyle && parentStyle.height !== 'auto' && parent.clientHeight > 0) {
-      const innerH = Math.max(
-        0,
-        parent.clientHeight - (parsePx(parentStyle.paddingTop) || 0) - (parsePx(parentStyle.paddingBottom) || 0),
-      );
-      if (innerH > 0) maxH = Math.min(maxH, innerH);
-    }
+    // Height: do NOT clamp by parent.clientHeight. `getComputedStyle`
+    // returns the *used* value (px) for height even when the CSS rule
+    // is `auto`, so we can't cheaply tell auto-sized parents from
+    // definite ones — and for the common auto case, parent.clientHeight
+    // echoes our own previous content height. Clamping by it creates a
+    // one-way shrink loop: the host shrinks once on a viewport
+    // contraction, then can't grow back because parentH still reads
+    // the small previous value. Consumers who need to fit a fixed-
+    // height container should set `max-height` on <sfx-crop> (as the
+    // demo does with `max-height: 640px`) — that path is honored above
+    // via getComputedStyle(this).maxHeight.
     if (!Number.isFinite(maxH)) maxH = window.innerHeight;
 
     this.style.width = savedW;
