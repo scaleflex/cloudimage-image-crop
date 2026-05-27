@@ -36,9 +36,14 @@ export const sfxCropShapesStyles = css`
     letter-spacing: 0.1px;
   }
 
+  /* Fixed variant: translucent pill so the trigger reads over the photo
+     (no dimmed crop mask behind it). Plain background — no filter/transform. */
+  :host([variant="fixed"]) .sfx-cr-shape-trigger {
+    background: var(--sfx-cr-overlay-color);
+  }
+
   .sfx-cr-shape-trigger:hover {
     border-color: var(--sfx-cr-primary);
-    color: var(--sfx-cr-primary);
     transform: translateY(-1px);
   }
 
@@ -84,9 +89,9 @@ export const sfxCropShapesStyles = css`
        whatever sits behind it (image, dark overlay, etc.) without reading
        as a solid white box. backdrop-filter blur keeps text crisp on
        busy backgrounds. */
-    background: rgba(246, 247, 249, 0.8);
+    background: var(--sfx-cr-dropdown-bg);
     border: 1px solid var(--sfx-cr-border);
-    border-radius: 10px;
+    border-radius: var(--sfx-cr-radius-lg, 8px);
     box-shadow: var(--sfx-cr-dropdown-shadow);
     backdrop-filter: blur(14px) saturate(160%);
     -webkit-backdrop-filter: blur(14px) saturate(160%);
@@ -97,13 +102,6 @@ export const sfxCropShapesStyles = css`
     transform: translateY(6px) scale(0.96);
     pointer-events: none;
     transition: opacity 120ms ease-in, transform 120ms ease-in;
-  }
-
-  :host-context([theme="dark"]) .sfx-cr-shape-dropdown,
-  :host([data-theme="dark"]) .sfx-cr-shape-dropdown {
-    /* Dark theme equivalent — keep the same translucent feel over the
-       dimmed canvas. */
-    background: rgba(20, 25, 38, 0.82);
   }
 
   /* Orientation toggle — naked icon-only buttons centered at the top.
@@ -131,10 +129,10 @@ export const sfxCropShapesStyles = css`
     transition: color var(--sfx-cr-transition);
   }
   .sfx-cr-shape-orient-btn:hover {
-    color: var(--sfx-cr-text);
+    color: var(--sfx-cr-text-secondary);
   }
   .sfx-cr-shape-orient-btn.is-active {
-    color: var(--sfx-cr-text);
+    color: var(--sfx-cr-text-secondary);
   }
   .sfx-cr-shape-orient-btn svg {
     width: 24px;
@@ -183,12 +181,12 @@ export const sfxCropShapesStyles = css`
     padding: 5px 10px;
     height: 30px;
     background: transparent;
-    color: var(--sfx-cr-text);
+    color: var(--sfx-cr-text-secondary);
     border: none;
-    border-radius: 5px;
+    border-radius: var(--sfx-cr-radius-sm, 4px);
     cursor: pointer;
     font-family: var(--sfx-cr-font);
-    font-size: 13.5px;
+    font-size: 14px;
     font-weight: 500;
     text-align: left;
     transition: background var(--sfx-cr-transition), color var(--sfx-cr-transition);
@@ -215,7 +213,7 @@ export const sfxCropShapesStyles = css`
     justify-content: center;
     width: 18px;
     height: 18px;
-    color: var(--sfx-cr-text);
+    color: var(--sfx-cr-text-secondary);
     flex-shrink: 0;
   }
   .sfx-cr-shape-option-icon svg { width: 100%; height: 100%; display: block; }
@@ -243,7 +241,7 @@ export const sfxCropShapesStyles = css`
      edge since the trigger now lives in the left column. Container
      query keyed off the sfxcrop named container so a narrow editor on
      a wide desktop also collapses. */
-  @container sfxcrop (max-width: 600px) {
+  @container sfxcrop (max-width: 760px) {
     /* Label/chevron also need hiding when only the editor (not viewport)
        is narrow — the 768px @media above only triggers on small viewports. */
     .sfx-cr-shape-trigger-label { display: none; }
@@ -270,19 +268,24 @@ export const sfxCropShapesStyles = css`
       width: 16px;
       height: 16px;
     }
-    /* Trigger sits at the bottom of the vertical left-rail toolbar.
-       Anchor the dropdown's bottom *below* the trigger so the panel
-       drops lower into the canvas instead of overflowing the top
-       edge — the menu is tall and there's more vertical room below
-       the trigger's vertical center than above it. */
-    .sfx-cr-shape-dropdown {
+    /* Fixed variant: match the toolbar's uniform 40×40 round icon buttons. */
+    :host([variant="fixed"]) .sfx-cr-shape-trigger {
+      width: 40px;
+      height: 40px;
+    }
+    /* Classic left-rail only: the trigger sits in the vertical rail, so the
+       dropdown opens to the SIDE (right of the trigger). Excluded from the
+       fixed variant — there the toolbar is a horizontal top bar, so the menu
+       must keep the default downward opening (below the trigger) to avoid
+       running off the screen edge. */
+    :host(:not([variant="fixed"])) .sfx-cr-shape-dropdown {
       right: auto;
       left: calc(100% + 6px);
       top: auto;
       bottom: -30px;
       transform: translateY(6px) scale(0.96);
     }
-    :host([open]) .sfx-cr-shape-dropdown {
+    :host(:not([variant="fixed"])[open]) .sfx-cr-shape-dropdown {
       transform: translateY(0) scale(1);
     }
   }

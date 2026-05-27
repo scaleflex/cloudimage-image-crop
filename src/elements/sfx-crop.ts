@@ -16,6 +16,7 @@ import { SfxCropCanvasElement } from './sfx-crop-canvas';
 import type { SfxCropToolbarElement, SfxCropToolbarCommand } from './sfx-crop-toolbar';
 import { SfxCropBaseElement } from './base';
 import { parseAvailableShapes, DEFAULT_SHAPES } from './parse-shapes';
+import { getAspectRatio } from '../transforms/constrain';
 import { designTokens, baseStyles, spinKeyframes } from '../styles/shared.css';
 import { sfxCropStyles } from './sfx-crop.styles';
 
@@ -84,6 +85,14 @@ export class SfxCropElement extends SfxCropBaseElement {
   @property({ type: String, attribute: 'bleed-margin-color' }) bleedMarginColor = 'rgba(255, 0, 0, 0.5)';
   @property({ type: String, attribute: 'output-type' }) outputType = 'image/png';
   @property({ type: String, attribute: 'toolbar-position', reflect: true }) toolbarPosition: 'bottom' | 'top' = 'top';
+
+  /**
+   * Display variant. `'classic'` (default) = movable/resizable frame over a
+   * photo-aspect canvas. `'fixed'` = the editor box IS the crop frame (sized to
+   * `cropShape`), with the photo cover-fit and panned underneath; toolbar
+   * overlays the frame.
+   */
+  @property({ type: String, reflect: true }) variant: 'classic' | 'fixed' = 'classic';
 
   /** `true | false | 'interaction'` (default). Attribute accepts all three as strings. */
   @property({ attribute: 'show-grid', converter: SHOW_GRID_CONVERTER })
@@ -184,9 +193,7 @@ export class SfxCropElement extends SfxCropBaseElement {
           this.cropShape = shape;
           this.toolbarHost?.setShapeValue(shape);
         },
-        onScaleSync: (scale) => this.toolbarHost?.setScaleValue(scale),
-        onWheelZoomActivity: () => this.toolbarHost?.showZoomPopover(),
-        onWheelRotationActivity: () => this.toolbarHost?.showRotatePopover(),
+        onScaleSync: () => {},
         onLoadingChange: (loading, error) => {
           this.loading = loading;
           this.errorMessage = error;
@@ -217,6 +224,13 @@ export class SfxCropElement extends SfxCropBaseElement {
       }
     }
     if (has) this.controller.update(delta);
+
+    // The editor box aspect depends on `variant` + `cropShape` in the fixed
+    // variant (box = frame aspect), so re-fit when either changes. Cheap no-op
+    // in classic, where the box always tracks the photo aspect.
+    if (changed.has('variant') || changed.has('cropShape')) {
+      this.fitHostToImage();
+    }
   }
 
   disconnectedCallback(): void {
@@ -238,15 +252,12 @@ export class SfxCropElement extends SfxCropBaseElement {
             ?show-rotate-button=${this.showRotateButton}
             ?show-flip-button=${this.showFlipButton}
             ?show-rotate-slider=${this.showRotateSlider}
-            ?show-zoom-slider=${this.showZoomSlider}
             ?show-shape-selector=${this.showShapeSelector}
             toolbar-position=${this.toolbarPosition}
+            variant=${this.variant}
             .availableShapes=${this.availableShapes}
-            .minScale=${this.minScale}
-            .maxScale=${this.maxScale}
             .icons=${this.icons}
             @sfx-crop-toolbar-command=${this.onToolbarCommand}
-            @sfx-crop-rotate-active=${this.onRotateActive}
           ></sfx-crop-toolbar>
         ` : null}
         <div class=${classMap({ 'sfx-cr-loading': true, 'sfx-cr-loading--hidden': !this.loading })} part="loading">
@@ -262,11 +273,6 @@ export class SfxCropElement extends SfxCropBaseElement {
 
   // === Toolbar command router ===
 
-  private onRotateActive = (e: Event): void => {
-    const active = (e as CustomEvent<{ active: boolean }>).detail.active;
-    this.controller?.setRotationMode(active);
-  };
-
   private onToolbarCommand = (e: Event): void => {
     if (!this.controller) return;
     const detail = (e as CustomEvent<SfxCropToolbarCommand>).detail;
@@ -279,6 +285,10 @@ export class SfxCropElement extends SfxCropBaseElement {
       case 'shape':
         // Property assignment only — `updated()` forwards to controller.
         this.cropShape = detail.value;
+        break;
+      case 'save':
+        // Builds blob + dataURL + params and dispatches `sfx-crop-save`.
+        void this.save();
         break;
     }
   };
@@ -411,9 +421,27 @@ export class SfxCropElement extends SfxCropBaseElement {
     const availH = maxH;
     if (availW <= 0 || availH <= 0) return;
 
-    const fit = Math.min(availW / effW, availH / effH, 1);
-    const displayW = Math.floor(effW * fit);
-    const displayH = Math.floor(effH * fit);
+    let displayW: number;
+    let displayH: number;
+    if (this.variant === 'fixed') {
+      // Fixed variant: the editor box IS the crop frame — size it to the
+      // frame's aspect (maximal, centered within the available area). The
+      // photo cover-fills it, so upscaling the box past the photo's natural
+      // size is fine (unlike classic, which caps at fit ≤ 1).
+      const boxAspect = this.fixedFrameAspect(availW / availH);
+      let dW = availW;
+      let dH = availW / boxAspect;
+      if (dH > availH) {
+        dH = availH;
+        dW = availH * boxAspect;
+      }
+      displayW = Math.floor(dW);
+      displayH = Math.floor(dH);
+    } else {
+      const fit = Math.min(availW / effW, availH / effH, 1);
+      displayW = Math.floor(effW * fit);
+      displayH = Math.floor(effH * fit);
+    }
 
     // Size only the outer host to the photo rect — toolbars float on top
     // via `position: absolute`. The inner canvas host stays at CSS
@@ -429,6 +457,19 @@ export class SfxCropElement extends SfxCropBaseElement {
     }
   }
 
+
+  /**
+   * Aspect ratio (W/H) of the fixed-variant editor box for the current shape.
+   * `free` fills the host (uses the available-area aspect); `square` / `circle`
+   * / `rounded-rect` are square; ratio shapes use their parsed ratio.
+   */
+  private fixedFrameAspect(fallback: number): number {
+    const shape = this.cropShape;
+    if (shape === 'free') return fallback;
+    if (shape === 'rounded-rect') return 1;
+    const r = getAspectRatio(shape);
+    return r && r > 0 ? r : fallback;
+  }
 
   private dispatch(type: string, detail: unknown): void {
     this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));
@@ -448,6 +489,7 @@ export class SfxCropElement extends SfxCropBaseElement {
   private buildConfig(): Partial<SfxCropConfig> {
     return {
       src: this.src,
+      variant: this.variant,
       cropShape: this.cropShape,
       theme: this.theme,
       initialRotation: this.initialRotation,
@@ -491,7 +533,7 @@ export class SfxCropElement extends SfxCropBaseElement {
  * a misspelling fails the build.
  */
 const LIVE_CONFIG_KEYS = [
-  'src', 'cropShape', 'theme',
+  'src', 'variant', 'cropShape', 'theme',
   'minScale', 'maxScale', 'minCropSize', 'borderRadius',
   'handleSize', 'handleColor', 'overlayColor',
   'showGrid', 'showBleedMargin', 'bleedMarginSize', 'bleedMarginColor',

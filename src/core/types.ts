@@ -209,6 +209,17 @@ export interface SfxCropConfig {
   /** Image source URL */
   src: string;
 
+  /**
+   * Display variant.
+   * - `'classic'` (default): photo fills the editor at its own aspect; a
+   *   movable / resizable crop frame floats over it, dimmed outside.
+   * - `'fixed'`: the editor area itself IS the crop frame — sized to the
+   *   `cropShape` aspect and centered. The photo pans/zooms/rotates UNDER it
+   *   and always covers it (no empty gaps). No resize handles; toolbar overlays
+   *   the frame.
+   */
+  variant: 'classic' | 'fixed';
+
   // Initial state
   /** Initial crop rect (normalized 0-1) */
   initialCrop?: CropRect | null;

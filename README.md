@@ -17,6 +17,7 @@ Interactive image-crop editor as a framework-agnostic web component, with a thin
 
 # Features
 
+- Two display variants: `classic` (movable / resizable crop frame over the photo) and `fixed` (the editor box *is* the crop frame — the photo is cover-fit and panned underneath, e.g. avatar / phone-style cropping). See [Variants](#variants).
 - Rotation in 90° increments and fine tilt slider (-45°…+45°), horizontal flip, pinch / wheel / button zoom, keyboard shortcuts.
 - Built-in shape presets (`free`, `square`, `circle`, `rounded-rect`, `16:9`, `4:3`, `3:2`, `5:4`, `2:1`, `9:16`, `3:4`, `2:3`, `4:5`, `1:2`) plus on-the-fly `"W:H"` ratios.
 - Optional bleed-margin guides for print workflows.
@@ -121,6 +122,7 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | Attribute / Property | Type | Default | Description |
 |---|---|---|---|
 | `src`             | `string`                | `''`        | Image URL to load. Setting after mount triggers a re-load. |
+| `variant`         | `'classic' \| 'fixed'`  | `'classic'` | Display mode. `classic` = movable/resizable crop frame over the photo. `fixed` = the editor box itself is the crop frame (sized to `crop-shape`), photo cover-fit and panned underneath, toolbar overlaid. Switchable at runtime. See [Variants](#variants). |
 | `crop-shape` / `cropShape` | `CropShapeName` | `'16:9'` | Built-in preset or any `"W:H"` ratio string. |
 | `available-shapes` / `availableShapes` | `CropShapeName[] \| string` | `['free','square','16:9','4:3','3:2','5:4','2:1','9:16','3:4','2:3','4:5','1:2']` | Restricts the shape palette in the toolbar. JSON-stringified array works as an attribute. `circle` and `rounded-rect` are valid built-ins but omitted from the default — pass them explicitly to enable. |
 | `initial-crop` / `initialCrop` | `CropRect \| string \| null` | `null` | Starting crop rect in normalised `[0,1]` image coords. |
@@ -147,6 +149,15 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `bleed-margin-color` / `bleedMarginColor` | `string`           | `'rgba(255,0,0,0.5)'` | Print bleed guide colour. |
 | `bleed-margin-size` / `bleedMarginSize`   | `number`           | `10`                  | Bleed inset in pixels. |
 | `show-bleed-margin` / `showBleedMargin`   | `boolean`          | `false`               | Toggles the print bleed guides. |
+
+> **Print bleed guides.** In print, artwork is printed slightly larger than the
+> final size and trimmed at the cut line; the *bleed* is the strip near the edge
+> that gets cut off. `show-bleed-margin` draws a dashed **safe-area** rectangle
+> inset `bleed-margin-size` pixels from every edge of the crop, so important
+> content (faces, text, logos) can be kept clear of the trim. It is a
+> **visual guide only** — it is *not* baked into the output: `toCanvas()`,
+> `toBlob()`, `toDataURL()`, and the `sfx-crop-save` payload never contain the
+> dashed line and the crop is not inset by it.
 
 ### UI toggles
 
@@ -180,6 +191,30 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `enable-animations` / `enableAnimations` | `boolean` | `true` | Spring/lerp transitions. |
 | `animation-speed` / `animationSpeed`     | `number`  | `1.0`  | Multiplier on the default spring. |
 | `icons` (property only)             | `CropIconOverrides` | `{}` | SVG-string slot overrides — see `CropIconOverrides` in `src/core/types.ts`. |
+
+# Variants
+
+The `variant` attribute switches how the crop is presented. Both share the same engine, tools, events, and export.
+
+## `classic` (default)
+
+The photo fills the editor at its own aspect ratio and a **movable / resizable crop frame** floats over it (resize handles + a move-handle), with the area outside the frame dimmed by `overlay-color`. Drag inside the frame to pan the photo, drag the handles to resize.
+
+## `fixed`
+
+The **editor box itself is the crop frame**, sized to the `crop-shape` aspect and centred (portrait, landscape, square, circle, rounded-rect — anything). The photo is **cover-fit** and panned/zoomed/rotated underneath; there are no resize handles, and the toolbar is overlaid on the frame. This is the avatar- / phone-style "fixed window, moving photo" pattern.
+
+```html
+<sfx-crop src="/photo.jpg" variant="fixed" crop-shape="1:1"></sfx-crop>
+```
+
+## Cover guarantee
+
+In **both** variants the photo is constrained to always fully cover the crop frame — zoom and pan are clamped (and the minimum zoom is raised) so the exported image never contains transparent gaps. The one exception is a 90°/270° turn in `classic`, which intentionally letterboxes the rotated photo to fit the frame.
+
+## Built-in "Done" button
+
+The toolbar renders a primary **Done** button pinned to the right edge. It calls [`save()`](#public-methods) — building `blob` + `dataURL` + `params` and dispatching `sfx-crop-save` — so a host app can commit the crop without wiring its own button. Handle `sfx-crop-save` to upload / persist / close. (Hide the whole toolbar with `show-toolbar="false"` if you prefer to drive everything imperatively.)
 
 # Public Methods
 
@@ -283,7 +318,9 @@ Every visual surface is keyed off `--sfx-cr-*` tokens. The full list (see `src/s
 
 ### Canvas & frame
 
-`--sfx-cr-overlay-color`, `--sfx-cr-frame-color`, `--sfx-cr-frame-shadow`, `--sfx-cr-handle-fill`, `--sfx-cr-handle-stroke`, `--sfx-cr-ring`, `--sfx-cr-shadow`.
+`--sfx-cr-overlay-color`, `--sfx-cr-frame-color`, `--sfx-cr-frame-shadow`, `--sfx-cr-handle-fill`, `--sfx-cr-handle-stroke`, `--sfx-cr-ruler-ink`, `--sfx-cr-ring`, `--sfx-cr-shadow`.
+
+`--sfx-cr-ruler-ink` colours the fine-tilt ruler (ticks, centre indicator, degree readout); it defaults to a deepened ink in the light theme so the dots stay legible over a bright photo, and to the standard light text in the dark theme.
 
 ### Toolbar & controls
 

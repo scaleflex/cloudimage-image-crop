@@ -773,6 +773,12 @@ interface SfxCropConfig {
   // Source
   src: string;
 
+  // Display variant: 'classic' = movable/resizable frame over the photo;
+  // 'fixed' = the editor box is the crop frame, photo cover-fit + panned
+  // underneath (avatar/phone-style). In both, pan/zoom are clamped so the
+  // photo always covers the frame (no transparent export gaps).
+  variant: 'classic' | 'fixed';       // Default: 'classic'
+
   // Initial state (applied once on first load)
   initialCrop?: CropRect | null;
   initialRotation?: number;          // -45 to 45
@@ -862,6 +868,7 @@ element consumers see identical behaviour.
 ```typescript
 const DEFAULT_CONFIG: SfxCropConfig = {
   src: '',
+  variant: 'classic',
   cropShape: '16:9',
   initialCrop: null,
   initialRotation: 0,

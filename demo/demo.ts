@@ -186,6 +186,7 @@ const EXAMPLE_GROUPS: ExampleGroup[] = [
     label: 'Crop configuration',
     items: [
       { path: '/examples/shapes',         label: 'Shape presets' },
+      { path: '/examples/fixed',          label: 'Fixed variant' },
       { path: '/examples/initial-state',  label: 'Initial state' },
     ],
   },
@@ -259,7 +260,6 @@ function renderSidebar(currentPath: string): string {
     return `
       <aside class="demo-sidebar" id="demo-sidebar" aria-label="Examples">
         <div class="demo-sidebar-inner">
-          <div class="demo-sidebar-title">Examples</div>
           ${EXAMPLE_GROUPS.map((g) => `
             <div class="demo-sidebar-group">
               <div class="demo-sidebar-group-label">${g.label}</div>
@@ -443,7 +443,7 @@ export function Editor() {
           <span class="demo-hero-badge-dot"></span>
           @scaleflex/crop
         </div>
-        <h1 class="demo-hero-title">Crop</h1>
+        <h1 class="demo-hero-title"><span class="demo-gradient-text">Crop</span></h1>
         <p class="demo-hero-sub">Framework-agnostic Web Component for interactive image cropping — rotate, flip, zoom, and shape presets in a single <code>&lt;sfx-crop&gt;</code> tag.</p>
         <div class="demo-hero-actions">
           <a class="demo-btn demo-btn--primary" href="#quick-start">Get started ${ICONS.arrow}</a>
@@ -465,8 +465,13 @@ export function Editor() {
         <div class="demo-section-label">Live demo</div>
         <h2>Try it right here</h2>
         <p class="demo-lead">A fully interactive crop editor embedded directly in this page — drag corners, rotate with the slider, switch crop shapes.</p>
-        <div class="demo-card demo-card--lg demo-crop-wrap">
+        <div class="demo-crop-controls">
+          <button type="button" class="demo-variant-toggle" aria-label="Toggle crop variant" aria-pressed="false">Variant: classic</button>
+          <button type="button" class="demo-grid-toggle" aria-label="Toggle rule-of-thirds grid" aria-pressed="false">Grid: off</button>
+          <button type="button" class="demo-bleed-toggle" aria-label="Toggle print bleed guides" aria-pressed="false">Bleed: off</button>
           <button type="button" class="demo-theme-toggle" aria-label="Toggle crop theme" aria-pressed="false">${ICONS.moon}</button>
+        </div>
+        <div class="demo-card demo-card--lg demo-crop-wrap">
           <sfx-crop id="home-viewer" style="display:block;max-width:1200px;max-height:640px;margin:0 auto"></sfx-crop>
         </div>
       </div>
@@ -596,6 +601,58 @@ function hydrateHome(root: HTMLElement): void {
     el.showToolbar = true;
     el.showZoomSlider = true;
     el.showRotateSlider = true;
+  }
+  // Variant toggle — flips between the classic movable frame and the fixed
+  // cover-frame ("window") mode. Lives in the controls row above the editor.
+  const variantBtn = root.querySelector<HTMLButtonElement>('.demo-variant-toggle');
+  if (el && variantBtn) {
+    variantBtn.addEventListener('click', () => {
+      const next = el.variant === 'fixed' ? 'classic' : 'fixed';
+      el.variant = next;
+      variantBtn.textContent = `Variant: ${next}`;
+      variantBtn.setAttribute('aria-pressed', String(next === 'fixed'));
+    });
+  }
+  // Grid toggle — pins the rule-of-thirds grid always-on (true) vs the default
+  // (only while interacting).
+  const gridBtn = root.querySelector<HTMLButtonElement>('.demo-grid-toggle');
+  if (el && gridBtn) {
+    gridBtn.addEventListener('click', () => {
+      const on = el.showGrid !== true;
+      el.showGrid = on ? true : 'interaction';
+      gridBtn.textContent = `Grid: ${on ? 'on' : 'off'}`;
+      gridBtn.setAttribute('aria-pressed', String(on));
+    });
+  }
+  // Bleed-guide toggle — flips the print-safe-area guides on #home-viewer.
+  const bleedBtn = root.querySelector<HTMLButtonElement>('.demo-bleed-toggle');
+  if (el && bleedBtn) {
+    bleedBtn.addEventListener('click', () => {
+      const next = !el.showBleedMargin;
+      el.showBleedMargin = next;
+      bleedBtn.textContent = `Bleed: ${next ? 'on' : 'off'}`;
+      bleedBtn.setAttribute('aria-pressed', String(next));
+    });
+  }
+  // The built-in toolbar "Done" button fires `sfx-crop-save`. A single global
+  // handler (see setupSavePreview) catches it from any <sfx-crop> on the page
+  // and shows the result preview — no per-editor wiring needed here.
+
+  // Theme toggle — now in the same external controls row (no longer overlaid
+  // on the editor), so it's wired here against #home-viewer directly rather
+  // than via the generic per-wrap binding.
+  const themeBtn = root.querySelector<HTMLButtonElement>('.demo-theme-toggle');
+  if (el && themeBtn) {
+    const stored = getStoredTheme();
+    el.setAttribute('theme', stored);
+    syncToggleButton(themeBtn, stored);
+    themeBtn.addEventListener('click', () => {
+      const current = el.getAttribute('theme') as DemoTheme | null;
+      const next: DemoTheme = current === 'dark' ? 'light' : 'dark';
+      localStorage.setItem(THEME_KEY, next);
+      el.setAttribute('theme', next);
+      syncToggleButton(themeBtn, next);
+    });
   }
   // npm/CDN tab toggle in Quick Start
   const qsTabs = root.querySelectorAll<HTMLButtonElement>('.demo-quick-start-tab');
@@ -773,6 +830,7 @@ function renderDocConfiguration(): string {
       heading: 'Source &amp; shape',
       rows: [
         ['src',              'URL',                                              '""',      'Image source URL. Setting it at runtime triggers an async reload.'],
+        ['variant',          'classic | fixed',                                  'classic', 'Display mode. <code>classic</code>: movable/resizable frame over the photo. <code>fixed</code>: the editor box is the crop frame, photo cover-fit + panned underneath (avatar/phone style). Switchable at runtime.'],
         ['crop-shape',       'free | square | circle | rounded-rect | 16:9 | 4:3 | 3:2 | 5:4 | 2:1 | 9:16 | 3:4 | 2:3 | 4:5 | 1:2 | "W:H"', '16:9', 'Active crop preset or ad-hoc ratio string.'],
         ['available-shapes', 'JSON array | CSV',                                 'full preset list', 'Shapes exposed in the selector dropdown.'],
         ['min-crop-size',    'px',                                               '20',      'Minimum crop rect side in image-pixel space.'],
@@ -798,7 +856,7 @@ function renderDocConfiguration(): string {
       rows: [
         ['theme',                'light | dark',                                 'light',   'Color variant — swaps the token bundle.'],
         ['toolbar-position',     'top | bottom',                                 'top',     'Anchor for the floating toolbar pill.'],
-        ['show-toolbar',         'boolean',                                      'true',    'Toggle the entire toolbar row.'],
+        ['show-toolbar',         'boolean',                                      'true',    'Toggle the entire toolbar row. The toolbar includes a primary <strong>Done</strong> button (right edge) that calls <code>save()</code> → dispatches <code>sfx-crop-save</code>. Hide the toolbar to drive everything imperatively.'],
         ['show-rotate-button',   'boolean',                                      'true',    'Show the 90° rotate-left button.'],
         ['show-flip-button',     'boolean',                                      'true',    'Show the flip-horizontal button.'],
         ['show-rotate-slider',   'boolean',                                      'true',    'Show the fine-rotation (±45°) trigger.'],
@@ -1076,6 +1134,7 @@ function renderDocTheming(): string {
         ['--sfx-cr-frame-shadow',   'Subtle shadow behind the frame outline.'],
         ['--sfx-cr-handle-fill',    'Corner-handle fill.'],
         ['--sfx-cr-handle-stroke',  'Corner-handle outline.'],
+        ['--sfx-cr-ruler-ink',      'Fine-tilt ruler ink (ticks, indicator, degree label). Deepened in light theme for legibility over bright photos.'],
       ],
     },
     {
@@ -1461,7 +1520,10 @@ document.getElementById('reset').onclick = () => crop.reset();`, 'typescript')}
       </div>
 
       <h2>Print bleed guides</h2>
-      <p>Safe-area guides drawn inside the crop rectangle — switch them on for print-ready crops where bleed must stay clear of trim.</p>
+      <p>Safe-area guides drawn inside the crop rectangle — switch them on for print-ready crops where bleed must stay clear of trim. They're a visual aid only: the dashed line isn't baked into <code>toBlob()</code> / <code>toDataURL()</code> output.</p>
+      <div class="demo-crop-controls">
+        <button type="button" class="demo-bleed-toggle" id="ex-bleed-toggle" aria-label="Toggle print bleed guides" aria-pressed="true">Bleed: on</button>
+      </div>
       <div class="demo-example-live">
         <sfx-crop
           id="ex-bleed"
@@ -1829,7 +1891,16 @@ function hydrateExampleTransforms(root: HTMLElement): void {
 
   // Secondary live demo on the same page — print-bleed guides.
   const bleed = root.querySelector('#ex-bleed') as SfxCropElement | null;
-  if (bleed) { bleed.src = DEMO_SRC; bleed.showGrid = true; bleed.theme = 'light'; }
+  if (bleed) {
+    bleed.src = DEMO_SRC; bleed.showGrid = true; bleed.theme = 'light';
+    const bleedBtn = root.querySelector<HTMLButtonElement>('#ex-bleed-toggle');
+    bleedBtn?.addEventListener('click', () => {
+      const next = !bleed.showBleedMargin;
+      bleed.showBleedMargin = next;
+      bleedBtn.textContent = `Bleed: ${next ? 'on' : 'off'}`;
+      bleedBtn.setAttribute('aria-pressed', String(next));
+    });
+  }
 }
 
 function hydrateExampleEvents(root: HTMLElement): void {
@@ -1853,6 +1924,11 @@ function hydrateExampleEvents(root: HTMLElement): void {
   el.addEventListener('sfx-crop-crop-change', (e: Event) => {
     const r = (e as CustomEvent).detail;
     append(`▸ sfx-crop-crop-change  ${r.x}×${r.y}  ${r.width}×${r.height}`);
+  });
+  // Fired by the toolbar's "Done" button (→ save()).
+  el.addEventListener('sfx-crop-save', (e: Event) => {
+    const { params } = (e as CustomEvent).detail as { params: { outputWidth: number; outputHeight: number } };
+    append(`▸ sfx-crop-save  ${params.outputWidth}×${params.outputHeight}px`);
   });
 }
 
@@ -1893,6 +1969,57 @@ function hydrateExampleTheming(root: HTMLElement): void {
   }
 }
 
+function renderExampleFixed(): string {
+  return examplePage(
+    'Fixed variant',
+    'The editor box IS the crop frame: the photo is cover-fit and panned / zoomed / rotated underneath, always covering the frame (no transparent gaps). No resize handles — the toolbar overlays the frame. Ideal for avatars and phone-style crops.',
+    `
+      <div class="demo-example-grid">
+        <div class="demo-example-cell">
+          <div class="demo-example-cell-label">Square (1:1)</div>
+          <sfx-crop class="ex-fixed" data-shape="square" style="height:360px;display:block"></sfx-crop>
+        </div>
+        <div class="demo-example-cell">
+          <div class="demo-example-cell-label">Portrait (9:16)</div>
+          <sfx-crop class="ex-fixed" data-shape="9:16" style="height:360px;display:block"></sfx-crop>
+        </div>
+        <div class="demo-example-cell">
+          <div class="demo-example-cell-label">Circle</div>
+          <sfx-crop class="ex-fixed" data-shape="circle" style="height:360px;display:block"></sfx-crop>
+        </div>
+        <div class="demo-example-cell">
+          <div class="demo-example-cell-label">Landscape (16:9)</div>
+          <sfx-crop class="ex-fixed" data-shape="16:9" style="height:360px;display:block"></sfx-crop>
+        </div>
+      </div>
+
+      ${tabbedCode([
+        { label: 'HTML', code: `<sfx-crop
+  src="/photo.jpg"
+  variant="fixed"
+  crop-shape="1:1"
+></sfx-crop>`, lang: 'markup' },
+        { label: 'React', code: `import { SfxCrop } from '@scaleflex/crop/react';
+
+<SfxCrop
+  src="/photo.jpg"
+  variant="fixed"
+  cropShape="1:1"
+  onSave={({ blob }) => upload(blob)}
+/>`, lang: 'tsx' },
+      ])}
+    `,
+  );
+}
+
+function hydrateExampleFixed(root: HTMLElement): void {
+  for (const el of root.querySelectorAll<SfxCropElement>('.ex-fixed')) {
+    el.variant = 'fixed';
+    el.cropShape = (el.dataset.shape ?? '1:1') as SfxCropElement['cropShape'];
+    el.src = DEMO_SRC;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Route registry
 // ---------------------------------------------------------------------------
@@ -1913,6 +2040,7 @@ const PAGES: Record<string, PageDef> = {
 
   '/examples/basic':          { render: renderExampleBasic,          hydrate: hydrateExampleBasic },
   '/examples/shapes':         { render: renderExampleShapes,         hydrate: hydrateExampleShapes },
+  '/examples/fixed':          { render: renderExampleFixed,          hydrate: hydrateExampleFixed },
   '/examples/initial-state':  { render: renderExampleInitialState,   hydrate: hydrateExampleInitialState },
   '/examples/transforms':     { render: renderExampleTransforms,     hydrate: hydrateExampleTransforms },
   '/examples/events':         { render: renderExampleEvents,         hydrate: hydrateExampleEvents },
@@ -2075,6 +2203,59 @@ function navigate(): void {
     }
   });
 }
+
+/**
+ * Global "Done" result preview. The toolbar's Done button calls save(), which
+ * dispatches a bubbling + composed `sfx-crop-save`, so one document-level
+ * listener surfaces the finished crop from ANY <sfx-crop> on the page — home
+ * or examples — in a single shared modal. This is the demo stand-in for what a
+ * real app does on save (upload / persist / close).
+ */
+function setupSavePreview(): void {
+  const overlay = document.createElement('div');
+  overlay.className = 'demo-save-modal';
+  overlay.hidden = true;
+  overlay.innerHTML = `
+    <div class="demo-save-card" role="dialog" aria-modal="true" aria-label="Crop result">
+      <div class="demo-save-head">
+        <span class="demo-save-title">Cropped result</span>
+        <button type="button" class="demo-save-close" aria-label="Close">✕</button>
+      </div>
+      <div class="demo-save-body"><img class="demo-save-img" alt="Cropped result preview" /></div>
+      <div class="demo-save-foot">
+        <span class="demo-save-meta"></span>
+        <a class="demo-save-dl" download="cropped.png">Download PNG</a>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const img  = overlay.querySelector<HTMLImageElement>('.demo-save-img')!;
+  const meta = overlay.querySelector<HTMLElement>('.demo-save-meta')!;
+  const dl   = overlay.querySelector<HTMLAnchorElement>('.demo-save-dl')!;
+  let url: string | null = null;
+
+  const close = (): void => {
+    overlay.hidden = true;
+    if (url) { URL.revokeObjectURL(url); url = null; }
+  };
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('.demo-save-close')!.addEventListener('click', close);
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) close(); });
+
+  document.addEventListener('sfx-crop-save', (e: Event) => {
+    const d = (e as CustomEvent).detail as {
+      blob: Blob; dataURL: string; params: { outputWidth: number; outputHeight: number };
+    };
+    img.src = d.dataURL;
+    meta.textContent = `${d.params.outputWidth} × ${d.params.outputHeight} px · PNG`;
+    if (url) URL.revokeObjectURL(url);
+    url = URL.createObjectURL(d.blob);
+    dl.href = url;
+    overlay.hidden = false;
+  });
+}
+
+setupSavePreview();
 
 window.addEventListener('hashchange', navigate);
 document.addEventListener('DOMContentLoaded', navigate);

@@ -1,9 +1,7 @@
 import { html, type PropertyValues } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { property, state } from 'lit/decorators.js';
 import { SfxCropBaseElement } from './base';
 import { clamp } from '../utils/math';
-import { resolveIcon } from './icons';
 import type { CropIconOverrides } from '../core/types';
 import { baseStyles } from '../styles/shared.css';
 import { sfxCropRotateStyles } from './sfx-crop-rotate.styles';
@@ -21,13 +19,10 @@ const TICK_STEP = 1;
 const MAJOR_EVERY = 5;
 
 /**
- * `<sfx-crop-rotate>` — collapsed fine-rotation control.
+ * `<sfx-crop-rotate>` — always-visible fine-rotation ruler.
  *
- * The trigger is a tilt icon styled like the other toolbar icons. Clicking
- * opens a ruler scrubber: ticks scroll under a fixed center marker, the
- * current degrees label sits below the marker. No pill container — the
- * ruler floats directly over the photo, transparent behind the marks.
- * Drag the ruler left/right to tilt; double-click the ruler to reset.
+ * Ticks scroll under a fixed center marker; the current degrees label sits
+ * below. Drag the ruler left/right to tilt; double-click to reset.
  *
  * Event:
  *   `sfx-crop-rotate-change` — `{ detail: { degrees: number } }`,
@@ -39,59 +34,34 @@ export class SfxCropRotateElement extends SfxCropBaseElement {
   @property({ type: Number }) value = 0;
   @property({ type: Number }) min = -45;
   @property({ type: Number }) max = 45;
-  @property({ type: Boolean, reflect: true }) open = false;
   @property({ attribute: false }) icons: CropIconOverrides = {};
 
   @state() private dragging = false;
-
-  @query('.sfx-cr-rotate-ruler') private rulerEl?: HTMLDivElement;
 
   private activePointer: number | null = null;
   private pointerStartX = 0;
   private pointerStartValue = 0;
 
-  /** See {@link SfxCropZoomElement.autoCloseTimer} — same pattern. */
-  private autoCloseTimer: ReturnType<typeof setTimeout> | null = null;
-
-  private docClickHandler = (): void => {
-    if (this.open) {
-      this.clearAutoClose();
-      this.open = false;
-    }
-  };
-
   private popoverAnchor: PopoverAnchor = createPopoverAnchor(this, '.sfx-cr-rotate-popover');
 
   connectedCallback(): void {
     super.connectedCallback();
-    document.addEventListener('click', this.docClickHandler);
+    this.popoverAnchor.start();
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    document.removeEventListener('click', this.docClickHandler);
     this.popoverAnchor.stop();
-    this.clearAutoClose();
   }
 
   updated(changed: PropertyValues): void {
-    if (changed.has('open')) {
-      if (this.open) this.popoverAnchor.start();
-      else this.popoverAnchor.stop();
-      this.dispatchEvent(new CustomEvent('sfx-crop-rotate-active', {
-        detail: { active: this.open },
-        bubbles: true,
-        composed: true,
-      }));
-    }
-    if (this.open && (changed.has('value') || changed.has('dragging'))) {
+    if (changed.has('value') || changed.has('dragging')) {
       this.popoverAnchor.update();
     }
   }
 
   render(): unknown {
     const formatted = `${this.value > 0 ? '+' : ''}${this.value.toFixed(1)}°`;
-    const range = this.max - this.min;
     // Translate the tick strip so the current value sits under the fixed
     // center indicator. With drag-physical behaviour, dragging the ruler
     // right shifts ticks right and the value under the marker goes down.
@@ -110,20 +80,7 @@ export class SfxCropRotateElement extends SfxCropBaseElement {
     }
 
     return html`
-      <div
-        class="sfx-cr-rotate-root"
-        @click=${(e: Event) => e.stopPropagation()}
-        @keydown=${this.onKeyDown}
-      >
-        <button
-          type="button"
-          class="sfx-cr-rotate-trigger"
-          aria-label=${`Fine rotation — ${formatted}`}
-          aria-haspopup="dialog"
-          aria-expanded=${this.open ? 'true' : 'false'}
-          @click=${this.onTriggerClick}
-        >${unsafeHTML(resolveIcon('tilt', this.icons))}</button>
-
+      <div class="sfx-cr-rotate-root" @keydown=${this.onKeyDown}>
         <div class="sfx-cr-rotate-popover" role="group" aria-label="Fine rotation">
           <div
             class=${`sfx-cr-rotate-ruler${this.dragging ? ' is-dragging' : ''}`}
@@ -161,59 +118,7 @@ export class SfxCropRotateElement extends SfxCropBaseElement {
     this.value = clamp(degrees, this.min, this.max);
   }
 
-  /**
-   * Open the popover and auto-close after `duration` ms of inactivity —
-   * mirrors {@link SfxCropZoomElement.showTemporarily}. A burst of wheel
-   * events keeps the slider visible via debounce; any manual interaction
-   * cancels the pending close. No-op when the user already opened the
-   * popover by hand (so wheel activity can't hijack it shut).
-   */
-  showTemporarily(duration = 1500): void {
-    if (this.open && this.autoCloseTimer === null) return;
-    const wasOpen = this.open;
-    this.open = true;
-    if (!wasOpen) {
-      this.dispatchEvent(new CustomEvent('sfx-crop-popover-open', {
-        detail: { source: 'rotate' },
-        bubbles: true,
-        composed: true,
-      }));
-    }
-    this.clearAutoClose();
-    this.autoCloseTimer = setTimeout(() => {
-      this.autoCloseTimer = null;
-      this.open = false;
-    }, duration);
-  }
-
-  private clearAutoClose(): void {
-    if (this.autoCloseTimer !== null) {
-      clearTimeout(this.autoCloseTimer);
-      this.autoCloseTimer = null;
-    }
-  }
-
-  private onTriggerClick = (e: Event): void => {
-    e.stopPropagation();
-    this.clearAutoClose();
-    this.open = !this.open;
-    if (this.open) {
-      this.dispatchEvent(new CustomEvent('sfx-crop-popover-open', {
-        detail: { source: 'rotate' },
-        bubbles: true,
-        composed: true,
-      }));
-    }
-  };
-
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (!this.open) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      this.open = false;
-      return;
-    }
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
       this.emit(clamp(this.value - (e.shiftKey ? 5 : 1), this.min, this.max));
@@ -226,9 +131,6 @@ export class SfxCropRotateElement extends SfxCropBaseElement {
   // --- Pointer scrubbing ---
   private onPointerDown = (e: PointerEvent): void => {
     if (this.activePointer !== null) return;
-    // User is driving the slider manually now — drop any pending auto-close
-    // so the popover doesn't vanish mid-drag.
-    this.clearAutoClose();
     this.activePointer = e.pointerId;
     this.pointerStartX = e.clientX;
     this.pointerStartValue = this.value;

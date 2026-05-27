@@ -5,10 +5,8 @@ import { SfxCropBaseElement } from './base';
 import type { CropShapeName, CropIconOverrides } from '../core/types';
 import { resolveIcon } from './icons';
 import './sfx-crop-rotate';
-import './sfx-crop-zoom';
 import './sfx-crop-shapes';
 import type { SfxCropRotateElement } from './sfx-crop-rotate';
-import type { SfxCropZoomElement } from './sfx-crop-zoom';
 import type { SfxCropShapesElement } from './sfx-crop-shapes';
 import { parseAvailableShapes, DEFAULT_SHAPES } from './parse-shapes';
 import { baseStyles, toolbarEnterKeyframes } from '../styles/shared.css';
@@ -24,28 +22,28 @@ export type SfxCropToolbarCommand =
   | { type: 'flip-h' }
   | { type: 'rotation'; value: number }
   | { type: 'scale'; value: number }
-  | { type: 'shape'; value: CropShapeName };
+  | { type: 'shape'; value: CropShapeName }
+  | { type: 'save' };
 
 /**
- * `<sfx-crop-toolbar>` — composes rotate/flip buttons + `<sfx-crop-rotate>` +
- * `<sfx-crop-shapes>` into the editor's action bar. Fully Lit-native with its
- * own shadow DOM; tokens inherit from the parent `<sfx-crop>`.
+ * `<sfx-crop-toolbar>` — composes rotate/flip buttons + the always-visible
+ * `<sfx-crop-rotate>` fine-rotation ruler + `<sfx-crop-shapes>` into the
+ * editor's action bar. Zoom is wheel-only and has no toolbar control.
  */
 export class SfxCropToolbarElement extends SfxCropBaseElement {
   static styles = [baseStyles, toolbarEnterKeyframes, sfxCropToolbarStyles];
 
   @property({ type: String }) shape: CropShapeName = 'free';
   @property({ type: Number }) rotation = 0;
-  @property({ type: Number }) scale = 1;
-  @property({ type: Number }) minScale = 0.5;
-  @property({ type: Number }) maxScale = 5;
   @property({ type: Boolean, attribute: 'show-rotate-button' }) showRotateButton = true;
   @property({ type: Boolean, attribute: 'show-flip-button' }) showFlipButton = true;
   @property({ type: Boolean, attribute: 'show-rotate-slider' }) showRotateSlider = true;
-  @property({ type: Boolean, attribute: 'show-zoom-slider' }) showZoomSlider = true;
   @property({ type: Boolean, attribute: 'show-shape-selector' }) showShapeSelector = true;
   @property({ type: String, attribute: 'toolbar-position', reflect: true })
   toolbarPosition: 'top' | 'bottom' = 'top';
+
+  /** Reflected so the stylesheet can center the bar over the fixed frame. */
+  @property({ type: String, reflect: true }) variant: 'classic' | 'fixed' = 'classic';
 
   /** JSON-serialized or CSV string on the attribute; `CropShapeName[]` via property. */
   @property({ attribute: 'available-shapes' })
@@ -55,7 +53,6 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
   @property({ attribute: false }) icons: CropIconOverrides = {};
 
   @query('sfx-crop-rotate') private rotateEl?: SfxCropRotateElement;
-  @query('sfx-crop-zoom') private zoomEl?: SfxCropZoomElement;
   @query('sfx-crop-shapes') private shapesEl?: SfxCropShapesElement;
 
   render(): unknown {
@@ -104,64 +101,37 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
           ></sfx-crop-rotate>
         ` : null}
 
-        ${this.showZoomSlider ? html`
-          <sfx-crop-zoom
-            .value=${this.scale}
-            .min=${this.minScale}
-            .max=${this.maxScale}
-            .icons=${this.icons}
-            @sfx-crop-zoom-change=${(e: CustomEvent<{ scale: number }>) =>
-              this.emit({ type: 'scale', value: e.detail.scale })}
-          ></sfx-crop-zoom>
-        ` : null}
-
         ${this.showShapeSelector ? html`
           <sfx-crop-shapes
             .value=${this.shape}
             .shapes=${shapes}
+            variant=${this.variant}
             .icons=${this.icons}
             @sfx-crop-shape-change=${(e: CustomEvent<{ shape: CropShapeName }>) =>
               this.emit({ type: 'shape', value: e.detail.shape })}
           ></sfx-crop-shapes>
         ` : null}
       </div>
+
+      <button
+        type="button"
+        class="sfx-cr-done-btn"
+        part="done"
+        aria-label="Done"
+        @click=${() => this.emit({ type: 'save' })}
+      >Done</button>
     `;
   }
 
   /**
-   * Mutual exclusion for the three collapsible popovers (rotate, zoom,
-   * shapes): whenever one opens it dispatches a bubbling
-   * `sfx-crop-popover-open` event, and we close the other two here so
-   * only one surface is expanded at a time.
+   * Mutual exclusion for collapsible popovers. The rotate ruler is now
+   * inline (always visible), so only the shapes popover participates —
+   * keeping the handler future-proof if more popovers are added.
    */
   private onPopoverOpen = (e: Event): void => {
     const source = (e as CustomEvent<{ source?: string }>).detail?.source;
-    if (source !== 'rotate' && this.rotateEl) this.rotateEl.open = false;
-    if (source !== 'zoom' && this.zoomEl) this.zoomEl.open = false;
     if (source !== 'shapes' && this.shapesEl) this.shapesEl.open = false;
   };
-
-  /** Sync the zoom slider without firing an event. */
-  setScaleValue(scale: number): void {
-    this.scale = scale;
-    this.zoomEl?.setValue(scale);
-  }
-
-  /**
-   * Surface the zoom popover briefly — called from the host when wheel
-   * zoom fires so the user sees the ruler moving under their cursor.
-   * Forwards to {@link SfxCropZoomElement.showTemporarily}; the element
-   * handles debouncing and auto-close on its own.
-   */
-  showZoomPopover(duration?: number): void {
-    this.zoomEl?.showTemporarily(duration);
-  }
-
-  /** Same as {@link showZoomPopover} but for the rotate slider — called
-   *  from the host on wheel-rotation activity (rotation-mode wheel scrubs). */
-  showRotatePopover(duration?: number): void {
-    this.rotateEl?.showTemporarily(duration);
-  }
 
   /** Sync the rotation slider without firing an event. */
   setRotationValue(degrees: number): void {

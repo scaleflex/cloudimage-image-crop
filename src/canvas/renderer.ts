@@ -31,6 +31,8 @@ export interface RendererHandle {
   getCanvasCropRect(): { x: number; y: number; width: number; height: number };
   setScaleBounds(min: number, max: number): void;
   setBleedConfig(config: BleedConfig): void;
+  /** Toggle the `'fixed'` variant: cover-fit photo, no resize/move handles. */
+  setFixedFrame(fixed: boolean): void;
   resize(): void;
   destroy(): void;
 }
@@ -109,6 +111,7 @@ export function createRenderer(
   let bounceVelocity = 0;
   let scaleMin = 0.5;
   let scaleMax = 5;
+  let fixedFrame = false;
 
   function resize(): void {
     if (destroyed) return;
@@ -370,8 +373,8 @@ export function createRenderer(
 
     const imgRect = getImageDisplayRect();
 
-    // 3. Image layer
-    drawImageLayer(ctx, image, imgRect, displayState);
+    // 3. Image layer — cover-fit in the fixed variant.
+    drawImageLayer(ctx, image, imgRect, displayState, fixedFrame);
 
     // 4. Overlay mask + 5. crop frame — both pull theme-aware colors from
     // CSS variables each frame so light/dark themes swap instantly.
@@ -381,15 +384,25 @@ export function createRenderer(
     const cssVar = (name: string, fallback: string): string =>
       getComputedStyle(themeHost).getPropertyValue(name).trim() || fallback;
 
-    const overlayColor = cssVar('--sfx-cr-overlay-color', 'rgba(0, 0, 0, 0.55)');
-    drawOverlayLayer(ctx, cw, ch, cropCanvas, shapeType, borderRadius, overlayColor);
+    // In the fixed variant the rectangular frame IS the whole editor box, so
+    // there is no "outside" to dim — skip the overlay. Circle / rounded-rect
+    // still mask their corners, so keep it for those shapes.
+    if (!(fixedFrame && shapeType === 'rect')) {
+      const overlayColor = cssVar('--sfx-cr-overlay-color', 'rgba(0, 0, 0, 0.55)');
+      drawOverlayLayer(ctx, cw, ch, cropCanvas, shapeType, borderRadius, overlayColor);
+    }
 
-    drawCropFrame(ctx, cropCanvas, shapeType, borderRadius, {
-      frame: cssVar('--sfx-cr-frame-color', '#ffffff'),
-      frameShadow: cssVar('--sfx-cr-frame-shadow', 'rgba(0, 0, 0, 0.3)'),
-      handleFill: cssVar('--sfx-cr-handle-fill', '#ffffff'),
-      handleStroke: cssVar('--sfx-cr-handle-stroke', 'rgba(0, 0, 0, 0.25)'),
-    });
+    // The rectangular fixed frame coincides with the editor-box edge, so its
+    // border is redundant — skip it. Circle / rounded-rect keep their outline
+    // (it conveys the crop shape). Classic always draws the frame + handles.
+    if (!(fixedFrame && shapeType === 'rect')) {
+      drawCropFrame(ctx, cropCanvas, shapeType, borderRadius, {
+        frame: cssVar('--sfx-cr-frame-color', '#ffffff'),
+        frameShadow: cssVar('--sfx-cr-frame-shadow', 'rgba(0, 0, 0, 0.3)'),
+        handleFill: cssVar('--sfx-cr-handle-fill', '#ffffff'),
+        handleStroke: cssVar('--sfx-cr-handle-stroke', 'rgba(0, 0, 0, 0.25)'),
+      }, !fixedFrame);
+    }
 
     // 5.5. Bleed margins
     if (bleedConfig.show) {
@@ -445,6 +458,11 @@ export function createRenderer(
 
     setBleedConfig(config: BleedConfig) {
       bleedConfig = config;
+      dirty = true;
+    },
+
+    setFixedFrame(fixed: boolean) {
+      fixedFrame = fixed;
       dirty = true;
     },
 

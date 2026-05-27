@@ -122,6 +122,8 @@ export class SfxCropShapesElement extends SfxCropBaseElement {
   ];
 
   @property({ type: Boolean, reflect: true }) open = false;
+  /** Reflected so the trigger can pick up a translucent pill in the fixed variant. */
+  @property({ type: String, reflect: true }) variant: 'classic' | 'fixed' = 'classic';
   @property({ attribute: false }) icons: CropIconOverrides = {};
 
   @state() private orientation: Orientation = 'landscape';

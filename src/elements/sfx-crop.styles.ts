@@ -43,10 +43,11 @@ export const sfxCropStyles = css`
        visible curves at the corners (outer + inner padding edge),
        reading as a "double ring"; a slightly stronger shadow gives the
        same elevation feel with a single clean rounded silhouette. */
+    /* shadow-xs ring + shadow-md elevation, sourced from ui-tw scale */
     box-shadow:
-      0 0 0 1px rgba(15, 23, 42, 0.06),
-      0 4px 12px rgba(15, 23, 42, 0.06),
-      0 16px 40px rgba(15, 23, 42, 0.08);
+      0 0 0 1px oklch(0 0 0 / 0.05),
+      0 4px 6px -1px oklch(0 0 0 / 0.1),
+      0 2px 4px -2px oklch(0 0 0 / 0.1);
     font-family: var(--sfx-cr-font);
     user-select: none;
     -webkit-user-select: none;
@@ -80,7 +81,7 @@ export const sfxCropStyles = css`
   }
 
   .sfx-cr-loading-text {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     color: var(--sfx-cr-text-secondary);
     letter-spacing: 0.2px;

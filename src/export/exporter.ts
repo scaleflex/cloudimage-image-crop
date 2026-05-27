@@ -1,5 +1,6 @@
 import type { TransformState, TransformParams } from '../core/types';
 import { degreesToRadians } from '../utils/math';
+import { computeCoverDraw } from '../canvas/image-layer';
 
 function get2DContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
   const ctx = canvas.getContext('2d');
@@ -42,29 +43,77 @@ export function renderToCanvas(
   maxHeight: number,
   cropShape: string = 'free',
   borderRadius: number = 20,
+  /**
+   * Width (CSS px) of the editor's layout container at the moment of export.
+   * The renderer stores `state.panX/panY` in container CSS pixels; we draw
+   * at iw×ih image pixels, so pan must be rescaled by iw/containerWidth or
+   * the exported framing drifts under any non-zero pan (e.g. after zoom).
+   * Falls back to iw (no rescaling) when callers don't have the dim.
+   */
+  containerWidth: number = 0,
+  /** Editor box height (CSS px) — required for the fixed variant's cover math. */
+  containerHeight: number = 0,
+  /** Display variant — `'fixed'` switches to frame-box + cover export. */
+  variant: 'classic' | 'fixed' = 'classic',
 ): HTMLCanvasElement {
   const iw = image.naturalWidth;
   const ih = image.naturalHeight;
 
-  // Calculate output dimensions
-  let outW = Math.round(state.cropRect.width * iw);
-  let outH = Math.round(state.cropRect.height * ih);
+  const fixed = variant === 'fixed' && containerWidth > 0 && containerHeight > 0;
 
-  // Swap dimensions for 90/270° rotations
-  const is90 = Math.round(state.quarterTurns / 90) % 2 !== 0;
-  if (is90) {
-    [outW, outH] = [outH, outW];
+  // Choose the display coordinate system (DW×DH) the transform chain is
+  // replayed in, and the photo's draw size within it.
+  //
+  // Classic: the editor box has the photo's natural aspect, so display space
+  // IS image-pixel space (DW=iw, DH=ih) and the photo fills it edge-to-edge.
+  // cropRect is normalized to this display rect — we replay the chain and
+  // slice cropRect out (handles quarterTurns/flip/tilt correctly).
+  //
+  // Fixed: the editor box has the FRAME aspect and the photo is drawn COVER.
+  // The whole box is the crop (cropRect = {0,0,1,1}), so display space is the
+  // frame box scaled up to roughly native photo resolution.
+  let DW: number;
+  let DH: number;
+  let drawW: number;
+  let drawH: number;
+
+  if (fixed) {
+    const coverCss = computeCoverDraw(containerWidth, containerHeight, iw, ih, state.quarterTurns);
+    // Image px per CSS px — render the box at this density to keep the photo
+    // near its native resolution.
+    const density = Math.max(iw / coverCss.drawW, ih / coverCss.drawH);
+    DW = Math.max(1, Math.round(containerWidth * density));
+    DH = Math.max(1, Math.round(containerHeight * density));
+    const coverOut = computeCoverDraw(DW, DH, iw, ih, state.quarterTurns);
+    drawW = coverOut.drawW;
+    drawH = coverOut.drawH;
+  } else {
+    DW = iw;
+    DH = ih;
+    const is90 = Math.round(state.quarterTurns / 90) % 2 !== 0;
+    const fit = is90 ? Math.min(DW, DH) / Math.max(DW, DH) : 1;
+    drawW = DW * fit;
+    drawH = DH * fit;
   }
 
-  // Apply max dimensions
+  const cropX = state.cropRect.x * DW;
+  const cropY = state.cropRect.y * DH;
+  const cropW = state.cropRect.width * DW;
+  const cropH = state.cropRect.height * DH;
+
+  let outW = Math.max(1, Math.round(cropW));
+  let outH = Math.max(1, Math.round(cropH));
+
   if (maxWidth > 0 && outW > maxWidth) {
-    outH = Math.round(outH * (maxWidth / outW));
+    outH = Math.max(1, Math.round(outH * (maxWidth / outW)));
     outW = maxWidth;
   }
   if (maxHeight > 0 && outH > maxHeight) {
-    outW = Math.round(outW * (maxHeight / outH));
+    outW = Math.max(1, Math.round(outW * (maxHeight / outH)));
     outH = maxHeight;
   }
+
+  const renderScale = outW / cropW;
 
   const canvas = document.createElement('canvas');
   canvas.width = outW;
@@ -73,31 +122,44 @@ export function renderToCanvas(
 
   ctx.save();
 
-  // Move origin to center
-  ctx.translate(outW / 2, outH / 2);
+  // Map display-space rect (cropX, cropY, cropW, cropH) → (0, 0, outW, outH).
+  ctx.scale(renderScale, renderScale);
+  ctx.translate(-cropX, -cropY);
 
-  // Apply rotation
-  const totalRotation = state.quarterTurns + state.rotation;
-  if (totalRotation !== 0) {
-    ctx.rotate(degreesToRadians(totalRotation));
+  // Mirror image-layer.ts transform chain in DW×DH display space.
+  const liveCx = (state.cropRect.x + state.cropRect.width / 2) * DW;
+  const liveCy = (state.cropRect.y + state.cropRect.height / 2) * DH;
+  const tiltPivot = state.rotationPivot ?? {
+    x: state.cropRect.x + state.cropRect.width / 2,
+    y: state.cropRect.y + state.cropRect.height / 2,
+  };
+  const tiltCx = tiltPivot.x * DW;
+  const tiltCy = tiltPivot.y * DH;
+
+  if (state.rotation !== 0) {
+    ctx.translate(tiltCx, tiltCy);
+    ctx.rotate(degreesToRadians(state.rotation));
+    ctx.translate(-tiltCx, -tiltCy);
   }
-
-  // Apply flip
   if (state.flipH || state.flipV) {
+    ctx.translate(liveCx, liveCy);
     ctx.scale(state.flipH ? -1 : 1, state.flipV ? -1 : 1);
+    ctx.translate(-liveCx, -liveCy);
   }
 
-  // Draw the cropped portion of the image
-  const sx = state.cropRect.x * iw;
-  const sy = state.cropRect.y * ih;
-  const sw = state.cropRect.width * iw;
-  const sh = state.cropRect.height * ih;
+  ctx.translate(DW / 2, DH / 2);
+  ctx.scale(state.scale, state.scale);
+  // Pan is stored in editor-box CSS px; rescale into display space. In fixed
+  // mode the box width is `containerWidth`; in classic it's the image width.
+  const panFactor = containerWidth > 0 ? DW / containerWidth : 1;
+  ctx.translate(state.panX * panFactor, state.panY * panFactor);
+  if (state.quarterTurns !== 0) {
+    ctx.rotate(degreesToRadians(state.quarterTurns));
+  }
 
-  // After rotation, the draw dimensions may be swapped
-  const drawW = is90 ? outH : outW;
-  const drawH = is90 ? outW : outH;
-
-  ctx.drawImage(image, sx, sy, sw, sh, -drawW / 2, -drawH / 2, drawW, drawH);
+  // `drawW`/`drawH` computed above: cover-fit (fixed) or shorter-axis fit on a
+  // 90° turn (classic, matches image-layer.ts).
+  ctx.drawImage(image, -drawW / 2, -drawH / 2, drawW, drawH);
 
   ctx.restore();
 

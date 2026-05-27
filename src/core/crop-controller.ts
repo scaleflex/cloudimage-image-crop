@@ -19,6 +19,7 @@ import {
   applyPan,
 } from '../transforms/transform-state';
 import { createRenderer, type RendererHandle, type CropShapeType } from '../canvas/renderer';
+import { clampCoverPanScale } from '../transforms/constrain';
 import { hitTest, getCursor } from '../canvas/hit-test';
 import { createPointerTracker, type PointerTrackerHandle } from '../interactions/pointer-tracker';
 import { startDragCrop, updateDragCrop, type DragCropState } from '../interactions/drag-crop';
@@ -28,7 +29,6 @@ import { handleWheelZoom } from '../interactions/wheel-zoom';
 import { setupKeyboard, type KeyboardHandle } from '../a11y/keyboard';
 import { announceState } from '../a11y/aria';
 import { renderToCanvas, canvasToBlob, getTransformParams } from '../export/exporter';
-import { clamp } from '../utils/math';
 
 /**
  * Callbacks invoked by the controller in response to state transitions.
@@ -54,12 +54,6 @@ export interface CropControllerCallbacks {
    * pointer activity.
    */
   onWheelZoomActivity?(): void;
-  /**
-   * Fired on every wheel notch that scrubs rotation (the rotation-mode
-   * branch of the wheel handler). Host uses this to surface the rotate
-   * slider UI — symmetric with {@link onWheelZoomActivity}.
-   */
-  onWheelRotationActivity?(): void;
   /** Fired when loading/error UI needs to change. */
   onLoadingChange?(loading: boolean, error: string | null): void;
 }
@@ -86,8 +80,6 @@ export interface CropController {
   rotateLeft(): void;
   flipHorizontal(): void;
   setRotation(deg: number): void;
-  /** When true, mouse-wheel over the canvas scrubs fine rotation instead of zoom. */
-  setRotationMode(active: boolean): void;
   setScale(scale: number): void;
   reset(): void;
   toCanvas(): HTMLCanvasElement;
@@ -132,10 +124,6 @@ export function createCropController(opts: CropControllerOptions): CropControlle
   let lastTapX = 0;
   let lastTapY = 0;
 
-  // When the rotate popover is open, wheel scrolls the fine-rotation
-  // slider instead of zooming. Host toggles this via setRotationMode().
-  let rotationMode = false;
-
   // === Initial state from config ===
   if (config.initialCrop) state = applyCropMove(state, config.initialCrop);
   if (config.initialRotation) state = applyRotation(state, config.initialRotation);
@@ -165,8 +153,49 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     };
   }
 
+  /** Normalized rect for the fixed variant: the whole editor box is the crop. */
+  const FIXED_CROP_RECT = { x: 0, y: 0, width: 1, height: 1 };
+
+  /**
+   * Keep the photo covering the crop so the export never has transparent gaps.
+   * Clamps pan + raises scale to the cover floor, and pins the renderer's lower
+   * scale bound to it so the elastic bounce can't dip under coverage.
+   *
+   * - `fixed`: the frame is the whole editor box.
+   * - `classic`: the frame is the movable/resizable crop rect (so the photo is
+   *   forced to fill whatever the user frames). Skipped on a 90°/270° turn,
+   *   where classic intentionally letterboxes the rotated photo to fit.
+   */
+  function applyCover(): void {
+    if (!image || !renderer) return;
+    const w = layoutContainer.clientWidth;
+    const h = layoutContainer.clientHeight;
+    if (w <= 0 || h <= 0) return;
+
+    let frame: { x: number; y: number; width: number; height: number };
+    if (config.variant === 'fixed') {
+      frame = { x: 0, y: 0, width: w, height: h };
+    } else {
+      // Classic keeps the existing letterbox on quarter-turns.
+      if (Math.round(state.quarterTurns / 90) % 2 !== 0) {
+        renderer.setScaleBounds(config.minScale, config.maxScale);
+        return;
+      }
+      const cr = state.cropRect;
+      frame = { x: cr.x * w, y: cr.y * h, width: cr.width * w, height: cr.height * h };
+    }
+
+    const r = clampCoverPanScale(state, w, h, frame, image.naturalWidth, image.naturalHeight);
+    state = { ...state, scale: r.scale, panX: r.panX, panY: r.panY };
+    renderer.setScaleBounds(r.minScale, config.maxScale);
+  }
+
   function syncDisplayState(): void {
     if (!renderer) return;
+    // Centralized cover enforcement: every state mutation funnels through here
+    // before the display syncs, so pan/zoom/tilt/rotate all stay covered in
+    // the fixed variant without sprinkling clamps across each handler.
+    applyCover();
     const ds: DisplayState = {
       quarterTurns: state.quarterTurns,
       rotation: state.rotation,
@@ -198,6 +227,9 @@ export function createCropController(opts: CropControllerOptions): CropControlle
       resizeDebounceTimer = null;
       if (destroyed) return;
       renderer?.resize();
+      // Cover bounds are in container px, so re-clamp after the box resizes
+      // (both variants). applyCover() inside is a no-op until an image loads.
+      syncDisplayState();
       renderer?.markDirty();
     }, 16);
   });
@@ -245,7 +277,11 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     // fixed-ratio shapes (e.g. "5:4") were stored as normalized ratios
     // that only match the target on a square image. Skip if the consumer
     // explicitly pinned an `initialCrop`.
-    if (!config.initialCrop) {
+    if (config.variant === 'fixed') {
+      // The frame box itself is the crop — pan/zoom moves the photo under it.
+      // initialCrop is ignored in this variant.
+      state = { ...state, cropRect: { ...FIXED_CROP_RECT } };
+    } else if (!config.initialCrop) {
       state = applyShapeChange(state, cropShape, image.naturalWidth, image.naturalHeight);
     }
 
@@ -264,6 +300,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     );
 
     renderer.setScaleBounds(config.minScale, config.maxScale);
+    renderer.setFixedFrame(config.variant === 'fixed');
     renderer.setBleedConfig({
       show: config.showBleedMargin,
       size: config.bleedMarginSize,
@@ -282,6 +319,8 @@ export function createCropController(opts: CropControllerOptions): CropControlle
         onZoomOut: () => setScale(state.scale - 0.1),
         onResetZoom: () => setScale(1),
         onMoveCrop: (dx, dy) => {
+          // Fixed variant has no movable frame — ignore arrow-key crop nudges.
+          if (config.variant === 'fixed') return;
           const cr = state.cropRect;
           state = applyCropMove(state, { x: cr.x + dx, y: cr.y + dy, width: cr.width, height: cr.height });
           syncDisplayState();
@@ -318,7 +357,13 @@ export function createCropController(opts: CropControllerOptions): CropControlle
         }
 
         const cropRect = renderer!.getCanvasCropRect();
-        const target: HitTarget = hitTest(pointer.x, pointer.y, cropRect);
+        let target: HitTarget = hitTest(pointer.x, pointer.y, cropRect);
+        // Fixed variant: the frame can't be resized or moved — every grab on
+        // it pans the photo. Coerce handle / move-handle hits to a plain
+        // crop-area drag so they fall into the pan branch below.
+        if (config.variant === 'fixed' && (target.type === 'handle' || target.type === 'move-handle')) {
+          target = { type: 'crop-area' };
+        }
         isInteracting = true;
 
         if (target.type === 'move-handle') {
@@ -414,12 +459,20 @@ export function createCropController(opts: CropControllerOptions): CropControlle
           return;
         }
 
-        const target = hitTest(pointer.x, pointer.y, cropRect);
-        canvas.style.cursor = getCursor(target, false);
+        if (config.variant === 'fixed') {
+          canvas.style.cursor = 'grab';
+        } else {
+          const target = hitTest(pointer.x, pointer.y, cropRect);
+          canvas.style.cursor = getCursor(target, false);
+        }
       },
 
       onHover: (pointer) => {
         if (!renderer) return;
+        if (config.variant === 'fixed') {
+          canvas.style.cursor = 'grab';
+          return;
+        }
         const cropRect = renderer.getCanvasCropRect();
         const target = hitTest(pointer.x, pointer.y, cropRect);
         canvas.style.cursor = getCursor(target, false);
@@ -456,20 +509,6 @@ export function createCropController(opts: CropControllerOptions): CropControlle
       },
 
       onWheel: (e) => {
-        if (rotationMode) {
-          // Fine-rotation scrubbing: one notch ≈ 1° (Shift = 5°).
-          e.preventDefault();
-          const step = e.shiftKey ? 5 : 1;
-          const delta = e.deltaY > 0 ? -step : step;
-          const next = clamp(state.rotation + delta, -45, 45);
-          if (next === state.rotation) return;
-          state = applyRotation(state, next);
-          callbacks.onRotationSync?.(state.rotation);
-          callbacks.onWheelRotationActivity?.();
-          syncDisplayState();
-          emitChange();
-          return;
-        }
         if (!config.wheelZoom) return;
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
@@ -509,12 +548,18 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     // change/cropChange dispatches to consumers.
     if (cropShape === shape) return;
     cropShape = shape;
-    state = applyShapeChange(
-      state,
-      shape,
-      image?.naturalWidth ?? 1,
-      image?.naturalHeight ?? 1,
-    );
+    if (config.variant === 'fixed') {
+      // Frame stays the whole box; only its aspect (driven by the element's
+      // box resize) changes. cropRect remains full; applyCover re-covers.
+      state = { ...state, cropRect: { ...FIXED_CROP_RECT } };
+    } else {
+      state = applyShapeChange(
+        state,
+        shape,
+        image?.naturalWidth ?? 1,
+        image?.naturalHeight ?? 1,
+      );
+    }
     callbacks.onShapeSync?.(shape);
     syncDisplayState();
     emitChange();
@@ -571,9 +616,13 @@ export function createCropController(opts: CropControllerOptions): CropControlle
       image?.naturalWidth ?? 1,
       image?.naturalHeight ?? 1,
     );
-    // Respect the consumer-provided initialCrop the same way the initial
-    // setup does, so reset lands back on the exact starting frame.
-    if (config.initialCrop) state = applyCropMove(state, config.initialCrop);
+    // Fixed variant: reset to the full-box crop; pan/scale snap back to the
+    // cover floor via applyCover(). initialCrop is not honored in this variant.
+    if (config.variant === 'fixed') {
+      state = { ...state, cropRect: { ...FIXED_CROP_RECT } };
+    } else if (config.initialCrop) {
+      state = applyCropMove(state, config.initialCrop);
+    }
     if (config.initialRotation) state = applyRotation(state, config.initialRotation);
     if (config.initialScale !== undefined && config.initialScale !== 1) {
       state = applyScale(state, config.initialScale, config.minScale, config.maxScale);
@@ -596,6 +645,12 @@ export function createCropController(opts: CropControllerOptions): CropControlle
       config.maxOutputHeight,
       cropShape,
       config.borderRadius,
+      // Pan is stored in the renderer's CSS-px container space; pass the
+      // container dims so the exporter can rescale pan into display space.
+      // The height + variant drive the fixed variant's cover-fit export.
+      layoutContainer.clientWidth,
+      layoutContainer.clientHeight,
+      config.variant,
     );
   }
 
@@ -618,20 +673,58 @@ export function createCropController(opts: CropControllerOptions): CropControlle
 
   function toTransformParams(): TransformParams {
     if (!image) throw new Error('No image loaded');
+    // NOTE: in the 'fixed' variant cropRect is the full box ({0,0,1,1}), so the
+    // returned `crop` spans the whole image rather than the cover-framed region
+    // — the rasterized exports (toCanvas/toBlob/toDataURL) are the source of
+    // truth for that variant. Server-side replication of fixed-mode framing
+    // from these params is not yet supported.
     return getTransformParams(state, image.naturalWidth, image.naturalHeight);
   }
 
   function update(partial: Partial<SfxCropConfig>): void {
     if (destroyed) return;
     const oldSrc = config.src;
+    const oldVariant = config.variant;
     config = mergeConfig({ ...config, ...partial });
     if (partial.cropShape !== undefined) setCropShape(partial.cropShape);
+    if (partial.variant !== undefined && partial.variant !== oldVariant) {
+      renderer?.setFixedFrame(config.variant === 'fixed');
+      if (config.variant === 'fixed') {
+        state = { ...state, cropRect: { ...FIXED_CROP_RECT } };
+      } else {
+        // Back to classic: restore an editable, centered frame and the
+        // config-driven scale bounds (applyCover no longer runs to pin them).
+        renderer?.setScaleBounds(config.minScale, config.maxScale);
+        state = applyShapeChange(state, cropShape, image?.naturalWidth ?? 1, image?.naturalHeight ?? 1);
+      }
+      syncDisplayState();
+      emitChange();
+      emitCropChange();
+    }
     if (partial.src !== undefined && partial.src !== oldSrc) {
       // loadImage already surfaces failures through onError; swallow the
       // promise so consumers calling update() synchronously don't trigger
       // `unhandledrejection` on decode errors.
       void loadImage(partial.src).catch(() => {});
     }
+    // Re-push bleed guides when any bleed key changes — initEditor sets these
+    // once, so toggling them at runtime (e.g. showBleedMargin) must refresh
+    // the renderer or the change never reaches the canvas.
+    if (
+      partial.showBleedMargin !== undefined ||
+      partial.bleedMarginSize !== undefined ||
+      partial.bleedMarginColor !== undefined
+    ) {
+      renderer?.setBleedConfig({
+        show: config.showBleedMargin,
+        size: config.bleedMarginSize,
+        color: config.bleedMarginColor,
+      });
+    }
+    // The grid's resting opacity is derived in syncDisplayState() from
+    // config.showGrid, so re-sync when it toggles or the grid won't appear /
+    // disappear until the next pointer interaction.
+    if (partial.showGrid !== undefined) syncDisplayState();
     // Colours are sampled from CSS vars each frame (see renderer), but the
     // loop only repaints when `dirty`. Flip it here so theme/token swaps
     // repaint without waiting for the next pointer event.
@@ -654,10 +747,6 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     }
   }
 
-  function setRotationMode(active: boolean): void {
-    rotationMode = active;
-  }
-
   return {
     loadImage,
     getTransformState,
@@ -667,7 +756,6 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     rotateLeft,
     flipHorizontal,
     setRotation,
-    setRotationMode,
     setScale,
     reset,
     toCanvas,

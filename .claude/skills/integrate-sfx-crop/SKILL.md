@@ -82,6 +82,7 @@ For SSR frameworks (Next.js App Router, Remix), the `@scaleflex/crop/react` modu
 | Custom ratio                            | `crop-shape="2.35:1"` |
 | Free crop                               | `crop-shape="free"` |
 | Round avatar                            | `crop-shape="circle"` |
+| Fixed "window" crop (avatar / phone)    | `variant="fixed"` — editor box is the frame, photo cover-fit + panned underneath, no resize handles. Combine with any `crop-shape`. Default is `variant="classic"` (movable/resizable frame). |
 | Restrict the toolbar shape palette      | `availableShapes={['free','square','circle','16:9']}` |
 | Pre-fill a saved crop                   | `initial-crop='{"x":0.1,"y":0.1,"width":0.8,"height":0.8}'` |
 | Hide the toolbar                        | `show-toolbar="false"` (drive via `ref` instead) |

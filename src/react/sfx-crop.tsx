@@ -32,6 +32,8 @@ export interface SfxCropSaveDetail {
 export interface SfxCropProps {
   // --- Core config ---
   src?: string;
+  /** `'classic'` (default) or `'fixed'` — see `<sfx-crop>` `variant`. */
+  variant?: 'classic' | 'fixed';
   cropShape?: CropShapeName;
   theme?: 'light' | 'dark';
   initialCrop?: CropRect | null;
@@ -120,6 +122,7 @@ function applyPropOrAttr(el: SfxCropElement, key: string, value: unknown): void 
  * `loadImage()` with all other config already in place.
  */
 const FORWARDED_PROPS: readonly (keyof SfxCropProps)[] = [
+  'variant',
   'cropShape', 'theme', 'initialRotation', 'initialScale', 'initialCrop',
   'minScale', 'maxScale', 'minCropSize', 'availableShapes', 'handleSize', 'handleColor',
   'borderRadius', 'overlayColor', 'outputType', 'outputQuality', 'maxOutputWidth',

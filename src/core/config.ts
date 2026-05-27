@@ -9,6 +9,7 @@ export const TOOLBAR_RESERVE_PX = 80;
 
 export const DEFAULT_CONFIG: SfxCropConfig = {
   src: '',
+  variant: 'classic',
   cropShape: '16:9',
   initialCrop: null,
   initialRotation: 0,

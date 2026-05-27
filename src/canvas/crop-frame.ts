@@ -27,6 +27,11 @@ export function drawCropFrame(
   shapeType: 'rect' | 'circle' | 'rounded-rect' = 'rect',
   borderRadius: number = 20,
   theme: FrameTheme = DEFAULT_THEME,
+  /**
+   * Draw the resize corner handles + move-handle. The `'fixed'` variant turns
+   * these off — its frame can't be resized or moved, only the photo moves.
+   */
+  handles: boolean = true,
 ): void {
   const isCircle = shapeType === 'circle';
   const isRoundedRect = shapeType === 'rounded-rect';
@@ -78,6 +83,12 @@ export function drawCropFrame(
     ctx.stroke();
   } else {
     ctx.strokeRect(x, y, width, height);
+  }
+
+  // Fixed variant: border only, no resize/move affordances.
+  if (!handles) {
+    ctx.restore();
+    return;
   }
 
   // Draw corner handles (circles)
