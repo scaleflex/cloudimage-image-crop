@@ -91,6 +91,15 @@ pnpm add @scaleflex/crop
 
 ### CDN
 
+The official Scaleflex CDN serves a single self-contained bundle that registers
+`<sfx-crop>` on load (plain `<script>`, no build step):
+
+```html
+<script src="https://cdn.scaleflex.com/crop/2.0.1/crop.min.js"></script>
+```
+
+Or load the ESM build straight from npm via jsDelivr / unpkg:
+
 ```html
 <script type="module"
         src="https://cdn.jsdelivr.net/npm/@scaleflex/crop/dist/define.js"></script>
@@ -154,7 +163,8 @@ export function Editor() {
 ### CDN
 
 ```html
-<script type="module" src="https://cdn.jsdelivr.net/npm/@scaleflex/crop/dist/define.js"></script>
+<!-- Self-contained bundle from the Scaleflex CDN -->
+<script src="https://cdn.scaleflex.com/crop/2.0.1/crop.min.js"></script>
 <sfx-crop src="https://cdn.example.com/photo.jpg" crop-shape="square"></sfx-crop>
 ```
 
