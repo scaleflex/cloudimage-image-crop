@@ -1,57 +1,21 @@
-PROPRIETARY SOFTWARE LICENSE
+MIT License
 
-Copyright (c) 2026 Scaleflex SAS. All Rights Reserved.
+Copyright (c) 2026 scaleflex
 
-NOTICE: This software and associated documentation files (the "Software") are
-the exclusive property of Scaleflex SAS. The Software is protected by copyright
-laws, international treaties, and other intellectual property laws.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-RESTRICTIONS
-
-You may NOT, without prior written permission from Scaleflex SAS:
-
-1. Copy, reproduce, or duplicate the Software, in whole or in part.
-
-2. Modify, adapt, translate, reverse engineer, decompile, or disassemble the
-   Software, or create derivative works based on the Software.
-
-3. Distribute, sublicense, lease, rent, loan, sell, or otherwise transfer the
-   Software or any rights therein to any third party.
-
-4. Remove, alter, or obscure any proprietary notices, labels, or marks on the
-   Software.
-
-5. Use the Software for any purpose other than as expressly authorised under a
-   separate written licence agreement with Scaleflex SAS.
-
-GRANT OF LICENCE
-
-Use of this Software is permitted only under a separate written licence
-agreement between the licensee and Scaleflex SAS. Installing or downloading
-this Software does not, by itself, grant any licence or right to use the
-Software.
-
-NO WARRANTY
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL
-SCALEFLEX SAS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN
-AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-ENFORCEMENT
-
-Unauthorised use, reproduction, or distribution of this Software, or any
-portion thereof, may result in severe civil and criminal penalties and will be
-prosecuted to the maximum extent permitted by applicable law.
-
-CONTACT
-
-For licensing enquiries:
-
-Scaleflex SAS
-
-Email: sales@scaleflex.com
-
-Web: https://www.scaleflex.com
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

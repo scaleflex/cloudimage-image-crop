@@ -102,7 +102,7 @@ export function invertMatrix(m: Matrix2D): Matrix2D {
 export function buildTransformMatrix(
   state: TransformState,
   canvasSize: Size,
-  imageSize: Size,
+  _imageSize: Size,
 ): DOMMatrix {
   const canvasCx = canvasSize.width / 2;
   const canvasCy = canvasSize.height / 2;

@@ -1,0 +1,11 @@
+{
+  "name": "scaleflex-crop-vanilla-example",
+  "version": "1.0.0",
+  "description": "@scaleflex/crop - Vanilla JavaScript Example",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve . -l 5175"
+  },
+  "keywords": ["crop", "image-editor", "scaleflex", "web-component"],
+  "license": "MIT"
+}

@@ -7,7 +7,7 @@ import { writeFileSync } from 'node:fs';
 
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const PORT = 9224;
-const URL = process.argv[2] || 'http://localhost:5175/js-cloudimage-crop/';
+const URL = process.argv[2] || 'http://localhost:5175/image-crop/';
 const OUT = process.argv[3] || 'scripts/home-screenshot.png';
 
 const child = spawn(

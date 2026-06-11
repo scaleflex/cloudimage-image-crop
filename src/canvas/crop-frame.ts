@@ -1,6 +1,4 @@
 const CORNER_HANDLE_SIZE = 12;
-const EDGE_HANDLE_W = 24;
-const EDGE_HANDLE_H = 6;
 const HIT_AREA_PAD = 22; // 44px / 2 for 44×44 hit area
 /** Diagonal offset of the move-handle from the NW corner, in canvas px. */
 const MOVE_HANDLE_OFFSET = 11;

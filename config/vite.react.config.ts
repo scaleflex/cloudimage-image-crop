@@ -43,7 +43,8 @@ export default defineConfig({
     },
     sourcemap: true,
     outDir: resolve(__dirname, '../dist/react'),
-    emptyOutDir: false,
+    // Runs after build:bundle; clears only its own dist/react/ subdir.
+    emptyOutDir: true,
   },
   resolve: {
     alias: {

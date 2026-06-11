@@ -2,7 +2,7 @@
   "name": "@scaleflex/crop",
   "version": "2.0.0",
   "description": "Interactive image crop tool with rotation, flip, zoom and shape selection — Scaleflex Web Component",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
   "author": "Scaleflex",
   "type": "module",
   "exports": {
@@ -23,8 +23,12 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.map"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "sideEffects": [
     "dist/define.js",
     "dist/define.cjs",
@@ -68,6 +72,7 @@
     "@typescript-eslint/parser": "^8.0.0",
     "@vitejs/plugin-react": "^4.0.0",
     "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
     "jsdom": "^25.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -92,10 +97,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/scaleflex/js-cloudimage-crop.git"
+    "url": "https://github.com/scaleflex/image-crop.git"
   },
   "bugs": {
-    "url": "https://github.com/scaleflex/js-cloudimage-crop/issues"
+    "url": "https://github.com/scaleflex/image-crop/issues"
   },
-  "homepage": "https://scaleflex.github.io/js-cloudimage-crop/"
+  "homepage": "https://scaleflex.github.io/image-crop/"
 }

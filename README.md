@@ -1,13 +1,60 @@
-# @scaleflex/crop
+<p align="center">
+  <a href="https://www.scaleflex.com/en/home">
+    <img width="350" src="https://scaleflex.cloudimg.io/v7/plugins/scaleflex/logo.png?vh=b0a502&radius=25&w=700" alt="Scaleflex logo">
+  </a>
+</p>
 
-[![npm version](https://img.shields.io/npm/v/@scaleflex/crop.svg)](https://www.npmjs.com/package/@scaleflex/crop)
-[![npm downloads](https://img.shields.io/npm/dm/@scaleflex/crop.svg)](https://www.npmjs.com/package/@scaleflex/crop)
-[![bundle size](https://img.shields.io/bundlephobia/minzip/@scaleflex/crop.svg)](https://bundlephobia.com/package/@scaleflex/crop)
-[![license](https://img.shields.io/badge/license-Proprietary-red.svg)](./LICENSE)
+<h1 align="center">Cloudimage Crop</h1>
 
-Interactive image-crop editor as a framework-agnostic web component, with a thin React wrapper and a headless controller for fully custom UIs.
+<p align="center">
+  <strong>An interactive image-crop editor web component — rotation, fine tilt, flip, zoom and shape selection</strong>
+</p>
 
-# Overview
+<p align="center">
+  <a href="https://www.npmjs.com/package/@scaleflex/crop">
+    <img src="https://img.shields.io/npm/v/@scaleflex/crop.svg" alt="Release">
+  </a>
+  <a href="https://bundlephobia.com/package/@scaleflex/crop">
+    <img src="https://img.shields.io/bundlephobia/minzip/@scaleflex/crop.svg" alt="Size">
+  </a>
+  <a href="https://www.npmjs.com/package/@scaleflex/crop">
+    <img src="https://img.shields.io/npm/dm/@scaleflex/crop.svg" alt="Downloads">
+  </a>
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
+  </a>
+  <a href="https://www.cloudimage.io/en/home">
+    <img src="https://img.shields.io/badge/Powered%20by-Cloudimage-blue" alt="Cloudimage">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://scaleflex.github.io/image-crop/">View Demo</a> ·
+  <a href="https://codesandbox.io/p/sandbox/github/scaleflex/image-crop/tree/master/codesandbox/react">React CodeSandbox</a> ·
+  <a href="https://codesandbox.io/p/sandbox/github/scaleflex/image-crop/tree/master/codesandbox/vanilla">Vanilla CodeSandbox</a> ·
+  <a href="https://github.com/scaleflex/image-crop/issues">Report Bug</a>
+</p>
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Variants](#variants)
+- [Public Methods](#public-methods)
+- [Events](#events)
+- [React API](#react-api)
+- [Theming](#theming)
+- [Types Reference](#types-reference)
+- [Browser Support](#browser-support)
+- [Release](#release)
+- [Claude Code Integration](#claude-code-integration)
+- [License](#license)
+
+## Overview
 
 `@scaleflex/crop` ships `<sfx-crop>`, a Lit-based custom element that renders a canvas-backed crop editor with rotation, fine tilt (±45°), horizontal/vertical flip, zoom, pan, and a configurable shape palette (free, square, circle, rounded-rect, plus arbitrary `W:H` ratio strings). The same engine is exposed three ways:
 
@@ -15,7 +62,7 @@ Interactive image-crop editor as a framework-agnostic web component, with a thin
 - a React component (`<SfxCrop>`) plus hooks (`useSfxCrop`, `useSfxCropController`);
 - a headless `createCropController({ canvas, host, config })` factory that drives a consumer-owned `<canvas>` with zero built-in UI.
 
-# Features
+## Features
 
 - Two display variants: `classic` (movable / resizable crop frame over the photo) and `fixed` (the editor box *is* the crop frame — the photo is cover-fit and panned underneath, e.g. avatar / phone-style cropping). See [Variants](#variants).
 - Rotation in 90° increments and fine tilt slider (-45°…+45°), horizontal flip, pinch / wheel / button zoom, keyboard shortcuts.
@@ -26,13 +73,13 @@ Interactive image-crop editor as a framework-agnostic web component, with a thin
 - Export to `HTMLCanvasElement`, `Blob`, data URL, or a serialisable `TransformParams` object suitable for server-side processing.
 - Three packaging entry points so consumers pay for only what they use.
 
-# Requirements
+## Requirements
 
 Modern evergreen browsers with Canvas 2D, Pointer Events, ResizeObserver, CSS container queries, and Custom Elements v1. React 18+ for the React entry. Node 18+ recommended for tooling.
 
-# Installation
+## Installation
 
-## npm / yarn / pnpm
+### npm / yarn / pnpm
 
 ```bash
 npm install @scaleflex/crop
@@ -42,14 +89,14 @@ yarn add @scaleflex/crop
 pnpm add @scaleflex/crop
 ```
 
-## CDN
+### CDN
 
 ```html
 <script type="module"
         src="https://cdn.jsdelivr.net/npm/@scaleflex/crop/dist/define.js"></script>
 ```
 
-## Package exports
+### Package exports
 
 | Specifier | Purpose |
 |---|---|
@@ -57,9 +104,9 @@ pnpm add @scaleflex/crop
 | `@scaleflex/crop/define`  | Side-effectful — registers the `<sfx-crop>` custom element. Import once at bootstrap. |
 | `@scaleflex/crop/react`   | React component `<SfxCrop>`, `useSfxCrop` / `useSfxCropController` hooks, plus re-exports of `createCropController`, `mergeConfig`, `DEFAULT_CONFIG`, and the public types. |
 
-# Quick Start
+## Quick Start
 
-## Vanilla JS / Web Component
+### Vanilla JS / Web Component
 
 ```html
 <script type="module">
@@ -83,7 +130,7 @@ pnpm add @scaleflex/crop
 </script>
 ```
 
-## React
+### React
 
 ```tsx
 import { SfxCrop, type SfxCropElement } from '@scaleflex/crop/react';
@@ -104,20 +151,20 @@ export function Editor() {
 }
 ```
 
-## CDN
+### CDN
 
 ```html
 <script type="module" src="https://cdn.jsdelivr.net/npm/@scaleflex/crop/dist/define.js"></script>
 <sfx-crop src="https://cdn.example.com/photo.jpg" crop-shape="square"></sfx-crop>
 ```
 
-# Configuration
+## Configuration
 
 All options below are exposed as both HTML attributes (kebab-case) and DOM properties (camelCase) on `<sfx-crop>`. Object/array options should be set as DOM properties; primitives can be set either way.
 
-## Attributes / Properties
+### Attributes / Properties
 
-### Image & shape
+#### Image & shape
 
 | Attribute / Property | Type | Default | Description |
 |---|---|---|---|
@@ -129,7 +176,7 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `initial-rotation` / `initialRotation` | `number` | `0`  | Starting fine rotation, degrees. |
 | `initial-scale`    / `initialScale`    | `number` | `1`  | Starting zoom level. |
 
-### Constraints
+#### Constraints
 
 | Attribute / Property | Type | Default | Description |
 |---|---|---|---|
@@ -139,7 +186,7 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `handle-size` / `handleSize`       | `number` | `12`  | Resize-handle radius. |
 | `border-radius` / `borderRadius`   | `number` | `20`  | Corner radius for the `rounded-rect` shape. |
 
-### Theme & colours
+#### Theme & colours
 
 | Attribute / Property | Type | Default | Description |
 |---|---|---|---|
@@ -159,7 +206,7 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 > `toBlob()`, `toDataURL()`, and the `sfx-crop-save` payload never contain the
 > dashed line and the crop is not inset by it.
 
-### UI toggles
+#### UI toggles
 
 | Attribute / Property | Type | Default | Description |
 |---|---|---|---|
@@ -172,7 +219,7 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `show-shape-selector` / `showShapeSelector`  | `boolean`                  | `true` | Shape dropdown. |
 | `show-grid` / `showGrid`                     | `boolean \| 'interaction'` | `'interaction'` | Rule-of-thirds overlay; `'interaction'` shows it only while dragging. |
 
-### Output
+#### Output
 
 | Attribute / Property | Type | Default | Description |
 |---|---|---|---|
@@ -181,7 +228,7 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `max-output-width` / `maxOutputWidth`  | `number` | `0`           | `0` = original. |
 | `max-output-height` / `maxOutputHeight`| `number` | `0`           | `0` = original. |
 
-### Behaviour
+#### Behaviour
 
 | Attribute / Property | Type | Default | Description |
 |---|---|---|---|
@@ -192,15 +239,15 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `animation-speed` / `animationSpeed`     | `number`  | `1.0`  | Multiplier on the default spring. |
 | `icons` (property only)             | `CropIconOverrides` | `{}` | SVG-string slot overrides — see `CropIconOverrides` in `src/core/types.ts`. |
 
-# Variants
+## Variants
 
 The `variant` attribute switches how the crop is presented. Both share the same engine, tools, events, and export.
 
-## `classic` (default)
+### `classic` (default)
 
 The photo fills the editor at its own aspect ratio and a **movable / resizable crop frame** floats over it (resize handles + a move-handle), with the area outside the frame dimmed by `overlay-color`. Drag inside the frame to pan the photo, drag the handles to resize.
 
-## `fixed`
+### `fixed`
 
 The **editor box itself is the crop frame**, sized to the `crop-shape` aspect and centred (portrait, landscape, square, circle, rounded-rect — anything). The photo is **cover-fit** and panned/zoomed/rotated underneath; there are no resize handles, and the toolbar is overlaid on the frame. This is the avatar- / phone-style "fixed window, moving photo" pattern.
 
@@ -208,15 +255,15 @@ The **editor box itself is the crop frame**, sized to the `crop-shape` aspect an
 <sfx-crop src="/photo.jpg" variant="fixed" crop-shape="1:1"></sfx-crop>
 ```
 
-## Cover guarantee
+### Cover guarantee
 
 In **both** variants the photo is constrained to always fully cover the crop frame — zoom and pan are clamped (and the minimum zoom is raised) so the exported image never contains transparent gaps. The one exception is a 90°/270° turn in `classic`, which intentionally letterboxes the rotated photo to fit the frame.
 
-## Built-in "Done" button
+### Built-in "Done" button
 
 The toolbar renders a primary **Done** button pinned to the right edge. It calls [`save()`](#public-methods) — building `blob` + `dataURL` + `params` and dispatching `sfx-crop-save` — so a host app can commit the crop without wiring its own button. Handle `sfx-crop-save` to upload / persist / close. (Hide the whole toolbar with `show-toolbar="false"` if you prefer to drive everything imperatively.)
 
-# Public Methods
+## Public Methods
 
 All methods live on the `<sfx-crop>` element instance. They throw if invoked before `sfx-crop-ready` fires.
 
@@ -239,7 +286,7 @@ All methods live on the `<sfx-crop>` element instance. They throw if invoked bef
 | `save(type?, quality?)`             | `Promise<void>`         | Convenience: builds blob + dataURL + params and dispatches `sfx-crop-save`. |
 | `cancel()`                          | `void`                  | Dispatches `sfx-crop-cancel`. |
 
-# Events
+## Events
 
 All events bubble and cross shadow boundaries (`bubbles: true, composed: true`).
 
@@ -253,9 +300,9 @@ All events bubble and cross shadow boundaries (`bubbles: true, composed: true`).
 | `sfx-crop-cancel`       | `undefined`                                | `.cancel()` invoked. |
 | `sfx-crop-error`        | `{ error: Error }`                         | Image-load or export error. |
 
-# React API
+## React API
 
-## `<SfxCrop>` component
+### `<SfxCrop>` component
 
 `forwardRef` component that mirrors the element's attributes as camelCase props and bridges every `sfx-crop-*` event into a matching `on*` callback.
 
@@ -280,7 +327,7 @@ import { SfxCrop } from '@scaleflex/crop/react';
 
 The `ref` resolves to the underlying `SfxCropElement`, so every imperative method above is callable directly.
 
-## `useSfxCrop()` hook
+### `useSfxCrop()` hook
 
 For consumers who prefer to render `<sfx-crop>` themselves and pull stable callables off a hook:
 
@@ -294,13 +341,13 @@ return <sfx-crop ref={ref} src="..." />;
 
 `ready` flips to `true` after `sfx-crop-ready`. All callables are no-ops before then.
 
-## `useSfxCropController()` hook (headless)
+### `useSfxCropController()` hook (headless)
 
 Drives the same controller against a consumer-owned `<canvas>`. Use this when the built-in toolbar isn't a fit and you need to render every UI affordance yourself. See `CropControllerState`, `CropControllerActions`, and `CropControllerApi` in `src/react/use-sfx-crop-controller.ts`.
 
-# Theming
+## Theming
 
-## Brand colour
+### Brand colour
 
 The fastest way to recolour the editor is to override one variable on the host:
 
@@ -308,31 +355,31 @@ The fastest way to recolour the editor is to override one variable on the host:
 <sfx-crop style="--sfx-cr-primary:#ff3366"></sfx-crop>
 ```
 
-## CSS Custom Properties
+### CSS Custom Properties
 
 Every visual surface is keyed off `--sfx-cr-*` tokens. The full list (see `src/styles/shared.css.ts` for the canonical defaults):
 
-### Colours
+#### Colours
 
 `--sfx-cr-primary`, `--sfx-cr-primary-hover`, `--sfx-cr-primary-mid`, `--sfx-cr-primary-bg`, `--sfx-cr-primary-glow`, `--sfx-cr-success`, `--sfx-cr-error`, `--sfx-cr-text`, `--sfx-cr-text-secondary`, `--sfx-cr-text-muted`, `--sfx-cr-border`, `--sfx-cr-border-light`, `--sfx-cr-bg`, `--sfx-cr-surface`, `--sfx-cr-canvas-bg`.
 
-### Canvas & frame
+#### Canvas & frame
 
 `--sfx-cr-overlay-color`, `--sfx-cr-frame-color`, `--sfx-cr-frame-shadow`, `--sfx-cr-handle-fill`, `--sfx-cr-handle-stroke`, `--sfx-cr-ruler-ink`, `--sfx-cr-ruler-halo`, `--sfx-cr-ring`, `--sfx-cr-shadow`.
 
 `--sfx-cr-ruler-ink` and `--sfx-cr-ruler-halo` colour the fine-tilt ruler (ticks, centre indicator, degree readout). The ruler floats directly over the photo, whose brightness is unknown, so it can't track the theme: the ink defaults to a near-white core and the halo to a dark glow wrapped around it, so the white core reads over dark images while the halo reads over bright ones (the trick subtitles use). Override both together if you want a different ink/halo pairing.
 
-### Toolbar & controls
+#### Toolbar & controls
 
 `--sfx-cr-toolbar-bg`, `--sfx-cr-toolbar-color`, `--sfx-cr-toolbar-border`, `--sfx-cr-toolbar-shadow`, `--sfx-cr-btn-size`, `--sfx-cr-btn-radius`, `--sfx-cr-btn-hover-bg`, `--sfx-cr-btn-active-bg`, `--sfx-cr-separator-color`, `--sfx-cr-slider-track`, `--sfx-cr-slider-fill`, `--sfx-cr-slider-thumb`, `--sfx-cr-dropdown-bg`, `--sfx-cr-dropdown-hover`, `--sfx-cr-dropdown-shadow`, `--sfx-cr-zoom-bar-bg`.
 
-### Typography & radius
+#### Typography & radius
 
 `--sfx-cr-font`, `--sfx-cr-radius`, `--sfx-cr-card-shadow`, `--sfx-cr-transition`.
 
 A `[theme="dark"]` selector on the host re-binds the same variables to the dark palette — no other configuration needed.
 
-## Shadow parts
+### Shadow parts
 
 Style internal regions from light DOM:
 
@@ -344,7 +391,7 @@ sfx-crop::part(error) { /* ... */ }
 sfx-crop::part(container) { /* ... */ }
 ```
 
-# Types Reference
+## Types Reference
 
 All types live in `src/core/types.ts` and are re-exported from both `@scaleflex/crop` and `@scaleflex/crop/react`.
 
@@ -355,15 +402,15 @@ All types live in `src/core/types.ts` and are re-exported from both `@scaleflex/
 - `CropIconOverrides` — per-slot SVG-string overrides for toolbar icons.
 - `SfxCropConfig` — the internal config shape consumed by `createCropController`. Element attributes mirror this 1:1.
 
-# Browser Support
+## Browser Support
 
 Latest two versions of Chrome, Firefox, Safari, and Edge. Requires Custom Elements v1, Canvas 2D, Pointer Events, ResizeObserver, and CSS container queries. No IE11 support.
 
-# Release
+## Release
 
 See [`CHANGELOG.md`](./CHANGELOG.md) for version history. The project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/) format. The full technical specification lives in [`SPECIFICATION.md`](./SPECIFICATION.md).
 
-## npm scripts
+### npm scripts
 
 | Script | Purpose |
 |---|---|
@@ -378,19 +425,19 @@ See [`CHANGELOG.md`](./CHANGELOG.md) for version history. The project follows [S
 | `npm run test:coverage` | Vitest with coverage. |
 | `npm run lint`          | ESLint over `src/` and `tests/`. |
 
-# Claude Code Integration
+## Claude Code Integration
 
 This repository ships rules and prompts that make [Claude Code](https://claude.ai/code) productive on the codebase out of the box.
 
-## Option 1: Project-level (recommended)
+### Option 1: Project-level (recommended)
 
 Drop a `CLAUDE.md` at the repo root describing the project conventions, then add project-scoped rules under `.claude/` (gitignored). Anyone with Claude Code installed picks them up automatically when they `cd` into the repo.
 
-## Option 2: Global (personal)
+### Option 2: Global (personal)
 
 Add personal rules at `~/.claude/CLAUDE.md` so they apply across every project you open.
 
-## Usage
+### Usage
 
 Once configured, run Claude Code from the repo root:
 
@@ -400,6 +447,6 @@ claude
 
 Then ask things like *"add a `setFlipVertical()` public method"* or *"explain how the controller settles after a 90° rotation"* and Claude will follow the project's conventions.
 
-# License
+## License
 
-Proprietary — Copyright (c) 2026 Scaleflex SAS. All rights reserved. See [`LICENSE`](./LICENSE) for the full terms. For licensing enquiries, contact [sales@scaleflex.com](mailto:sales@scaleflex.com).
+[MIT](./LICENSE) © 2026 Scaleflex

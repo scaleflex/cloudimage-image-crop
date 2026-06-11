@@ -57,7 +57,9 @@ export default defineConfig({
     sourcemap: true,
     minify: 'esbuild',
     outDir: resolve(__dirname, '../dist'),
-    emptyOutDir: false,
+    // Runs first in `npm run build`, so it's safe to wipe the whole dist/.
+    // build:react afterwards only clears its own dist/react/ subdir.
+    emptyOutDir: true,
   },
   resolve: {
     alias: {

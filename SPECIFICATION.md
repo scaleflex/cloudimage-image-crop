@@ -1,4 +1,4 @@
-# js-cloudimage-crop — Specification
+# @scaleflex/crop — Specification
 
 Interactive image crop tool with rotation, flip, zoom, and shape constraints.
 Inspired by Pintura's crop interface style. Part of the Scaleflex js-cloudimage-* family.

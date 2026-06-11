@@ -229,7 +229,7 @@ function renderHeader(currentPath: string): string {
           <a href="#/examples/basic"            class="demo-topbar-nav-link${isEx ? ' is-active' : ''}">Examples</a>
         </nav>
         <div class="demo-topbar-actions">
-          <a class="demo-topbar-chip" href="https://github.com/scaleflex/js-cloudimage-crop" target="_blank" rel="noopener" aria-label="GitHub repository">
+          <a class="demo-topbar-chip" href="https://github.com/scaleflex/image-crop" target="_blank" rel="noopener" aria-label="GitHub repository">
             ${ICONS.github}<span>GitHub</span>
           </a>
           <a class="demo-topbar-chip demo-topbar-chip--icon" href="https://www.npmjs.com/package/@scaleflex/crop" target="_blank" rel="noopener" aria-label="npm package">
@@ -291,7 +291,7 @@ function renderFooter(): string {
           <h4>Resources</h4>
           <a href="#/docs/getting-started">Documentation</a>
           <a href="#/examples/basic">Examples</a>
-          <a href="https://github.com/scaleflex/js-cloudimage-crop" target="_blank" rel="noopener">GitHub ${ICONS.external}</a>
+          <a href="https://github.com/scaleflex/image-crop" target="_blank" rel="noopener">GitHub ${ICONS.external}</a>
           <a href="https://www.npmjs.com/package/@scaleflex/crop" target="_blank" rel="noopener">npm ${ICONS.external}</a>
         </div>
         <div class="demo-footer-col">
@@ -447,7 +447,7 @@ export function Editor() {
         <p class="demo-hero-sub">Framework-agnostic Web Component for interactive image cropping — rotate, flip, zoom, and shape presets in a single <code>&lt;sfx-crop&gt;</code> tag.</p>
         <div class="demo-hero-actions">
           <a class="demo-btn demo-btn--primary" href="#quick-start">Get started ${ICONS.arrow}</a>
-          <a class="demo-btn demo-btn--glass" href="https://github.com/scaleflex/js-cloudimage-crop" target="_blank" rel="noopener">${ICONS.github} GitHub</a>
+          <a class="demo-btn demo-btn--glass" href="https://github.com/scaleflex/image-crop" target="_blank" rel="noopener">${ICONS.github} GitHub</a>
           <a class="demo-btn demo-btn--glass" href="https://www.npmjs.com/package/@scaleflex/crop" target="_blank" rel="noopener">${ICONS.npm} npm</a>
         </div>
         <div class="demo-hero-meta">

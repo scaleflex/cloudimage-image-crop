@@ -3,7 +3,7 @@
 import { JSDOM, VirtualConsole } from 'jsdom';
 
 const SERVER = 'http://localhost:5173';
-const BASE = '/js-cloudimage-crop/';
+const BASE = '/image-crop/';
 
 const vc = new VirtualConsole();
 const logs = [];

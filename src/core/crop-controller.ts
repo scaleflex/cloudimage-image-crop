@@ -23,7 +23,7 @@ import { computeCoverDraw } from '../canvas/image-layer';
 import { clampCoverPanScale } from '../transforms/constrain';
 import { hitTest, getCursor } from '../canvas/hit-test';
 import { createPointerTracker, type PointerTrackerHandle } from '../interactions/pointer-tracker';
-import { startDragCrop, updateDragCrop, type DragCropState } from '../interactions/drag-crop';
+import { updateDragCrop, type DragCropState } from '../interactions/drag-crop';
 import { startResize, updateResize, type ResizeState } from '../interactions/resize-handles';
 import { startPinch, type PinchState } from '../interactions/pinch-zoom';
 import { handleWheelZoom } from '../interactions/wheel-zoom';

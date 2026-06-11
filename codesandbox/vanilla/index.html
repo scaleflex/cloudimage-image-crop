@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@scaleflex/crop - Vanilla Example</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f7;
+        color: #111;
+      }
+      main {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .editor {
+        height: 460px;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        margin: 16px 0;
+      }
+      button {
+        padding: 8px 16px;
+        border: 0;
+        border-radius: 8px;
+        background: #1f6feb;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #e1e4e8;
+        color: #111;
+      }
+      #result img {
+        max-width: 100%;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>@scaleflex/crop — Vanilla example</h1>
+      <p>
+        Drag to pan, use the toolbar to rotate / flip / zoom / change the shape,
+        then hit <strong>Crop &amp; preview</strong>.
+      </p>
+
+      <div class="editor">
+        <sfx-crop
+          id="crop"
+          src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=2400&q=80"
+          crop-shape="16:9"
+          theme="light"
+        ></sfx-crop>
+      </div>
+
+      <div class="actions">
+        <button id="save">Crop &amp; preview</button>
+        <button id="reset" class="secondary">Reset</button>
+      </div>
+
+      <div id="result"></div>
+    </main>
+
+    <script type="module">
+      import 'https://cdn.jsdelivr.net/npm/@scaleflex/crop/dist/define.js';
+
+      const crop = document.getElementById('crop');
+      const result = document.getElementById('result');
+
+      document.getElementById('save').addEventListener('click', () => crop.save());
+      document.getElementById('reset').addEventListener('click', () => crop.reset());
+
+      crop.addEventListener('sfx-crop-save', (e) => {
+        const img = new Image();
+        img.src = e.detail.dataURL;
+        result.replaceChildren(img);
+      });
+    </script>
+  </body>
+</html>

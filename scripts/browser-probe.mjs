@@ -7,7 +7,7 @@ import http from 'node:http';
 
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const PORT = 9223;
-const URL = process.argv[2] || 'http://localhost:5175/js-cloudimage-crop/#/examples/basic';
+const URL = process.argv[2] || 'http://localhost:5175/image-crop/#/examples/basic';
 
 const child = spawn(
   CHROME,
