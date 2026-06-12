@@ -5,6 +5,37 @@ All notable changes to `@scaleflex/image-crop` (formerly `js-cloudimage-crop`).
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `LICENSE` now uses the canonical Scaleflex MIT text (`Copyright (c) 2022
+  SCALEFLEX SAS`) plus the **Publicity** clause, matching the other Scaleflex
+  plugins.
+
+## [2.0.2] — 2026-06-12
+
+### Changed
+
+- **Renamed the npm package `@scaleflex/crop` → `@scaleflex/image-crop`.** The
+  old `@scaleflex/crop` name was unpublished; update imports accordingly. The
+  HTML tag (`<sfx-crop>`) and events are unchanged.
+- CDN bundle moved to
+  `https://cdn.scaleflex.com/image-crop/<version>/image-crop.min.js`
+  (was `/crop/<version>/crop.min.js`).
+- Public titles: README → "Scaleflex Image Crop"; demo landing hero → "Image Crop".
+
+### Removed
+
+- "Also by Scaleflex" carousel section on the demo landing page.
+
+### Fixed
+
+- Demo footer restructured into Resources / Examples / Support columns with a
+  centered bottom bar and corrected link colors.
+- "Download PNG" button text was unreadable on hover (global `a:hover` recolor) —
+  now keeps white text with reduced opacity.
+
 ## [2.0.0] — 2026-04-21
 
 Major release. The package is renamed to `@scaleflex/image-crop` and rewritten on

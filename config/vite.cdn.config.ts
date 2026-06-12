@@ -5,7 +5,7 @@ import { resolve } from 'path';
  * CDN build — a single self-contained IIFE that registers `<sfx-crop>`.
  *
  * Unlike the npm bundle (`vite.config.ts`), `lit` is **bundled in** (not
- * external) so the file works standalone via `<script src=".../crop.min.js">`
+ * external) so the file works standalone via `<script src=".../image-crop.min.js">`
  * with no import map or peer install. React is irrelevant here — the CDN
  * entry is the framework-agnostic custom element only.
  *
