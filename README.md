@@ -14,8 +14,8 @@
   <a href="https://www.npmjs.com/package/@scaleflex/image-crop">
     <img src="https://img.shields.io/npm/v/@scaleflex/image-crop.svg" alt="Release">
   </a>
-  <a href="https://bundlephobia.com/package/@scaleflex/image-crop">
-    <img src="https://img.shields.io/bundlephobia/minzip/@scaleflex/image-crop.svg" alt="Size">
+  <a href="https://bundlejs.com/?q=@scaleflex/image-crop">
+    <img src="https://img.shields.io/bundlejs/size/@scaleflex/image-crop" alt="Minified + gzipped size">
   </a>
   <a href="https://www.npmjs.com/package/@scaleflex/image-crop">
     <img src="https://img.shields.io/npm/dm/@scaleflex/image-crop.svg" alt="Downloads">
