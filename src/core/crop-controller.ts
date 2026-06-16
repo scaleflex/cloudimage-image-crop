@@ -30,6 +30,7 @@ import { handleWheelZoom } from '../interactions/wheel-zoom';
 import { setupKeyboard, type KeyboardHandle } from '../a11y/keyboard';
 import { announceState } from '../a11y/aria';
 import { renderToCanvas, canvasToBlob, getTransformParams } from '../export/exporter';
+import { buildCloudimageUrlFromDescriptor, type CloudimageUrlOptions, type CropDescriptor } from '../export/cloudimage-url';
 
 /**
  * Callbacks invoked by the controller in response to state transitions.
@@ -87,6 +88,19 @@ export interface CropController {
   toBlob(type?: string, quality?: number): Promise<Blob>;
   toDataURL(type?: string, quality?: number): string;
   toTransformParams(): TransformParams;
+  /**
+   * Serializable snapshot (state + image/container dims + variant) that lets a
+   * server/Node reproduce the crop as a Cloudimage URL. Throws if no image.
+   */
+  toCropDescriptor(): CropDescriptor;
+  /**
+   * Build a Cloudimage URL that reproduces the current crop/transform
+   * server-side with full parity (crop/flip/90°/tilt/zoom/pan, both variants).
+   * Reads token/domain/bg-color from config; `options` overrides per call.
+   * Throws if no image is loaded, or if no token is configured and `config.src`
+   * isn't already a Cloudimage/Filerobot URL.
+   */
+  toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string;
   update(config: Partial<SfxCropConfig>): void;
   destroy(): void;
 }
@@ -708,6 +722,33 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     return getTransformParams(state, image.naturalWidth, image.naturalHeight);
   }
 
+  function toCropDescriptor(): CropDescriptor {
+    if (!image) throw new Error('No image loaded');
+    const { w, h } = layoutSize();
+    return {
+      state: getTransformState(),
+      imageWidth: image.naturalWidth,
+      imageHeight: image.naturalHeight,
+      containerWidth: w,
+      containerHeight: h,
+      variant: config.variant,
+    };
+  }
+
+  function toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string {
+    return buildCloudimageUrlFromDescriptor(toCropDescriptor(), {
+      src: config.src,
+      token: config.cloudimageToken || undefined,
+      domain: config.cloudimageDomain || undefined,
+      bgColor: config.cloudimageBgColor || undefined,
+      format: config.outputType,
+      quality: config.outputQuality,
+      maxWidth: config.maxOutputWidth,
+      maxHeight: config.maxOutputHeight,
+      ...options,
+    });
+  }
+
   function update(partial: Partial<SfxCropConfig>): void {
     if (destroyed) return;
     const oldSrc = config.src;
@@ -793,6 +834,8 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     toBlob,
     toDataURL,
     toTransformParams,
+    toCropDescriptor,
+    toCloudimageURL,
     update,
     destroy,
   };

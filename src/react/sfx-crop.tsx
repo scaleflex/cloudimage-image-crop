@@ -14,6 +14,7 @@ import type {
   TransformParams,
   CropIconOverrides,
 } from '../core/types';
+import type { CropDescriptor } from '../export/cloudimage-url';
 
 // Auto-register the custom element as soon as this module loads in the
 // browser. Guarded for SSR.
@@ -24,9 +25,18 @@ if (typeof customElements !== 'undefined') {
 export type { SfxCropElement };
 
 export interface SfxCropSaveDetail {
-  blob: Blob;
-  dataURL: string;
+  /** Rasterized crop. `null` when `outputMode="cloudimage"`. */
+  blob: Blob | null;
+  /** Rasterized crop as a data URL. `null` when `outputMode="cloudimage"`. */
+  dataURL: string | null;
   params: TransformParams;
+  /**
+   * Cloudimage transform URL — the result in `cloudimage` mode, best-effort in
+   * `blob` mode. `null` when no token is configured / `src` isn't a Cloudimage URL.
+   */
+  url: string | null;
+  /** Serializable snapshot to rebuild the Cloudimage URL server-side. `null` if unavailable. */
+  descriptor: CropDescriptor | null;
 }
 
 export interface SfxCropProps {
@@ -53,6 +63,14 @@ export interface SfxCropProps {
   outputQuality?: number;
   maxOutputWidth?: number;
   maxOutputHeight?: number;
+  /** `'blob'` (default) or `'cloudimage'` — what `save()`/`onSave` emits. */
+  outputMode?: 'blob' | 'cloudimage';
+  /** Cloudimage token for server-side crop URLs. */
+  cloudimageToken?: string;
+  /** Custom Cloudimage domain (default `cloudimg.io`). */
+  cloudimageDomain?: string;
+  /** Hex fill (no `#`) for corners exposed by non-90° rotation in URL mode. */
+  cloudimageBgColor?: string;
 
   // --- UI toggles ---
   showGrid?: boolean | 'interaction';
@@ -126,7 +144,7 @@ const FORWARDED_PROPS: readonly (keyof SfxCropProps)[] = [
   'cropShape', 'theme', 'initialRotation', 'initialScale', 'initialCrop',
   'minScale', 'maxScale', 'minCropSize', 'availableShapes', 'handleSize', 'handleColor',
   'borderRadius', 'overlayColor', 'outputType', 'outputQuality', 'maxOutputWidth',
-  'maxOutputHeight', 'showGrid',
+  'maxOutputHeight', 'outputMode', 'cloudimageToken', 'cloudimageDomain', 'cloudimageBgColor', 'showGrid',
   'showToolbar', 'showRotateSlider', 'showZoomSlider', 'showShapeSelector',
   'showRotateButton', 'showFlipButton', 'toolbarPosition',
   'showBleedMargin', 'bleedMarginSize', 'bleedMarginColor', 'enableAnimations',

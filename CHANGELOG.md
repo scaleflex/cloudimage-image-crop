@@ -5,6 +5,50 @@ All notable changes to `@scaleflex/image-crop` (formerly `js-cloudimage-crop`).
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Configurable crop output — Blob or Cloudimage URL.** New `output-mode` /
+  `outputMode` config (`'blob'` default, or `'cloudimage'`) selects whether
+  `save()` rasterizes the crop to a `Blob`/`dataURL` (client-side, upload it
+  yourself) or emits a **Cloudimage URL** that performs the transform server-side
+  on delivery (non-destructive).
+- **Full canvas↔URL parity (for any crop within the photo).** The Cloudimage URL
+  reproduces the editor exactly — crop + flip + 90° turns + **free tilt** +
+  **zoom** + **pan**, in both `classic` and `fixed` variants. Most cases emit a
+  single-pass URL; free tilt uses a two-pass **nested** URL (inner rotates, outer
+  crops). The pre-image is derived from the same transform matrix the canvas
+  renderer uses, so they can't drift. Verified end-to-end in a real browser across
+  tilt / 90° / zoom / pan / flip / both variants (mean per-channel diff 3–9 / 255).
+  - **Known limit:** a crop frame that extends *beyond the photo* into empty
+    margins can't be reproduced — a CDN clamps a crop to the image (it can't pad),
+    so the canvas's margins are dropped. Reachable in `classic` after a 90°/270°
+    turn (which letterboxes the photo) when the frame reaches into the margin. Use
+    the **`fixed` variant for guaranteed parity** (it cover-fits → crop always
+    inside the photo), or keep the `classic` crop within the photo.
+    `resolveServerCrop(...).clamped` flags it.
+- `toCloudimageURL(options?)` and `toCropDescriptor()` on the `<sfx-crop>`
+  element, the headless controller, and the React `useSfxCrop` /
+  `useSfxCropController` hooks.
+- `buildCloudimageUrlFromDescriptor(descriptor, target)` — exported pure,
+  parity-complete helper (also from `@scaleflex/image-crop/react`) to build the
+  URL from a stored `CropDescriptor` in Node / on a server. `buildCloudimageUrl`
+  (lossy single-pass) is retained for the basic case. New `CropDescriptor` and
+  `CloudimageTarget` types.
+- `cloudimage-token`, `cloudimage-domain`, `cloudimage-bg-color` config to point
+  the editor at a Cloudimage account (token form, custom domain, or appending to
+  an `src` that is already a Cloudimage URL). Cloudimage (`*.cloudimg.io`) and
+  Filerobot (`*.filerobot.com`) URLs are auto-detected → ops are appended with no
+  token needed.
+
+### Changed
+
+- `sfx-crop-save` event detail gains `url` and `descriptor` fields, and
+  `blob`/`dataURL` are now `null` when `output-mode="cloudimage"` (previously
+  always present). The React `SfxCropSaveDetail` type widens `blob`/`dataURL` to
+  `… | null` accordingly.
+
 ## [2.0.3] — 2026-06-12
 
 ### Fixed

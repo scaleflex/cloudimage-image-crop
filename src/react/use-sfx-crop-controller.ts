@@ -12,6 +12,7 @@ import type {
   CropRect,
   CropShapeName,
 } from '../core/types';
+import type { CloudimageUrlOptions, CropDescriptor } from '../export/cloudimage-url';
 
 /**
  * Headless options for {@link useSfxCropController}. Most fields mirror the
@@ -52,6 +53,10 @@ export interface CropControllerApi {
   toBlob(type?: string, quality?: number): Promise<Blob | null>;
   toDataURL(type?: string, quality?: number): string | null;
   toTransformParams(): TransformParams | null;
+  /** Build a Cloudimage server-side crop URL (null until the controller is live). */
+  toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string | null;
+  /** Serializable snapshot to rebuild the Cloudimage URL server-side (null until live). */
+  toCropDescriptor(): CropDescriptor | null;
   /** Underlying controller handle (null until both refs are attached). */
   getController(): CropController | null;
 }
@@ -206,6 +211,8 @@ export function useSfxCropController(
     toDataURL: (type, quality) =>
       controllerRef.current?.toDataURL(type, quality) ?? null,
     toTransformParams: () => controllerRef.current?.toTransformParams() ?? null,
+    toCloudimageURL: (options) => controllerRef.current?.toCloudimageURL(options) ?? null,
+    toCropDescriptor: () => controllerRef.current?.toCropDescriptor() ?? null,
     getController: () => controllerRef.current,
   }), []);
 

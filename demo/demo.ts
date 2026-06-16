@@ -201,6 +201,7 @@ const EXAMPLE_GROUPS: ExampleGroup[] = [
     items: [
       { path: '/examples/events',         label: 'Event handling' },
       { path: '/examples/export',         label: 'Export (blob / data-URL)' },
+      { path: '/examples/cloudimage-url', label: 'Cloudimage URL (server-side)' },
     ],
   },
   {
@@ -738,6 +739,10 @@ function renderDocConfiguration(): string {
         ['output-quality',    'number (0 – 1)',                                  '0.92',        'Quality for lossy formats (ignored for PNG).'],
         ['max-output-width',  'px',                                              '0',           'Clamp the exported width (<code>0</code> = original).'],
         ['max-output-height', 'px',                                              '0',           'Clamp the exported height (<code>0</code> = original).'],
+        ['output-mode',       'blob | cloudimage',                               'blob',        'What <code>save()</code> emits — a rasterized blob, or a server-side <a href="#/examples/cloudimage-url">Cloudimage URL</a>.'],
+        ['cloudimage-token',  'string',                                          '""',          'Cloudimage token (<code>&lt;token&gt;.cloudimg.io</code>) used to build server-side URLs.'],
+        ['cloudimage-domain', 'string',                                          '""',          'Custom Cloudimage domain (default <code>cloudimg.io</code>).'],
+        ['cloudimage-bg-color','hex',                                            '""',          'Fill for corners exposed by a non-90° rotation in URL mode.'],
       ],
     },
     {
@@ -825,6 +830,7 @@ function renderDocApi(): string {
     ['toBlob',           '(type?: string, quality?: number): Promise&lt;Blob&gt;', 'Export the crop as a <code>Blob</code>. Defaults come from the <code>output-*</code> attributes.'],
     ['toDataURL',        '(type?: string, quality?: number): string',      'Export as a data URL (base64).'],
     ['toTransformParams','(): TransformParams',                            'Summary suitable for server-side rendering (image CDNs).'],
+    ['toCloudimageURL',  '(options?): string',                             'Build a Cloudimage URL that crops / rotates / flips / resizes server-side.'],
     ['reset',            '(): void',                                       'Restore rotation, scale, pan, and crop rect to initial values.'],
     ['save',             '(type?: string, quality?: number): Promise&lt;void&gt;', 'Export and dispatch <code>sfx-crop-save</code> with the result.'],
     ['cancel',           '(): void',                                       'Dispatch <code>sfx-crop-cancel</code> — the consumer decides what that means.'],
@@ -835,7 +841,7 @@ function renderDocApi(): string {
     ['sfx-crop-image-load',   '{ image: HTMLImageElement }',                                          'Image decoded and initial fit applied.'],
     ['sfx-crop-change',       'TransformState',                                                       'Any state change — rotation, flip, scale, pan, crop.'],
     ['sfx-crop-crop-change',  'CropRect (image-pixel coords)',                                        'Crop rect moved or resized (subset of <code>-change</code>).'],
-    ['sfx-crop-save',         '{ blob: Blob, dataURL: string, params: TransformParams }',             'Emitted from <code>save()</code>.'],
+    ['sfx-crop-save',         '{ blob: Blob | null, dataURL: string | null, params: TransformParams, url: string | null }', 'Emitted from <code>save()</code>. <code>blob</code>/<code>dataURL</code> are null in <code>cloudimage</code> output-mode; <code>url</code> is the Cloudimage URL.'],
     ['sfx-crop-cancel',       'void',                                                                 'Emitted from <code>cancel()</code>.'],
     ['sfx-crop-error',        '{ error: Error }',                                                     'Image load failed or invalid configuration.'],
   ];
@@ -1458,6 +1464,66 @@ fetch('/api/transform', { method: 'POST', body: JSON.stringify(params) });`, 'ty
   );
 }
 
+function renderExampleCloudimage(): string {
+  return examplePage(
+    'Cloudimage URL (server-side)',
+    'Instead of a Blob, emit a <a href="https://www.cloudimage.io/" target="_blank" rel="noopener">Cloudimage</a> URL that performs the transform on the CDN — with <strong>full parity</strong> to the canvas: crop, flip, rotate, free tilt, zoom and pan all match (tilt via a two-pass nested URL). Set <code>output-mode="cloudimage"</code> plus a token, transform, then <strong>Crop &amp; compare</strong> — the right image is served straight from Cloudimage, no upload. <em>Parity holds for any crop within the photo; the <a href="#/examples/fixed">fixed</a> variant guarantees it (cover-fit). In classic, a 90° turn letterboxes the photo, so a crop frame reaching into the empty margin can’t be reproduced — a CDN clamps crops to the image.</em>',
+    `
+      <div class="demo-example-controls" style="margin-bottom:12px">
+        <input id="ex-ci-src" type="text" placeholder="Paste a Filerobot / Cloudimage image URL…" style="flex:1;min-width:280px;padding:9px 12px;border-radius:8px;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;font:inherit" />
+        <button class="demo-btn demo-btn--ghost" id="ex-ci-load">Load image</button>
+      </div>
+      <div class="demo-example-live">
+        <sfx-crop id="ex-ci" output-mode="cloudimage" cloudimage-token="doc" style="width:100%;height:480px;display:block"></sfx-crop>
+      </div>
+      <div class="demo-example-controls">
+        <button class="demo-btn demo-btn--primary" id="ex-ci-build">Crop &amp; compare →</button>
+        <button class="demo-btn demo-btn--ghost" id="ex-ci-variant" aria-pressed="false" title="Switch the editor between classic (movable crop frame over the photo) and fixed (the box is the crop frame, photo cover-fit)">Variant: classic</button>
+      </div>
+      <p style="font-size:13px;opacity:.7;margin:4px 0 0">Left is cropped <strong>locally on canvas</strong> (what <code>blob</code> mode produces); right is fetched from <strong>Cloudimage</strong> using the generated URL. They should match — that's the proof the params are correct. Toggle the <strong>variant</strong> to verify parity in both modes.</p>
+      <div class="demo-ci-compare" id="ex-ci-compare" hidden style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px">
+        <figure style="margin:0">
+          <figcaption style="font-size:12px;opacity:.7;margin-bottom:6px">① Local canvas crop</figcaption>
+          <img id="ex-ci-local" alt="Crop rendered locally in the browser" style="max-width:100%;display:block;border-radius:10px" />
+        </figure>
+        <figure style="margin:0">
+          <figcaption style="font-size:12px;opacity:.7;margin-bottom:6px">② Cloudimage server crop</figcaption>
+          <img id="ex-ci-remote" crossorigin="anonymous" alt="Crop rendered by Cloudimage from the URL" style="max-width:100%;display:block;border-radius:10px" />
+        </figure>
+      </div>
+      <div id="ex-ci-diff" style="margin-top:10px;font-size:14px;font-weight:600;min-height:1.2em"></div>
+      <pre class="demo-example-out" id="ex-ci-out"></pre>
+
+      ${tabbedCode([
+        { label: 'HTML', code: `<sfx-crop
+  src="https://samples.scaleflex.com/earth.jpg"
+  output-mode="cloudimage"
+  cloudimage-token="doc"
+></sfx-crop>
+
+<script type="module">
+  const crop = document.querySelector('sfx-crop');
+  crop.addEventListener('sfx-crop-save', (e) => {
+    const { url } = e.detail;   // blob / dataURL are null in this mode
+    document.querySelector('img#out').src = url;   // Cloudimage crops on delivery
+  });
+</script>`, lang: 'markup' },
+        { label: 'On demand', code: `const crop = document.querySelector('sfx-crop');
+const url = crop.toCloudimageURL();
+// → https://doc.cloudimg.io/https://samples.scaleflex.com/earth.jpg?tl_px=…&br_px=…`, lang: 'typescript' },
+        { label: 'Node / server', code: `import { buildCloudimageUrlFromDescriptor } from '@scaleflex/image-crop';
+
+// 'descriptor' is what you stored from the editor — the onSave event's
+// detail.descriptor, or crop.toCropDescriptor() (state + dims + variant).
+const url = buildCloudimageUrlFromDescriptor(descriptor, {
+  src: 'https://samples.scaleflex.com/earth.jpg',
+  token: 'doc',
+});`, lang: 'typescript' },
+      ])}
+    `,
+  );
+}
+
 function renderExampleCustomIcons(): string {
   // The SVG strings below live in a single source-of-truth `CUSTOM_ICON_SET`
   // block so the preview and the code snippet can't drift. Each picked to
@@ -1807,6 +1873,129 @@ function hydrateExampleExport(root: HTMLElement): void {
   });
 }
 
+function hydrateExampleCloudimage(root: HTMLElement): void {
+  const el = root.querySelector('#ex-ci') as SfxCropElement | null;
+  const out = root.querySelector<HTMLElement>('#ex-ci-out');
+  const compare = root.querySelector<HTMLElement>('#ex-ci-compare');
+  const local = root.querySelector<HTMLImageElement>('#ex-ci-local');
+  const remote = root.querySelector<HTMLImageElement>('#ex-ci-remote');
+  const diff = root.querySelector<HTMLElement>('#ex-ci-diff');
+  if (!el || !out) return;
+  el.src = 'https://samples.scaleflex.com/earth.jpg';
+  el.showGrid = 'interaction';
+
+  // Let the user swap in their own Filerobot / Cloudimage image URL.
+  const srcInput = root.querySelector<HTMLInputElement>('#ex-ci-src');
+  if (srcInput) srcInput.value = el.src;
+  root.querySelector('#ex-ci-load')?.addEventListener('click', () => {
+    const raw = srcInput?.value.trim();
+    if (!raw) return;
+    // Encode raw path delimiters (e.g. a folder literally named "Wines & More")
+    // so the browser can load the source — mirrors buildCloudimageUrl's output.
+    const q = raw.indexOf('?');
+    const base = (q === -1 ? raw : raw.slice(0, q)).replace(/ /g, '%20').replace(/&/g, '%26').replace(/#/g, '%23');
+    el.src = q === -1 ? base : base + raw.slice(q);
+    if (compare) compare.hidden = true;
+    out.textContent = '';
+  });
+
+  // Variant toggle — flip the editor between `classic` (movable crop frame over
+  // the photo) and `fixed` (the box IS the crop frame, photo cover-fit) so parity
+  // can be verified in both modes from the same page.
+  const variantBtn = root.querySelector<HTMLButtonElement>('#ex-ci-variant');
+  variantBtn?.addEventListener('click', () => {
+    const next = el.variant === 'fixed' ? 'classic' : 'fixed';
+    el.variant = next;
+    variantBtn.textContent = `Variant: ${next}`;
+    variantBtn.setAttribute('aria-pressed', next === 'fixed' ? 'true' : 'false');
+    // The previous comparison is for the old variant — clear it.
+    if (compare) compare.hidden = true;
+    if (diff) diff.textContent = '';
+    out.textContent = '';
+  });
+
+  // Render both crops for the current state side by side: the local canvas crop
+  // (what blob mode produces) and the Cloudimage crop fetched from the URL.
+  // Matching images = correct param mapping.
+  // Objective ①-vs-② check: sample both at a common size and report the mean
+  // per-channel difference. ~<18 means identical modulo resize kernel; a wrong
+  // crop scores far higher. Removes all eyeballing/zoom ambiguity.
+  const computeDiff = (): void => {
+    if (!diff || !local || !remote || !local.complete || !remote.complete || !local.naturalWidth || !remote.naturalWidth) return;
+    const W = 240;
+    const H = Math.max(1, Math.round((W * local.naturalHeight) / local.naturalWidth));
+    const sample = (img: HTMLImageElement): Uint8ClampedArray | null => {
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      const cx = c.getContext('2d');
+      if (!cx) return null;
+      cx.drawImage(img, 0, 0, W, H);
+      try { return cx.getImageData(0, 0, W, H).data; } catch { return null; }
+    };
+    const a = sample(local);
+    const b = sample(remote);
+    if (!a || !b) { diff.textContent = '(pixel diff unavailable — CORS)'; diff.style.color = ''; return; }
+    let sum = 0;
+    for (let i = 0; i < a.length; i += 4) sum += Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]);
+    const mean = sum / ((a.length / 4) * 3);
+    const ok = mean < 18;
+    // A differing output aspect means the crop frame extends past the photo into
+    // empty margins: the canvas shows them, but Cloudimage clamps the crop to the
+    // image (CDNs can't pad a crop), so parity is impossible for that region.
+    const arLocal = local.naturalWidth / local.naturalHeight;
+    const arRemote = remote.naturalWidth / remote.naturalHeight;
+    const cropSpillsOffPhoto = Math.abs(arLocal - arRemote) / arLocal > 0.03;
+    if (!ok && cropSpillsOffPhoto) {
+      diff.textContent = `pixel diff ① vs ②: ${mean.toFixed(1)} / 255 — ✗ the crop extends beyond the photo (empty margins). `
+        + 'Cloudimage clamps crops to the image, so it can’t reproduce those margins. '
+        + 'Keep the crop inside the photo, or use the fixed variant (cover-fit) for guaranteed parity.';
+      diff.style.color = '#d97706';
+      return;
+    }
+    diff.textContent = `pixel diff ① vs ②: ${mean.toFixed(1)} / 255 — ${ok ? '✓ match (only the resize kernel differs)' : '✗ differ — share the descriptor below'}`;
+    diff.style.color = ok ? '#16a34a' : '#dc2626';
+  };
+
+  let reqSeq = 0;
+  const renderCompare = (url: string | null): void => {
+    if (!url) { out.textContent = '(no token configured)'; return; }
+    // Show the URL + the descriptor that produced it, so an exact state can be
+    // captured for debugging parity (copy and share).
+    let descriptorJson = '';
+    try { descriptorJson = `\n\ndescriptor: ${JSON.stringify(el.toCropDescriptor())}`; } catch { /* no image */ }
+    out.textContent = url + descriptorJson;
+    if (diff) diff.textContent = '';
+    reqSeq += 1;
+    const myReq = reqSeq;
+    if (local) {
+      try {
+        local.onload = () => { if (myReq === reqSeq) computeDiff(); };
+        local.src = el.toDataURL('image/png');
+      } catch {
+        local.removeAttribute('src');
+        local.alt = 'Canvas blocked by CORS — compare the right image against the editor frame above.';
+      }
+    }
+    if (remote) {
+      remote.onload = () => { if (myReq === reqSeq) computeDiff(); };
+      remote.src = url;
+    }
+    if (compare) compare.hidden = false;
+  };
+
+  root.querySelector('#ex-ci-build')?.addEventListener('click', () => {
+    try { renderCompare(el.toCloudimageURL()); }
+    catch (err) { out.textContent = err instanceof Error ? err.message : String(err); }
+  });
+
+  // The toolbar "Done" button → save(): in cloudimage mode the detail carries
+  // `url` (blob / dataURL are null).
+  el.addEventListener('sfx-crop-save', (e: Event) => {
+    renderCompare(((e as CustomEvent).detail as { url: string | null }).url);
+  });
+}
+
 function hydrateExampleTheming(root: HTMLElement): void {
   for (const el of root.querySelectorAll<SfxCropElement>('.ex-theme')) {
     el.src = DEMO_SRC;
@@ -1899,6 +2088,7 @@ const PAGES: Record<string, PageDef> = {
   '/examples/transforms':     { render: renderExampleTransforms,     hydrate: hydrateExampleTransforms },
   '/examples/events':         { render: renderExampleEvents,         hydrate: hydrateExampleEvents },
   '/examples/export':         { render: renderExampleExport,         hydrate: hydrateExampleExport },
+  '/examples/cloudimage-url': { render: renderExampleCloudimage,     hydrate: hydrateExampleCloudimage },
   '/examples/custom-icons':   { render: renderExampleCustomIcons,    hydrate: hydrateExampleCustomIcons },
   '/examples/theming':        { render: renderExampleTheming,        hydrate: hydrateExampleTheming },
   '/examples/react':          { render: renderExampleReact },

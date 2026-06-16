@@ -44,6 +44,7 @@
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
 - [Variants](#variants)
+- [Server-side crop (Cloudimage)](#server-side-crop-cloudimage)
 - [Public Methods](#public-methods)
 - [Events](#events)
 - [React API](#react-api)
@@ -70,7 +71,7 @@
 - Optional bleed-margin guides for print workflows.
 - Themeable via a single `theme="light|dark"` attribute or fine-grained `--sfx-cr-*` CSS custom properties (~50 tokens).
 - Per-icon SVG overrides via the `icons` property.
-- Export to `HTMLCanvasElement`, `Blob`, data URL, or a serialisable `TransformParams` object suitable for server-side processing.
+- Export to `HTMLCanvasElement`, `Blob`, data URL, or a serialisable `TransformParams` object — or a ready-made **Cloudimage URL** that runs the crop/rotate/flip/resize server-side (see [Server-side crop](#server-side-crop-cloudimage)).
 - Three packaging entry points so consumers pay for only what they use.
 
 ## Requirements
@@ -238,6 +239,10 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `output-quality` / `outputQuality`     | `number` | `0.92`        | Quality 0–1 for lossy types. |
 | `max-output-width` / `maxOutputWidth`  | `number` | `0`           | `0` = original. |
 | `max-output-height` / `maxOutputHeight`| `number` | `0`           | `0` = original. |
+| `output-mode` / `outputMode`           | `'blob' \| 'cloudimage'` | `'blob'` | What `save()` emits — a rasterized blob, or a Cloudimage URL (server-side crop). See [Server-side crop](#server-side-crop-cloudimage). |
+| `cloudimage-token` / `cloudimageToken` | `string` | `''`          | Cloudimage token (`<token>.cloudimg.io`) used to build server-side URLs. |
+| `cloudimage-domain` / `cloudimageDomain` | `string` | `''`        | Custom Cloudimage domain (default `cloudimg.io`). |
+| `cloudimage-bg-color` / `cloudimageBgColor` | `string` | `''`     | Hex fill (no `#`) for corners exposed by a non-90° rotation in URL mode. |
 
 #### Behaviour
 
@@ -274,6 +279,100 @@ In **both** variants the photo is constrained to always fully cover the crop fra
 
 The toolbar renders a primary **Done** button pinned to the right edge. It calls [`save()`](#public-methods) — building `blob` + `dataURL` + `params` and dispatching `sfx-crop-save` — so a host app can commit the crop without wiring its own button. Handle `sfx-crop-save` to upload / persist / close. (Hide the whole toolbar with `show-toolbar="false"` if you prefer to drive everything imperatively.)
 
+## Server-side crop (Cloudimage)
+
+Instead of rasterising the crop in the browser, `<sfx-crop>` can emit a
+**[Cloudimage](https://www.cloudimage.io/) URL** that carries the crop as
+transformation parameters — crop / flip / rotate / **free tilt** / **zoom** /
+**pan** are then performed on the CDN, on the fly, when the image is requested,
+with full parity to the canvas in both variants. No new file is produced or
+uploaded; you store one original plus a URL. Non-destructive, and ideal for
+responsive delivery.
+
+### Output mode
+
+`output-mode` selects what `save()` (and the `sfx-crop-save` event) produces:
+
+| `output-mode` | Result | Crop runs | Use it to |
+|---|---|---|---|
+| `'blob'` (default) | `blob` + `dataURL` (+ best-effort `url`) | in the browser (canvas) | upload a new cropped file |
+| `'cloudimage'`     | `url` (+ `params`); `blob`/`dataURL` are `null` | on the Cloudimage CDN | store a non-destructive transform URL |
+
+### Configure the target
+
+```html
+<sfx-crop
+  src="https://example.com/photo.jpg"
+  output-mode="cloudimage"
+  cloudimage-token="mytoken"
+></sfx-crop>
+
+<script type="module">
+  document.querySelector('sfx-crop').addEventListener('sfx-crop-save', (e) => {
+    const { url, params } = e.detail;   // blob / dataURL are null in this mode
+    // e.g. <img src={url}> — Cloudimage crops on delivery
+  });
+</script>
+```
+
+If `src` is **already** a Cloudimage / Filerobot URL (`*.cloudimg.io` or
+`*.filerobot.com`), the crop ops are appended to it (preserving its existing
+query) and no token is needed. Otherwise the raw origin URL is wrapped as
+`https://<token>.cloudimg.io/<src>?…` (Cloudimage's fetch-from-origin form).
+
+### Build a URL on demand
+
+`toCloudimageURL(options?)` returns the URL string directly with full parity. To
+reproduce a crop **server-side / in Node**, persist `toCropDescriptor()` (or the
+`descriptor` field on the `sfx-crop-save` event) and rebuild it with the pure
+`buildCloudimageUrlFromDescriptor(descriptor, target)`:
+
+```ts
+import { buildCloudimageUrlFromDescriptor } from '@scaleflex/image-crop';
+
+const url = crop.toCloudimageURL();
+// …or later, on a server, from the stored descriptor:
+const url2 = buildCloudimageUrlFromDescriptor(savedDescriptor, { src, token: 'mytoken' });
+```
+
+A simpler `buildCloudimageUrl(params, target)` also exists for the basic
+single-pass case (crop + flip + resize, no zoom/tilt).
+
+### Mapping & fidelity
+
+Editor state maps to Cloudimage v7 ops in pipeline order
+(`flip → rotate → crop → resize → format`):
+
+| Editor | Cloudimage |
+|---|---|
+| crop rect                         | `tl_px` / `br_px` (original-image pixels) |
+| flip H/V                          | `flip=h` / `v` / `hv` |
+| rotation (90° turns + tilt)       | `r=<deg>` (CCW) + `bg_color` for non-90° |
+| `max-output-*`                    | `w` / `h` + `func=bound` |
+| `output-type` / `output-quality`  | `force_format` + `q` |
+
+> **Fidelity — full parity for any crop within the photo.** Crop, flip, resize,
+> format/quality, **90° turns, free tilt (±45°), zoom and pan** all reproduce the
+> canvas exactly, in both `classic` and `fixed` variants — the crop window's
+> pre-image is derived from the very same transform matrix `renderToCanvas` uses
+> (`resolveDisplay`), so the two can't drift. **Free tilt** is reproduced via a
+> **two-pass nested URL** (an inner pass rotates the photo, an outer pass crops the
+> rotated result) because Cloudimage crops before it rotates. Geometry is exact;
+> only the resize kernel differs from the canvas. *Cost:* tilt uses two CDN passes;
+> everything else is one. *(Verified end-to-end in a real browser across tilt /
+> 90° / zoom / pan / flip / both variants — mean per-channel diff 3–9 / 255.)*
+>
+> **The one limit — empty margins can't be reproduced.** If the crop frame extends
+> *beyond the photo* into empty/background margins, a Cloudimage URL cannot match
+> the canvas there: a CDN **clamps a crop to the image** (it can't pad a crop), so
+> those margins are dropped. This happens in `classic` after a **90°/270° turn**,
+> which letterboxes the photo smaller than the frame, when the crop frame reaches
+> into the margin. **For guaranteed server-side parity use the `fixed` variant**
+> (it cover-fits, so the crop is always inside the photo — every combination
+> matches), or in `classic` keep the crop within the photo. The geometry of the
+> in-photo region stays exact; `resolveServerCrop(...).clamped` flags when a crop
+> spilled past the image.
+
 ## Public Methods
 
 All methods live on the `<sfx-crop>` element instance. They throw if invoked before `sfx-crop-ready` fires.
@@ -294,7 +393,9 @@ All methods live on the `<sfx-crop>` element instance. They throw if invoked bef
 | `toBlob(type?, quality?)`           | `Promise<Blob>`         | Like `HTMLCanvasElement.toBlob` for the cropped output. |
 | `toDataURL(type?, quality?)`        | `string`                | Like `HTMLCanvasElement.toDataURL`. |
 | `toTransformParams()`               | `TransformParams`       | Serialisable description of the transform — pass to a server-side resizer. |
-| `save(type?, quality?)`             | `Promise<void>`         | Convenience: builds blob + dataURL + params and dispatches `sfx-crop-save`. |
+| `toCloudimageURL(options?)`         | `string`                | Build a Cloudimage URL reproducing the full transform (crop/flip/90°/tilt/zoom/pan) server-side. See [Server-side crop](#server-side-crop-cloudimage). |
+| `toCropDescriptor()`                | `CropDescriptor`        | Serializable snapshot (state + dims + variant) to rebuild the Cloudimage URL later/server-side. |
+| `save(type?, quality?)`             | `Promise<void>`         | Convenience: builds the result for the current `output-mode` (blob + dataURL + params, or a Cloudimage `url`) and dispatches `sfx-crop-save`. |
 | `cancel()`                          | `void`                  | Dispatches `sfx-crop-cancel`. |
 
 ## Events
@@ -307,7 +408,7 @@ All events bubble and cross shadow boundaries (`bubbles: true, composed: true`).
 | `sfx-crop-image-load`   | `{ image: HTMLImageElement }`              | Image decoded and rendered. |
 | `sfx-crop-change`       | `TransformState`                           | Any transform mutation. |
 | `sfx-crop-crop-change`  | `CropRect`                                 | Crop rect changed. |
-| `sfx-crop-save`         | `{ blob, dataURL, params }`                | `.save()` resolved. |
+| `sfx-crop-save`         | `{ blob, dataURL, params, url }`           | `.save()` resolved. `blob`/`dataURL` are `null` when `output-mode="cloudimage"`; `url` is the Cloudimage URL (or `null` when no token is configured). |
 | `sfx-crop-cancel`       | `undefined`                                | `.cancel()` invoked. |
 | `sfx-crop-error`        | `{ error: Error }`                         | Image-load or export error. |
 
@@ -330,7 +431,7 @@ import { SfxCrop } from '@scaleflex/image-crop/react';
   onImageLoad={({ image }) => {}}
   onChange={(state) => {}}
   onCropChange={(crop) => {}}
-  onSave={({ blob, dataURL, params }) => {}}
+  onSave={({ blob, dataURL, params, url }) => {}}
   onCancel={() => {}}
   onError={({ error }) => {}}
 />
@@ -412,6 +513,8 @@ All types live in `src/core/types.ts` and are re-exported from both `@scaleflex/
 - `TransformParams` — serialisable export shape (`rotation`, `flipH`, `flipV`, `scale`, `crop` in original-image pixels, `outputWidth`, `outputHeight`).
 - `CropIconOverrides` — per-slot SVG-string overrides for toolbar icons.
 - `SfxCropConfig` — the internal config shape consumed by `createCropController`. Element attributes mirror this 1:1.
+- `CloudimageTarget` (alias `CloudimageUrlOptions`) — the Cloudimage delivery target for `toCloudimageURL` / `buildCloudimageUrlFromDescriptor` (`src`, `token`, `domain`, `bgColor`, `format`, `quality`, `maxWidth`, `maxHeight`).
+- `CropDescriptor` — serializable parity snapshot (`state`, `imageWidth/Height`, `containerWidth/Height`, `variant`) returned by `toCropDescriptor()`; pass to `buildCloudimageUrlFromDescriptor` to reproduce the crop server-side.
 
 ## Browser Support
 

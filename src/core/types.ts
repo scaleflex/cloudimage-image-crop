@@ -288,6 +288,22 @@ export interface SfxCropConfig {
   /** Maximum output height (0 = original) */
   maxOutputHeight: number;
 
+  // Output target
+  /**
+   * What `save()` emits and how a crop is meant to be consumed:
+   * - `'blob'` (default): rasterize the crop on a canvas → `Blob`/`dataURL`
+   *   (destructive, upload it yourself).
+   * - `'cloudimage'`: skip rasterizing and emit a Cloudimage URL with the
+   *   transform params (non-destructive, server-side crop on delivery).
+   */
+  outputMode: 'blob' | 'cloudimage';
+  /** Cloudimage token (the `<token>` in `<token>.cloudimg.io`) for URL building. */
+  cloudimageToken: string;
+  /** Custom Cloudimage domain (default `cloudimg.io`). */
+  cloudimageDomain: string;
+  /** Hex fill (no `#`) for corners exposed by non-90° rotation in URL mode. */
+  cloudimageBgColor: string;
+
   // Animations
   /** Show print bleed margin guides inside crop area */
   showBleedMargin: boolean;

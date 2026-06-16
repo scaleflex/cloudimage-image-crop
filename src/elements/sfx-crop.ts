@@ -2,6 +2,7 @@ import { html, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { createCropController, type CropController } from '../core/crop-controller';
+import type { CloudimageUrlOptions, CropDescriptor } from '../export/cloudimage-url';
 import { mergeConfig } from '../core/config';
 import { setupAria } from '../a11y/aria';
 import type {
@@ -51,7 +52,7 @@ const SHOW_GRID_CONVERTER = {
  *   - `sfx-crop-image-load`   `{ image }`
  *   - `sfx-crop-change`       `TransformState`
  *   - `sfx-crop-crop-change`  `CropRect` (image-pixel coords)
- *   - `sfx-crop-save`         `{ blob, dataURL, params }` (from imperative `.save()`)
+ *   - `sfx-crop-save`         `{ blob, dataURL, params, url, descriptor }` (from imperative `.save()`; `blob`/`dataURL` are null when `outputMode="cloudimage"`)
  *   - `sfx-crop-cancel`       (from imperative `.cancel()`)
  *   - `sfx-crop-error`        `{ error }`
  *
@@ -85,6 +86,16 @@ export class SfxCropElement extends SfxCropBaseElement {
   @property({ type: String, attribute: 'bleed-margin-color' }) bleedMarginColor = 'rgba(255, 0, 0, 0.5)';
   @property({ type: String, attribute: 'output-type' }) outputType = 'image/png';
   @property({ type: String, attribute: 'toolbar-position', reflect: true }) toolbarPosition: 'bottom' | 'top' = 'top';
+
+  /**
+   * What `.save()` emits: `'blob'` (default — rasterized canvas crop) or
+   * `'cloudimage'` (a server-side Cloudimage transform URL; `blob`/`dataURL`
+   * in the save event are then null). See `toCloudimageURL()`.
+   */
+  @property({ type: String, attribute: 'output-mode' }) outputMode: 'blob' | 'cloudimage' = 'blob';
+  @property({ type: String, attribute: 'cloudimage-token' }) cloudimageToken = '';
+  @property({ type: String, attribute: 'cloudimage-domain' }) cloudimageDomain = '';
+  @property({ type: String, attribute: 'cloudimage-bg-color' }) cloudimageBgColor = '';
 
   /**
    * Display variant. `'classic'` (default) = movable/resizable frame over a
@@ -312,12 +323,32 @@ export class SfxCropElement extends SfxCropBaseElement {
   toBlob(type?: string, quality?: number): Promise<Blob> { return this.ensure().toBlob(type, quality); }
   toDataURL(type?: string, quality?: number): string { return this.ensure().toDataURL(type, quality); }
   toTransformParams(): TransformParams { return this.ensure().toTransformParams(); }
+  /** Build a Cloudimage URL reproducing the current crop/transform server-side. */
+  toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string { return this.ensure().toCloudimageURL(options); }
+  /** Serializable snapshot to reproduce the crop as a Cloudimage URL server-side. */
+  toCropDescriptor(): CropDescriptor { return this.ensure().toCropDescriptor(); }
 
+  /**
+   * Emit the crop result via `sfx-crop-save`. In the default `'blob'`
+   * `outputMode` the detail carries the rasterized `blob` + `dataURL` (plus a
+   * best-effort Cloudimage `url` when a token is configured). In `'cloudimage'`
+   * mode the canvas is never rasterized — `blob`/`dataURL` are `null` and `url`
+   * holds the Cloudimage transform URL.
+   */
   async save(type?: string, quality?: number): Promise<void> {
+    const params = this.toTransformParams();
+    let url: string | null = null;
+    let descriptor: CropDescriptor | null = null;
+    try { descriptor = this.toCropDescriptor(); } catch { descriptor = null; }
+    try { url = this.toCloudimageURL(); } catch { url = null; }
+
+    if (this.outputMode === 'cloudimage') {
+      this.dispatch('sfx-crop-save', { blob: null, dataURL: null, params, url, descriptor });
+      return;
+    }
     const blob = await this.toBlob(type, quality);
     const dataURL = this.toDataURL(type, quality);
-    const params = this.toTransformParams();
-    this.dispatch('sfx-crop-save', { blob, dataURL, params });
+    this.dispatch('sfx-crop-save', { blob, dataURL, params, url, descriptor });
   }
 
   cancel(): void {
@@ -506,6 +537,10 @@ export class SfxCropElement extends SfxCropBaseElement {
       outputQuality: this.outputQuality,
       maxOutputWidth: this.maxOutputWidth,
       maxOutputHeight: this.maxOutputHeight,
+      outputMode: this.outputMode,
+      cloudimageToken: this.cloudimageToken,
+      cloudimageDomain: this.cloudimageDomain,
+      cloudimageBgColor: this.cloudimageBgColor,
       overlayColor: this.overlayColor,
       showGrid: this.showGrid,
       showToolbar: this.showToolbar,
@@ -539,6 +574,7 @@ const LIVE_CONFIG_KEYS = [
   'showGrid', 'showBleedMargin', 'bleedMarginSize', 'bleedMarginColor',
   'enableAnimations', 'animationSpeed',
   'keyboard', 'pinchZoom', 'wheelZoom',
+  'outputMode', 'cloudimageToken', 'cloudimageDomain', 'cloudimageBgColor',
 ] as const satisfies ReadonlyArray<keyof SfxCropConfig & keyof SfxCropElement>;
 
 /**

@@ -48,3 +48,8 @@ export type {
 
 export { parseRatio, getAspectRatio } from './transforms/constrain';
 export { imageToCanvas, canvasToImage, buildTransformMatrix } from './transforms/matrix';
+
+// Cloudimage server-side crop — turn a crop/transform into a Cloudimage URL
+// instead of a rasterized Blob (see `outputMode` / `toCloudimageURL()`).
+export { buildCloudimageUrl, buildCloudimageUrlFromDescriptor } from './export/cloudimage-url';
+export type { CloudimageUrlOptions, CloudimageTarget, CropDescriptor } from './export/cloudimage-url';

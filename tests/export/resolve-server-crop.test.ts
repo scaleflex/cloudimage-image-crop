@@ -1,0 +1,115 @@
+import { describe, it, expect } from 'vitest';
+import { resolveServerCrop, getTransformParams } from '../../src/export/exporter';
+import { createInitialState, applyRotateLeft, applyScale, applyPan, applyRotation } from '../../src/transforms/transform-state';
+
+const W = 1920;
+const H = 1080;
+
+describe('resolveServerCrop — single pass (no tilt)', () => {
+  it('identity: crop == cropRect × dims (matches getTransformParams)', () => {
+    const s = createInitialState();
+    const sc = resolveServerCrop(s, W, H, W, H, 'classic');
+    const p = getTransformParams(s, W, H);
+    expect(sc.tilted).toBe(false);
+    expect(sc.rotateCCW).toBe(0);
+    expect(sc.clamped).toBe(false); // crop is within the photo
+    expect(sc.cropPx.x).toBe(p.crop.x);
+    expect(sc.cropPx.y).toBe(p.crop.y);
+    expect(sc.cropPx.width).toBe(p.crop.width);
+    expect(sc.cropPx.height).toBe(p.crop.height);
+  });
+
+  it('zoom shrinks the pre-image crop (scale 2 → half size, centred) — this is what was ignored before', () => {
+    const sc = resolveServerCrop(applyScale(createInitialState(), 2, 0.5, 5), W, H, W, H, 'classic');
+    expect(sc.cropPx).toEqual({ x: 576, y: 324, width: 768, height: 432 });
+  });
+
+  it('pan shifts the pre-image crop', () => {
+    const sc = resolveServerCrop(applyPan(createInitialState(), 100, 0), W, H, W, H, 'classic');
+    expect(sc.cropPx.x).toBe(92); // 192 − 100·panFactor(1)
+    expect(sc.cropPx.width).toBe(1536);
+  });
+
+  it('90° turn → rotateCCW=90, axis-aligned crop within bounds', () => {
+    const sc = resolveServerCrop(applyRotateLeft(createInitialState()), W, H, W, H, 'classic');
+    expect(sc.tilted).toBe(false);
+    expect(sc.rotateCCW).toBe(90);
+    expect(sc.cropPx.x).toBeGreaterThanOrEqual(0);
+    expect(sc.cropPx.x + sc.cropPx.width).toBeLessThanOrEqual(W);
+    expect(sc.cropPx.y + sc.cropPx.height).toBeLessThanOrEqual(H);
+    // classic letterboxes the photo on a 90° turn, so the default 80% crop frame
+    // reaches into the empty margin → the crop is clamped to the image and the
+    // canvas's margins can't be reproduced server-side.
+    expect(sc.clamped).toBe(true);
+  });
+
+  it('90° turn with a crop kept INSIDE the letterboxed photo → not clamped', () => {
+    const s = { ...applyRotateLeft(createInitialState()), cropRect: { x: 0.4, y: 0.4, width: 0.2, height: 0.2 } };
+    const sc = resolveServerCrop(s, W, H, W, H, 'classic');
+    expect(sc.tilted).toBe(false);
+    expect(sc.clamped).toBe(false);
+  });
+
+  it('fixed variant resolves a real sub-region (no longer the whole image)', () => {
+    const full = { ...createInitialState(), cropRect: { x: 0, y: 0, width: 1, height: 1 } };
+    const sc = resolveServerCrop(full, W, H, 800, 800, 'fixed');
+    expect(sc.tilted).toBe(false);
+    expect(sc.cropPx.width).toBeGreaterThan(0);
+    expect(sc.cropPx.width).toBeLessThan(W); // square frame over landscape → centre strip
+    expect(sc.cropPx.x + sc.cropPx.width).toBeLessThanOrEqual(W);
+    expect(sc.clamped).toBe(false); // fixed cover-fits → frame always within the photo
+  });
+});
+
+describe('resolveServerCrop — nested (free tilt)', () => {
+  it('free tilt → nested plan with bounding-box inner canvas + inset-shifted outer crop', () => {
+    // Small centred crop so a 22° tilt keeps the window inside the photo.
+    const s = { ...applyRotation(createInitialState(), 22), cropRect: { x: 0.3, y: 0.3, width: 0.4, height: 0.4 } };
+    const sc = resolveServerCrop(s, W, H, W, H, 'classic');
+    expect(sc.tilted).toBe(true);
+    expect(sc.rotateCCW).toBe(338); // −22 normalized to [0,360)
+    expect(sc.nested).toBeDefined();
+    const rad = (22 * Math.PI) / 180;
+    const innerW = Math.round(Math.abs(W * Math.cos(rad)) + Math.abs(H * Math.sin(rad)));
+    const innerH = Math.round(Math.abs(W * Math.sin(rad)) + Math.abs(H * Math.cos(rad)));
+    expect(sc.nested!.innerW).toBe(innerW);
+    expect(sc.nested!.innerH).toBe(innerH);
+    const o = sc.nested!.outerCrop;
+    // The crop can be no larger than the rotated bbox.
+    expect(o.width).toBeGreaterThan(0);
+    expect(o.height).toBeGreaterThan(0);
+    expect(o.width).toBeLessThanOrEqual(innerW);
+    expect(o.height).toBeLessThanOrEqual(innerH);
+    expect(sc.clamped).toBe(false); // tilt only, scale 1 → crop stays within the photo
+  });
+
+  it('nested outer crop is shifted by the bbox→photo inset (Cloudimage nested-crop frame)', () => {
+    // Regression lock for the inset fix: the emitted outerCrop equals the
+    // axis-aligned bbox crop minus ((innerW-iw)/2, (innerH-ih)/2). Without the
+    // shift, every tilted crop is offset and the CDN result drifts off-frame.
+    const sc = resolveServerCrop(applyRotation(createInitialState(), 30), W, H, W, H, 'classic');
+    const rad = (30 * Math.PI) / 180;
+    const innerW = Math.round(Math.abs(W * Math.cos(rad)) + Math.abs(H * Math.sin(rad)));
+    const innerH = Math.round(Math.abs(W * Math.sin(rad)) + Math.abs(H * Math.cos(rad)));
+    const insetX = Math.round((innerW - W) / 2);
+    const insetY = Math.round((innerH - H) / 2);
+    // The inset is non-trivial for a landscape image, so the shift is observable.
+    expect(insetX).not.toBe(0);
+    // x + inset must land back inside the bbox (i.e. pre-shift crop was in-bounds).
+    const o = sc.nested!.outerCrop;
+    expect(o.x + insetX).toBeGreaterThanOrEqual(0);
+    expect(o.x + insetX + o.width).toBeLessThanOrEqual(innerW + 1);
+    expect(o.y + insetY).toBeGreaterThanOrEqual(0);
+    expect(o.y + insetY + o.height).toBeLessThanOrEqual(innerH + 1);
+  });
+
+  it('90° turn + free tilt with default crop → nested AND clamped (letterbox margin)', () => {
+    // quarterTurns ±90 letterboxes the photo (classic); the default 80% crop then
+    // spills into the margin, so even the nested plan must clamp — the canvas's
+    // empty margins are not reproducible via a Cloudimage crop.
+    const s = applyRotation(applyRotateLeft(createInitialState()), 13.56);
+    const sc = resolveServerCrop(s, W, H, W, H, 'classic');
+    expect(sc.tilted).toBe(true);
+    expect(sc.clamped).toBe(true);
+  });
+});

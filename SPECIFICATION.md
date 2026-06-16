@@ -633,6 +633,8 @@ interface SfxCropElement extends HTMLElement {
   toBlob(type?: string, quality?: number): Promise<Blob>;
   toDataURL(type?: string, quality?: number): string;
   toTransformParams(): TransformParams;
+  toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string;
+  toCropDescriptor(): CropDescriptor;
 
   reset(): void;
   save(type?: string, quality?: number): Promise<void>;  // fires sfx-crop-save
@@ -648,7 +650,7 @@ interface SfxCropElement extends HTMLElement {
 | `sfx-crop-image-load` | `{ image: HTMLImageElement }` |
 | `sfx-crop-change` | `TransformState` |
 | `sfx-crop-crop-change` | `CropRect` (image-pixel coords) |
-| `sfx-crop-save` | `{ blob: Blob, dataURL: string, params: TransformParams }` |
+| `sfx-crop-save` | `{ blob: Blob \| null, dataURL: string \| null, params: TransformParams, url: string \| null }` |
 | `sfx-crop-cancel` | `void` |
 | `sfx-crop-error` | `{ error: Error }` |
 
@@ -1121,6 +1123,57 @@ toTransformParams(): {
   outputHeight: number;
 }
 ```
+
+### 10.4 Export to Cloudimage URL (server-side)
+
+`toCloudimageURL(options?)` (and the pure `buildCloudimageUrl(params, options)`)
+turn the transform into a [Cloudimage v7](https://docs.cloudimage.io/) URL so the
+crop runs on the CDN instead of a canvas. Selected by `outputMode: 'cloudimage'`,
+in which case `save()` emits `url` and skips the canvas (`blob`/`dataURL` null).
+
+Ops are emitted in Cloudimage's fixed pipeline order — `flip → rotate → crop →
+resize → format`:
+
+| Editor state | Cloudimage op |
+|---|---|
+| `flipH`/`flipV` | `flip=h\|v\|hv` |
+| `rotation` (quarterTurns + tilt) | `r=<deg>` — CCW, so `r = normalize(-rotation)`; `bg_color` fills corners when not a multiple of 90° |
+| `crop` (original-image px) | `tl_px=x,y` + `br_px=x+w,y+h` |
+| `maxOutputWidth/Height` | `w`/`h` + `func=bound` + `org_if_sml=1` |
+| `outputType` → `force_format`; `outputQuality` (0–1) → `q` (0–100) | format / quality |
+
+**Full parity.** The crop window's pre-image is derived by inverting the shared
+`resolveDisplay()` matrix — the SAME transform chain `renderToCanvas` slices — so
+crop + flip + 90° turns + **zoom** + **pan** reproduce the canvas exactly in both
+`classic` and `fixed` variants, in a **single-pass** URL (`tl_px`/`br_px` in
+original pixels + `flip` + `r` + `w/h func=bound`). **Free tilt** (rotation not a
+multiple of 90) uses a **two-pass nested URL** — an inner pass rotates the photo
+(`r`, `bg_color` corners), an outer pass crops the rotated result (`ci_url_encoded=1`) —
+because Cloudimage crops before it rotates. The nested outer `tl_px`/`br_px` are
+shifted by the bbox→photo inset `((innerW-iw)/2, (innerH-ih)/2)`, because Cloudimage
+measures a nested crop from the original image frame's inset position inside the
+rotated bounding box, not from the bbox corner. Geometry is exact; only the CDN's
+resize kernel differs from the canvas. Verified end-to-end in a real browser
+(puppeteer driving the live element) across tilt / 90° / zoom / pan / flip / both
+variants — mean per-channel diff 3–9 / 255.
+
+**Limit — out-of-photo margins.** Parity holds for any crop window that lies
+**within the photo**. If the window extends past the image into empty/background
+margins, the URL cannot match: a CDN **clamps a crop to the image bounds** (it
+does not pad a crop — verified: out-of-bounds `tl_px`/`br_px`, with or without
+`bg_color`, return the same clamped pixels). This is reachable in `classic` after
+a **90°/270° turn**, which letterboxes the photo smaller than the frame, so a
+crop frame reaching into the letterbox margin is clamped (the canvas shows those
+margins; the CDN can't). `resolveServerCrop(...).clamped` reports it. The **`fixed`
+variant always cover-fits** (crop ⊆ photo) → every combination matches; in
+`classic`, keep the crop within the photo for guaranteed parity.
+
+`resolveServerCrop()` (exporter) produces the plan (incl. the `clamped` flag);
+`buildCloudimageUrlFromDescriptor()`
+emits the URL. The target is built from `cloudimageToken` (+ optional
+`cloudimageDomain`); if `src` is already a Cloudimage/Filerobot URL the ops are
+appended/merged instead. A serializable `CropDescriptor` (`toCropDescriptor()`)
+lets a server reproduce the URL from stored data.
 
 ---
 

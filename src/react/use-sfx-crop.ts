@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SfxCropElement } from '../elements/sfx-crop';
 import type { CropRect, CropShapeName, TransformState, TransformParams } from '../core/types';
+import type { CloudimageUrlOptions, CropDescriptor } from '../export/cloudimage-url';
 
 // Auto-register the custom element. Guarded for SSR.
 if (typeof customElements !== 'undefined') {
@@ -27,6 +28,8 @@ export interface UseSfxCropReturn {
   toBlob(type?: string, quality?: number): Promise<Blob | null>;
   toDataURL(type?: string, quality?: number): string | null;
   toTransformParams(): TransformParams | null;
+  toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string | null;
+  toCropDescriptor(): CropDescriptor | null;
   save(type?: string, quality?: number): Promise<void>;
   cancel(): void;
 }
@@ -71,6 +74,10 @@ export function useSfxCrop(): UseSfxCropReturn {
     ref.current?.toDataURL(type, quality) ?? null, []);
   const toTransformParams = useCallback((): TransformParams | null =>
     ref.current?.toTransformParams() ?? null, []);
+  const toCloudimageURL = useCallback((options?: Partial<CloudimageUrlOptions>): string | null =>
+    ref.current?.toCloudimageURL(options) ?? null, []);
+  const toCropDescriptor = useCallback((): CropDescriptor | null =>
+    ref.current?.toCropDescriptor() ?? null, []);
   const save = useCallback((type?: string, quality?: number): Promise<void> =>
     ref.current ? ref.current.save(type, quality) : Promise.resolve(), []);
   const cancel = useCallback(() => ref.current?.cancel(), []);
@@ -92,6 +99,8 @@ export function useSfxCrop(): UseSfxCropReturn {
     toBlob,
     toDataURL,
     toTransformParams,
+    toCloudimageURL,
+    toCropDescriptor,
     save,
     cancel,
   };
