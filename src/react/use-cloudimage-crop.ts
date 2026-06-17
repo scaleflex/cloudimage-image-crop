@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SfxCropElement } from '../elements/sfx-crop';
+import type { CloudimageCropElement } from '../elements/cloudimage-crop';
 import type { CropRect, CropShapeName, TransformState, TransformParams } from '../core/types';
 import type { CloudimageUrlOptions, CropDescriptor } from '../export/cloudimage-url';
 
@@ -8,9 +8,9 @@ if (typeof customElements !== 'undefined') {
   void import('../define');
 }
 
-export interface UseSfxCropReturn {
-  /** Attach this ref to your `<sfx-crop ref={ref}>` (or the React `SfxCrop`). */
-  ref: React.RefObject<SfxCropElement | null>;
+export interface UseCloudimageCropReturn {
+  /** Attach this ref to your `<cloudimage-crop ref={ref}>` (or the React `CloudimageCrop`). */
+  ref: React.RefObject<CloudimageCropElement | null>;
   /** Fires after the editor has loaded the image and the renderer is live. */
   ready: boolean;
   // --- Imperative methods (no-ops before ready) ---
@@ -36,21 +36,21 @@ export interface UseSfxCropReturn {
 
 /**
  * Hook variant of the React wrapper — returns a ref to bind plus stable
- * callables for imperative operations. Prefer the `<SfxCrop>` component for
+ * callables for imperative operations. Prefer the `<CloudimageCrop>` component for
  * declarative usage; reach for this hook when you need to render the element
  * yourself or share imperative access across multiple components.
  */
-export function useSfxCrop(): UseSfxCropReturn {
-  const ref = useRef<SfxCropElement | null>(null);
+export function useCloudimageCrop(): UseCloudimageCropReturn {
+  const ref = useRef<CloudimageCropElement | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const onReady = (): void => setReady(true);
-    el.addEventListener('sfx-crop-ready', onReady);
+    el.addEventListener('cloudimage-crop-ready', onReady);
     return () => {
-      el.removeEventListener('sfx-crop-ready', onReady);
+      el.removeEventListener('cloudimage-crop-ready', onReady);
       setReady(false);
     };
   }, []);

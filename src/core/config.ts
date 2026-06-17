@@ -1,4 +1,4 @@
-import type { SfxCropConfig } from './types';
+import type { CloudimageCropConfig } from './types';
 
 /**
  * Vertical space (in CSS px) reserved below the canvas for the toolbar when
@@ -7,7 +7,7 @@ import type { SfxCropConfig } from './types';
  */
 export const TOOLBAR_RESERVE_PX = 80;
 
-export const DEFAULT_CONFIG: SfxCropConfig = {
+export const DEFAULT_CONFIG: CloudimageCropConfig = {
   src: '',
   variant: 'classic',
   cropShape: '16:9',
@@ -54,11 +54,11 @@ export const DEFAULT_CONFIG: SfxCropConfig = {
   wheelZoom: true,
 };
 
-export function mergeConfig(partial: Partial<SfxCropConfig>): SfxCropConfig {
+export function mergeConfig(partial: Partial<CloudimageCropConfig>): CloudimageCropConfig {
   return { ...DEFAULT_CONFIG, ...partial };
 }
 
-export function validateConfig(config: SfxCropConfig): string[] {
+export function validateConfig(config: CloudimageCropConfig): string[] {
   const errors: string[] = [];
 
   if (!config.src) {

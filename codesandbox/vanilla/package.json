@@ -1,7 +1,7 @@
 {
   "name": "scaleflex-crop-vanilla-example",
   "version": "1.0.0",
-  "description": "@scaleflex/image-crop - Vanilla JavaScript Example",
+  "description": "@cloudimage/image-crop - Vanilla JavaScript Example",
   "main": "index.html",
   "scripts": {
     "dev": "serve . -l 5175",

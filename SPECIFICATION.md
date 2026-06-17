@@ -1,4 +1,4 @@
-# @scaleflex/image-crop — Specification
+# @cloudimage/image-crop — Specification
 
 Interactive image crop tool with rotation, flip, zoom, and shape constraints.
 Inspired by Pintura's crop interface style. Part of the Scaleflex js-cloudimage-* family.
@@ -28,7 +28,7 @@ Inspired by Pintura's crop interface style. Part of the Scaleflex js-cloudimage-
 ### 1.1 Purpose
 
 Framework-agnostic interactive image-cropping library delivered as a Lit 3
-Web Component (`<sfx-crop>`) with a thin React wrapper. Canvas-based editor
+Web Component (`<cloudimage-crop>`) with a thin React wrapper. Canvas-based editor
 with rotation, flip, zoom, and aspect-ratio shape presets. Public API and
 packaging mirror the sibling Scaleflex packages `@scaleflex/uploader` and
 `@scaleflex/asset-picker`.
@@ -36,14 +36,14 @@ packaging mirror the sibling Scaleflex packages `@scaleflex/uploader` and
 ### 1.2 Goals
 
 - Premium, Pintura-inspired visual experience with luxury animations
-- Web-component first: `<sfx-crop>` works in any framework, no SDK required
+- Web-component first: `<cloudimage-crop>` works in any framework, no SDK required
 - Single runtime dep (`lit@^3`); Canvas 2D for rendering
 - Scaleflex-convention packaging: `.` / `./define` / `./react` exports,
   ESM + CJS, no UMD
 - Touch, mouse, keyboard, and stylus support
 - WCAG 2.1 AA accessible
 - TypeScript-first with full type safety
-- `--sfx-cr-*` CSS custom properties + `::part(...)` for consumer theming
+- `--ci-crop-*` CSS custom properties + `::part(...)` for consumer theming
 
 ### 1.3 Tools
 
@@ -530,7 +530,7 @@ User Action (click/drag/keyboard)
   → Interaction handler
   → Pure transform function → new TransformState
   → crop-controller updates state, calls callbacks
-  → <sfx-crop> dispatches sfx-crop-change / sfx-crop-crop-change
+  → <cloudimage-crop> dispatches cloudimage-crop-change / cloudimage-crop-crop-change
   → renderer.markDirty()
   → Next rAF: render(image, animatedState)
   → Fire onChange callback
@@ -564,31 +564,31 @@ Conversion functions: `imageToCanvas()`, `canvasToImage()`, `normalizedToCanvas(
 
 ```html
 <script type="module">
-  import '@scaleflex/image-crop/define';
+  import '@cloudimage/image-crop/define';
 </script>
 
-<sfx-crop
+<cloudimage-crop
   src="/photos/landscape.jpg"
   crop-shape="16:9"
   theme="dark"
   show-grid="interaction"
-></sfx-crop>
+></cloudimage-crop>
 ```
 
 Registered tags (all six live in `./define`):
 
 | Tag | Role |
 |---|---|
-| `<sfx-crop>` | main editor |
-| `<sfx-crop-canvas>` | stable `<canvas>` host inside the shadow root |
-| `<sfx-crop-toolbar>` | action bar composing rotate/flip buttons + sliders + shape selector |
-| `<sfx-crop-zoom>` | zoom slider |
-| `<sfx-crop-rotate>` | fine-rotation slider (-45°…+45°) with snap-to-zero |
-| `<sfx-crop-shapes>` | shape preset dropdown with keyboard nav |
+| `<cloudimage-crop>` | main editor |
+| `<cloudimage-crop-canvas>` | stable `<canvas>` host inside the shadow root |
+| `<cloudimage-crop-toolbar>` | action bar composing rotate/flip buttons + sliders + shape selector |
+| `<cloudimage-crop-zoom>` | zoom slider |
+| `<cloudimage-crop-rotate>` | fine-rotation slider (-45°…+45°) with snap-to-zero |
+| `<cloudimage-crop-shapes>` | shape preset dropdown with keyboard nav |
 
 ### 5.2 Attributes
 
-Every configuration value has a kebab-case attribute on `<sfx-crop>`. Notable:
+Every configuration value has a kebab-case attribute on `<cloudimage-crop>`. Notable:
 
 | Attribute | Type | Default |
 |---|---|---|
@@ -616,7 +616,7 @@ Every configuration value has a kebab-case attribute on `<sfx-crop>`. Notable:
 ### 5.3 Imperative methods (on the element)
 
 ```ts
-interface SfxCropElement extends HTMLElement {
+interface CloudimageCropElement extends HTMLElement {
   loadImage(src: string): Promise<void>;
 
   rotateLeft(): void;                 // 90° CCW, animated
@@ -637,8 +637,8 @@ interface SfxCropElement extends HTMLElement {
   toCropDescriptor(): CropDescriptor;
 
   reset(): void;
-  save(type?: string, quality?: number): Promise<void>;  // fires sfx-crop-save
-  cancel(): void;                                        // fires sfx-crop-cancel
+  save(type?: string, quality?: number): Promise<void>;  // fires cloudimage-crop-save
+  cancel(): void;                                        // fires cloudimage-crop-cancel
 }
 ```
 
@@ -646,19 +646,19 @@ interface SfxCropElement extends HTMLElement {
 
 | Event | `detail` |
 |---|---|
-| `sfx-crop-ready` | `{ element: SfxCropElement }` |
-| `sfx-crop-image-load` | `{ image: HTMLImageElement }` |
-| `sfx-crop-change` | `TransformState` |
-| `sfx-crop-crop-change` | `CropRect` (image-pixel coords) |
-| `sfx-crop-save` | `{ blob: Blob \| null, dataURL: string \| null, params: TransformParams, url: string \| null, descriptor: CropDescriptor \| null }` |
-| `sfx-crop-cancel` | `void` |
-| `sfx-crop-error` | `{ error: Error }` |
+| `cloudimage-crop-ready` | `{ element: CloudimageCropElement }` |
+| `cloudimage-crop-image-load` | `{ image: HTMLImageElement }` |
+| `cloudimage-crop-change` | `TransformState` |
+| `cloudimage-crop-crop-change` | `CropRect` (image-pixel coords) |
+| `cloudimage-crop-save` | `{ blob: Blob \| null, dataURL: string \| null, params: TransformParams, url: string \| null, descriptor: CropDescriptor \| null }` |
+| `cloudimage-crop-cancel` | `void` |
+| `cloudimage-crop-error` | `{ error: Error }` |
 
 Internal sub-element events (not part of the public API; the host listens for
-them on `<sfx-crop-toolbar>` and translates them into controller calls):
-- `sfx-crop-toolbar-command` — discriminated union over `reset` / `rotate-left` /
+them on `<cloudimage-crop-toolbar>` and translates them into controller calls):
+- `cloudimage-crop-toolbar-command` — discriminated union over `reset` / `rotate-left` /
   `flip-h` / `rotation` / `scale` / `shape`.
-- `sfx-crop-rotate-active` — `{ active: boolean }` to drive the
+- `cloudimage-crop-rotate-active` — `{ active: boolean }` to drive the
   `setRotationMode(active)` interaction state.
 
 ### 5.5 Types
@@ -720,26 +720,26 @@ type CropIconOverrides = Partial<{
 }>;
 ```
 
-### 5.6 React binding (`@scaleflex/image-crop/react`)
+### 5.6 React binding (`@cloudimage/image-crop/react`)
 
 Three tiers, all exported from the same entry:
 
 ```tsx
 import {
-  SfxCrop,                  // forwardRef component (built-in toolbar)
-  useSfxCrop,               // hook around the same custom element
-  useSfxCropController,     // headless controller hook (consumer-owned canvas)
+  CloudimageCrop,                  // forwardRef component (built-in toolbar)
+  useCloudimageCrop,               // hook around the same custom element
+  useCloudimageCropController,     // headless controller hook (consumer-owned canvas)
   createCropController,     // raw factory re-exported for convenience
   DEFAULT_CONFIG,
   mergeConfig,
-  type SfxCropElement,
-  type SfxCropProps,
-  type SfxCropSaveDetail,
-} from '@scaleflex/image-crop/react';
+  type CloudimageCropElement,
+  type CloudimageCropProps,
+  type CloudimageCropSaveDetail,
+} from '@cloudimage/image-crop/react';
 
 // 1) Declarative component
-const ref = useRef<SfxCropElement>(null);
-<SfxCrop
+const ref = useRef<CloudimageCropElement>(null);
+<CloudimageCrop
   ref={ref}
   src="/photo.jpg"
   cropShape="16:9"
@@ -749,12 +749,12 @@ const ref = useRef<SfxCropElement>(null);
 />
 
 // 2) Imperative hook (same UI, ref-based access)
-const crop = useSfxCrop();
-<sfx-crop ref={crop.ref} src="/photo.jpg" />;
+const crop = useCloudimageCrop();
+<cloudimage-crop ref={crop.ref} src="/photo.jpg" />;
 await crop.save();
 
 // 3) Headless — render your own canvas + UI
-const { canvasRef, state, actions, api } = useSfxCropController({
+const { canvasRef, state, actions, api } = useCloudimageCropController({
   src: '/photo.jpg', cropShape: '16:9',
 });
 <canvas ref={canvasRef} />;
@@ -762,7 +762,7 @@ const { canvasRef, state, actions, api } = useSfxCropController({
 
 The headless hook returns `{ canvasRef, ready, state, actions, api }` — see
 `CropControllerState`, `CropControllerActions`, `CropControllerApi` in
-`src/react/use-sfx-crop-controller.ts`.
+`src/react/use-cloudimage-crop-controller.ts`.
 
 ---
 
@@ -771,7 +771,7 @@ The headless hook returns `{ canvasRef, ready, state, actions, api }` — see
 ### 6.1 Full Config Interface
 
 ```typescript
-interface SfxCropConfig {
+interface CloudimageCropConfig {
   // Source
   src: string;
 
@@ -837,16 +837,16 @@ interface SfxCropConfig {
 }
 ```
 
-> `SfxCropConfig` is `@internal` — marshalled by the `<sfx-crop>` element from
+> `CloudimageCropConfig` is `@internal` — marshalled by the `<cloudimage-crop>` element from
 > its reflected attributes. Consumers interact through HTML attributes / DOM
 > properties / events (§5), not this shape directly.
 
 ### 6.2 HTML attributes
 
-Every field above maps to a kebab-case attribute on `<sfx-crop>`:
+Every field above maps to a kebab-case attribute on `<cloudimage-crop>`:
 
 ```html
-<sfx-crop
+<cloudimage-crop
   src="/images/photo.jpg"
   crop-shape="16:9"
   theme="dark"
@@ -855,20 +855,20 @@ Every field above maps to a kebab-case attribute on `<sfx-crop>`:
   max-scale="5"
   enable-animations="true"
   available-shapes='["free","circle","16:9"]'
-></sfx-crop>
+></cloudimage-crop>
 ```
 
-Booleans accept presence-shorthand (`<sfx-crop show-toolbar>`), `"true"`, or
+Booleans accept presence-shorthand (`<cloudimage-crop show-toolbar>`), `"true"`, or
 `"false"`. Arrays accept JSON or whitespace/comma-separated strings.
 
 ### 6.3 Default Configuration
 
-Mirrors `src/core/config.ts:DEFAULT_CONFIG`. The `<sfx-crop>` element's
+Mirrors `src/core/config.ts:DEFAULT_CONFIG`. The `<cloudimage-crop>` element's
 `@property` declarations re-use the same defaults, so headless and custom
 element consumers see identical behaviour.
 
 ```typescript
-const DEFAULT_CONFIG: SfxCropConfig = {
+const DEFAULT_CONFIG: CloudimageCropConfig = {
   src: '',
   variant: 'classic',
   cropShape: '16:9',
@@ -913,7 +913,7 @@ const DEFAULT_CONFIG: SfxCropConfig = {
 ```
 
 > The `icons` (`CropIconOverrides`) override map is exposed only on the
-> `<sfx-crop>` element / React props — it is not part of `SfxCropConfig`
+> `<cloudimage-crop>` element / React props — it is not part of `CloudimageCropConfig`
 > because the headless `createCropController` has no toolbar to skin.
 
 ---
@@ -1222,7 +1222,7 @@ lets a server reproduce the URL from stored data.
 ## 12. Project Structure
 
 ```
-@scaleflex/image-crop/
+@cloudimage/image-crop/
 ├── package.json
 ├── tsconfig.json                  # experimentalDecorators + useDefineForClassFields:false
 ├── tsconfig.build.json
@@ -1243,25 +1243,25 @@ lets a server reproduce the URL from stored data.
 │   ├── define.ts                  # side-effect entry — safeDefine all six tags
 │   ├── vite-env.d.ts
 │   ├── elements/
-│   │   ├── base.ts                # SfxCropBaseElement + safeDefine guard
+│   │   ├── base.ts                # CloudimageCropBaseElement + safeDefine guard
 │   │   ├── icons.ts               # static SVG strings (innerHTML-safe invariant)
 │   │   ├── parse-shapes.ts        # CSV/JSON/array normaliser for available-shapes
-│   │   ├── sfx-crop.ts            # <sfx-crop> main element
-│   │   ├── sfx-crop.styles.ts     # host + container + loading/error
-│   │   ├── sfx-crop-canvas.ts     # <sfx-crop-canvas>
-│   │   ├── sfx-crop-canvas.styles.ts
-│   │   ├── sfx-crop-toolbar.ts    # <sfx-crop-toolbar>
-│   │   ├── sfx-crop-toolbar.styles.ts
-│   │   ├── sfx-crop-zoom.ts       # <sfx-crop-zoom>
-│   │   ├── sfx-crop-zoom.styles.ts
-│   │   ├── sfx-crop-rotate.ts     # <sfx-crop-rotate>
-│   │   ├── sfx-crop-rotate.styles.ts
-│   │   ├── sfx-crop-shapes.ts     # <sfx-crop-shapes>
-│   │   └── sfx-crop-shapes.styles.ts
+│   │   ├── cloudimage-crop.ts            # <cloudimage-crop> main element
+│   │   ├── cloudimage-crop.styles.ts     # host + container + loading/error
+│   │   ├── cloudimage-crop-canvas.ts     # <cloudimage-crop-canvas>
+│   │   ├── cloudimage-crop-canvas.styles.ts
+│   │   ├── cloudimage-crop-toolbar.ts    # <cloudimage-crop-toolbar>
+│   │   ├── cloudimage-crop-toolbar.styles.ts
+│   │   ├── cloudimage-crop-zoom.ts       # <cloudimage-crop-zoom>
+│   │   ├── cloudimage-crop-zoom.styles.ts
+│   │   ├── cloudimage-crop-rotate.ts     # <cloudimage-crop-rotate>
+│   │   ├── cloudimage-crop-rotate.styles.ts
+│   │   ├── cloudimage-crop-shapes.ts     # <cloudimage-crop-shapes>
+│   │   └── cloudimage-crop-shapes.styles.ts
 │   ├── core/
 │   │   ├── crop-controller.ts     # pure factory — state/renderer/pointer/keyboard wiring
 │   │   ├── config.ts              # DEFAULT_CONFIG, mergeConfig, validateConfig, TOOLBAR_RESERVE_PX
-│   │   └── types.ts               # SfxCropConfig + TransformState + CropRect + ...
+│   │   └── types.ts               # CloudimageCropConfig + TransformState + CropRect + ...
 │   ├── canvas/                    # unchanged: renderer + layers + hit-test
 │   ├── transforms/                # unchanged: pure state + matrix + constrain
 │   ├── interactions/              # unchanged: pointer-tracker + drag + resize + pinch + wheel
@@ -1269,7 +1269,7 @@ lets a server reproduce the URL from stored data.
 │   ├── export/                    # unchanged: exporter
 │   ├── a11y/
 │   │   ├── keyboard.ts            # attached to host (tabindex=0 via setupAria)
-│   │   └── aria.ts                # uses .sfx-cr-sr-only live region
+│   │   └── aria.ts                # uses .ci-crop-sr-only live region
 │   ├── utils/
 │   │   ├── events.ts
 │   │   └── math.ts
@@ -1277,18 +1277,18 @@ lets a server reproduce the URL from stored data.
 │   │   └── shared.css.ts          # designTokens + baseStyles + keyframes + sliderThumbStyles
 │   └── react/
 │       ├── index.ts
-│       ├── sfx-crop.tsx                  # SfxCrop (forwardRef) + event bridge
-│       ├── use-sfx-crop.ts               # useSfxCrop() — hook around the custom element
-│       └── use-sfx-crop-controller.ts    # useSfxCropController() — headless controller
+│       ├── cloudimage-crop.tsx                  # CloudimageCrop (forwardRef) + event bridge
+│       ├── use-cloudimage-crop.ts               # useCloudimageCrop() — hook around the custom element
+│       └── use-cloudimage-crop-controller.ts    # useCloudimageCropController() — headless controller
 └── tests/
     ├── setup.ts                   # DOMMatrix + ResizeObserver polyfills
     ├── canvas/hit-test.test.ts
     ├── core/config.test.ts
     ├── elements/parse-shapes.test.ts
-    ├── elements/sfx-crop.test.ts
-    ├── elements/sfx-crop-toolbar.test.ts
+    ├── elements/cloudimage-crop.test.ts
+    ├── elements/cloudimage-crop-toolbar.test.ts
     ├── export/exporter.test.ts
-    ├── react/sfx-crop.test.tsx
+    ├── react/cloudimage-crop.test.tsx
     ├── transforms/{constrain,matrix,transform-state}.test.ts
     └── utils/math.test.ts
 ```
@@ -1304,42 +1304,42 @@ Scaleflex packages.
 
 | Entry | File(s) |
 |---|---|
-| `@scaleflex/image-crop` (types + helpers, no side effects) | `dist/index.js`, `dist/index.cjs`, `dist/index.d.ts` |
-| `@scaleflex/image-crop/define` (side-effect: registers all six tags) | `dist/define.js`, `dist/define.cjs`, `dist/define.d.ts` |
-| `@scaleflex/image-crop/react` (forwardRef component + hook) | `dist/react/index.js`, `dist/react/index.cjs`, `dist/react/index.d.ts` |
-| Shared chunk (Lit elements, controller, transforms) | `dist/chunks/sfx-crop-*.js|cjs` |
+| `@cloudimage/image-crop` (types + helpers, no side effects) | `dist/index.js`, `dist/index.cjs`, `dist/index.d.ts` |
+| `@cloudimage/image-crop/define` (side-effect: registers all six tags) | `dist/define.js`, `dist/define.cjs`, `dist/define.d.ts` |
+| `@cloudimage/image-crop/react` (forwardRef component + hook) | `dist/react/index.js`, `dist/react/index.cjs`, `dist/react/index.d.ts` |
+| Shared chunk (Lit elements, controller, transforms) | `dist/chunks/cloudimage-crop-*.js|cjs` |
 
 ### 13.2 Usage Examples
 
 **CDN (ESM):**
 ```html
 <script type="module"
-        src="https://cdn.jsdelivr.net/npm/@scaleflex/image-crop/dist/define.js"></script>
-<sfx-crop src="/photos/landscape.jpg" crop-shape="16:9" theme="light"></sfx-crop>
+        src="https://cdn.jsdelivr.net/npm/@cloudimage/image-crop/dist/define.js"></script>
+<cloudimage-crop src="/photos/landscape.jpg" crop-shape="16:9" theme="light"></cloudimage-crop>
 ```
 
 **ESM:**
 ```ts
-import '@scaleflex/image-crop/define';
+import '@cloudimage/image-crop/define';
 
 const crop = document.getElementById('crop');
-crop.addEventListener('sfx-crop-change', (e) => console.log(e.detail));
+crop.addEventListener('cloudimage-crop-change', (e) => console.log(e.detail));
 
 const blob = await crop.toBlob('image/jpeg', 0.9);
 ```
 
 **React:**
 ```tsx
-import { SfxCrop, type SfxCropElement } from '@scaleflex/image-crop/react';
+import { CloudimageCrop, type CloudimageCropElement } from '@cloudimage/image-crop/react';
 
 function App() {
-  const ref = useRef<SfxCropElement>(null);
+  const ref = useRef<CloudimageCropElement>(null);
   const handleExport = async () => {
     const blob = await ref.current?.toBlob('image/jpeg', 0.9);
     // ...
   };
   return (
-    <SfxCrop
+    <CloudimageCrop
       ref={ref}
       src="/photos/landscape.jpg"
       cropShape="16:9"

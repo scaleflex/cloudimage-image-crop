@@ -1,10 +1,10 @@
 import { html, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { SfxCropBaseElement } from './base';
+import { CloudimageCropBaseElement } from './base';
 import { clamp } from '../utils/math';
 import type { CropIconOverrides } from '../core/types';
 import { baseStyles } from '../styles/shared.css';
-import { sfxCropRotateStyles } from './sfx-crop-rotate.styles';
+import { sfxCropRotateStyles } from './cloudimage-crop-rotate.styles';
 import { createPopoverAnchor, type PopoverAnchor } from './popover-anchor';
 
 /**
@@ -19,16 +19,16 @@ const TICK_STEP = 1;
 const MAJOR_EVERY = 5;
 
 /**
- * `<sfx-crop-rotate>` — always-visible fine-rotation ruler.
+ * `<cloudimage-crop-rotate>` — always-visible fine-rotation ruler.
  *
  * Ticks scroll under a fixed center marker; the current degrees label sits
  * below. Drag the ruler left/right to tilt; double-click to reset.
  *
  * Event:
- *   `sfx-crop-rotate-change` — `{ detail: { degrees: number } }`,
+ *   `cloudimage-crop-rotate-change` — `{ detail: { degrees: number } }`,
  *   bubbles + composed.
  */
-export class SfxCropRotateElement extends SfxCropBaseElement {
+export class CloudimageCropRotateElement extends CloudimageCropBaseElement {
   static styles = [baseStyles, sfxCropRotateStyles];
 
   @property({ type: Number }) value = 0;
@@ -42,7 +42,7 @@ export class SfxCropRotateElement extends SfxCropBaseElement {
   private pointerStartX = 0;
   private pointerStartValue = 0;
 
-  private popoverAnchor: PopoverAnchor = createPopoverAnchor(this, '.sfx-cr-rotate-popover');
+  private popoverAnchor: PopoverAnchor = createPopoverAnchor(this, '.ci-crop-rotate-popover');
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -80,10 +80,10 @@ export class SfxCropRotateElement extends SfxCropBaseElement {
     }
 
     return html`
-      <div class="sfx-cr-rotate-root" @keydown=${this.onKeyDown}>
-        <div class="sfx-cr-rotate-popover" role="group" aria-label="Fine rotation">
+      <div class="ci-crop-rotate-root" @keydown=${this.onKeyDown}>
+        <div class="ci-crop-rotate-popover" role="group" aria-label="Fine rotation">
           <div
-            class=${`sfx-cr-rotate-ruler${this.dragging ? ' is-dragging' : ''}`}
+            class=${`ci-crop-rotate-ruler${this.dragging ? ' is-dragging' : ''}`}
             role="slider"
             aria-valuemin=${String(this.min)}
             aria-valuemax=${String(this.max)}
@@ -97,17 +97,17 @@ export class SfxCropRotateElement extends SfxCropBaseElement {
             @pointercancel=${this.onPointerUp}
             @dblclick=${this.onReset}
           >
-            <div class="sfx-cr-rotate-ticks" style=${`transform: translateX(${offset.toFixed(1)}px)`}>
+            <div class="ci-crop-rotate-ticks" style=${`transform: translateX(${offset.toFixed(1)}px)`}>
               ${ticks.map((t) => html`
                 <span
-                  class=${`sfx-cr-rotate-tick${t.major ? ' sfx-cr-rotate-tick--major' : ''}`}
+                  class=${`ci-crop-rotate-tick${t.major ? ' ci-crop-rotate-tick--major' : ''}`}
                   style=${`left: ${((t.deg - this.min) * PX_PER_DEG).toFixed(1)}px`}
                 ></span>
               `)}
             </div>
-            <div class="sfx-cr-rotate-indicator" aria-hidden="true"></div>
+            <div class="ci-crop-rotate-indicator" aria-hidden="true"></div>
           </div>
-          <span class="sfx-cr-rotate-value">${formatted}</span>
+          <span class="ci-crop-rotate-value">${formatted}</span>
         </div>
       </div>
     `;
@@ -167,7 +167,7 @@ export class SfxCropRotateElement extends SfxCropBaseElement {
   private emit(degrees: number): void {
     if (this.value === degrees) return;
     this.value = degrees;
-    this.dispatchEvent(new CustomEvent('sfx-crop-rotate-change', {
+    this.dispatchEvent(new CustomEvent('cloudimage-crop-rotate-change', {
       detail: { degrees },
       bubbles: true,
       composed: true,
@@ -181,6 +181,6 @@ export class SfxCropRotateElement extends SfxCropBaseElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'sfx-crop-rotate': SfxCropRotateElement;
+    'cloudimage-crop-rotate': CloudimageCropRotateElement;
   }
 }

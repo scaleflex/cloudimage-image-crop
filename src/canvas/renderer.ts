@@ -133,7 +133,7 @@ export function createRenderer(
   }
 
   /**
-   * The canvas host is sized by <sfx-crop> to the image's display rect, so
+   * The canvas host is sized by <cloudimage-crop> to the image's display rect, so
    * the image fills the canvas edge-to-edge. No letterbox, no toolbar
    * reserve inside the canvas.
    */
@@ -367,7 +367,7 @@ export function createRenderer(
     dirty = false;
 
     // 1. Clear — leave the canvas transparent so the host element's
-    // `--sfx-cr-canvas-bg` CSS variable shows through and follows the
+    // `--ci-crop-canvas-bg` CSS variable shows through and follows the
     // active theme (light/dark) without a hardcoded fill here.
     ctx.clearRect(0, 0, cw, ch);
 
@@ -388,7 +388,7 @@ export function createRenderer(
     // there is no "outside" to dim — skip the overlay. Circle / rounded-rect
     // still mask their corners, so keep it for those shapes.
     if (!(fixedFrame && shapeType === 'rect')) {
-      const overlayColor = cssVar('--sfx-cr-overlay-color', 'rgba(0, 0, 0, 0.55)');
+      const overlayColor = cssVar('--ci-crop-overlay-color', 'rgba(0, 0, 0, 0.55)');
       drawOverlayLayer(ctx, cw, ch, cropCanvas, shapeType, borderRadius, overlayColor);
     }
 
@@ -397,10 +397,10 @@ export function createRenderer(
     // (it conveys the crop shape). Classic always draws the frame + handles.
     if (!(fixedFrame && shapeType === 'rect')) {
       drawCropFrame(ctx, cropCanvas, shapeType, borderRadius, {
-        frame: cssVar('--sfx-cr-frame-color', '#ffffff'),
-        frameShadow: cssVar('--sfx-cr-frame-shadow', 'rgba(0, 0, 0, 0.3)'),
-        handleFill: cssVar('--sfx-cr-handle-fill', '#ffffff'),
-        handleStroke: cssVar('--sfx-cr-handle-stroke', 'rgba(0, 0, 0, 0.25)'),
+        frame: cssVar('--ci-crop-frame-color', '#ffffff'),
+        frameShadow: cssVar('--ci-crop-frame-shadow', 'rgba(0, 0, 0, 0.3)'),
+        handleFill: cssVar('--ci-crop-handle-fill', '#ffffff'),
+        handleStroke: cssVar('--ci-crop-handle-stroke', 'rgba(0, 0, 0, 0.25)'),
       }, !fixedFrame);
     }
 

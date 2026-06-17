@@ -1,22 +1,22 @@
 import { html } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { SfxCropBaseElement } from './base';
+import { CloudimageCropBaseElement } from './base';
 import type { CropShapeName, CropIconOverrides } from '../core/types';
 import { resolveIcon } from './icons';
-import './sfx-crop-rotate';
-import './sfx-crop-shapes';
-import type { SfxCropRotateElement } from './sfx-crop-rotate';
-import type { SfxCropShapesElement } from './sfx-crop-shapes';
+import './cloudimage-crop-rotate';
+import './cloudimage-crop-shapes';
+import type { CloudimageCropRotateElement } from './cloudimage-crop-rotate';
+import type { CloudimageCropShapesElement } from './cloudimage-crop-shapes';
 import { parseAvailableShapes, DEFAULT_SHAPES } from './parse-shapes';
 import { baseStyles, toolbarEnterKeyframes } from '../styles/shared.css';
-import { sfxCropToolbarStyles } from './sfx-crop-toolbar.styles';
+import { sfxCropToolbarStyles } from './cloudimage-crop-toolbar.styles';
 
 /**
- * Unified descriptor dispatched on `sfx-crop-toolbar-command` so the host
- * `<sfx-crop>` routes interactions through a single handler.
+ * Unified descriptor dispatched on `cloudimage-crop-toolbar-command` so the host
+ * `<cloudimage-crop>` routes interactions through a single handler.
  */
-export type SfxCropToolbarCommand =
+export type CloudimageCropToolbarCommand =
   | { type: 'reset' }
   | { type: 'rotate-left' }
   | { type: 'flip-h' }
@@ -26,11 +26,11 @@ export type SfxCropToolbarCommand =
   | { type: 'save' };
 
 /**
- * `<sfx-crop-toolbar>` — composes rotate/flip buttons + the always-visible
- * `<sfx-crop-rotate>` fine-rotation ruler + `<sfx-crop-shapes>` into the
+ * `<cloudimage-crop-toolbar>` — composes rotate/flip buttons + the always-visible
+ * `<cloudimage-crop-rotate>` fine-rotation ruler + `<cloudimage-crop-shapes>` into the
  * editor's action bar. Zoom is wheel-only and has no toolbar control.
  */
-export class SfxCropToolbarElement extends SfxCropBaseElement {
+export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
   static styles = [baseStyles, toolbarEnterKeyframes, sfxCropToolbarStyles];
 
   @property({ type: String }) shape: CropShapeName = 'free';
@@ -49,21 +49,21 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
   @property({ attribute: 'available-shapes' })
   availableShapes: CropShapeName[] | string | null = null;
 
-  /** Consumer icon overrides propagated from `<sfx-crop>`. */
+  /** Consumer icon overrides propagated from `<cloudimage-crop>`. */
   @property({ attribute: false }) icons: CropIconOverrides = {};
 
-  @query('sfx-crop-rotate') private rotateEl?: SfxCropRotateElement;
-  @query('sfx-crop-shapes') private shapesEl?: SfxCropShapesElement;
+  @query('cloudimage-crop-rotate') private rotateEl?: CloudimageCropRotateElement;
+  @query('cloudimage-crop-shapes') private shapesEl?: CloudimageCropShapesElement;
 
   render(): unknown {
     const hasLeftButtons = this.showRotateButton || this.showFlipButton;
     const shapes = parseAvailableShapes(this.availableShapes) ?? [...DEFAULT_SHAPES];
 
     return html`
-      <div class="sfx-cr-toolbar" @sfx-crop-popover-open=${this.onPopoverOpen}>
+      <div class="ci-crop-toolbar" @cloudimage-crop-popover-open=${this.onPopoverOpen}>
         <button
           type="button"
-          class="sfx-cr-reset-btn"
+          class="ci-crop-reset-btn"
           aria-label="Reset all changes"
           @click=${() => this.emit({ type: 'reset' })}
         >
@@ -72,11 +72,11 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
         </button>
 
         ${hasLeftButtons ? html`
-          <div class="sfx-cr-toolbar-group">
+          <div class="ci-crop-toolbar-group">
             ${this.showRotateButton ? html`
               <button
                 type="button"
-                class="sfx-cr-toolbar-btn"
+                class="ci-crop-toolbar-btn"
                 aria-label="Rotate left 90°"
                 @click=${() => this.emit({ type: 'rotate-left' })}
               >${unsafeHTML(resolveIcon('rotateLeft', this.icons))}</button>
@@ -84,7 +84,7 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
             ${this.showFlipButton ? html`
               <button
                 type="button"
-                class="sfx-cr-toolbar-btn"
+                class="ci-crop-toolbar-btn"
                 aria-label="Flip horizontal"
                 @click=${() => this.emit({ type: 'flip-h' })}
               >${unsafeHTML(resolveIcon('flipHorizontal', this.icons))}</button>
@@ -93,29 +93,29 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
         ` : null}
 
         ${this.showRotateSlider ? html`
-          <sfx-crop-rotate
+          <cloudimage-crop-rotate
             .value=${this.rotation}
             .icons=${this.icons}
-            @sfx-crop-rotate-change=${(e: CustomEvent<{ degrees: number }>) =>
+            @cloudimage-crop-rotate-change=${(e: CustomEvent<{ degrees: number }>) =>
               this.emit({ type: 'rotation', value: e.detail.degrees })}
-          ></sfx-crop-rotate>
+          ></cloudimage-crop-rotate>
         ` : null}
 
         ${this.showShapeSelector ? html`
-          <sfx-crop-shapes
+          <cloudimage-crop-shapes
             .value=${this.shape}
             .shapes=${shapes}
             variant=${this.variant}
             .icons=${this.icons}
-            @sfx-crop-shape-change=${(e: CustomEvent<{ shape: CropShapeName }>) =>
+            @cloudimage-crop-shape-change=${(e: CustomEvent<{ shape: CropShapeName }>) =>
               this.emit({ type: 'shape', value: e.detail.shape })}
-          ></sfx-crop-shapes>
+          ></cloudimage-crop-shapes>
         ` : null}
       </div>
 
       <button
         type="button"
-        class="sfx-cr-done-btn"
+        class="ci-crop-done-btn"
         part="done"
         aria-label="Done"
         @click=${() => this.emit({ type: 'save' })}
@@ -145,8 +145,8 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
     this.shapesEl?.setValue(shape);
   }
 
-  private emit(detail: SfxCropToolbarCommand): void {
-    this.dispatchEvent(new CustomEvent('sfx-crop-toolbar-command', {
+  private emit(detail: CloudimageCropToolbarCommand): void {
+    this.dispatchEvent(new CustomEvent('cloudimage-crop-toolbar-command', {
       detail,
       bubbles: true,
       composed: true,
@@ -156,6 +156,6 @@ export class SfxCropToolbarElement extends SfxCropBaseElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'sfx-crop-toolbar': SfxCropToolbarElement;
+    'cloudimage-crop-toolbar': CloudimageCropToolbarElement;
   }
 }

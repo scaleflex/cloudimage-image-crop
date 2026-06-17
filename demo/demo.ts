@@ -1,5 +1,5 @@
 /**
- * Demo site for @scaleflex/image-crop.
+ * Demo site for @cloudimage/image-crop.
  *
  * Hash-routed SPA matching the shell of @scaleflex/uploader's demo site:
  *   #/                             landing
@@ -8,12 +8,12 @@
  *
  * All page content is plain TS returning HTML template literals rendered
  * into #content.innerHTML — no framework on the site chrome. The
- * `<sfx-crop>` custom element used on live sections is the component being
+ * `<cloudimage-crop>` custom element used on live sections is the component being
  * demoed (imported via the side-effect entry below).
  */
 
 import '../src/define';
-import type { SfxCropElement } from '../src/elements/sfx-crop';
+import type { CloudimageCropElement } from '../src/elements/cloudimage-crop';
 import type { CropShapeName } from '../src/core/types';
 
 declare global {
@@ -43,12 +43,12 @@ const ICONS = {
 };
 
 // ---------------------------------------------------------------------------
-// Theme toggle — scoped per <sfx-crop> preview. Each `.demo-crop-wrap` that
+// Theme toggle — scoped per <cloudimage-crop> preview. Each `.demo-crop-wrap` that
 // hosts a crop gets its own button; clicking flips only that sibling crop
 // between `theme="light"` and `theme="dark"`. The last choice is persisted
 // so the preview restores the same theme after navigation.
 
-const THEME_KEY = 'sfx-crop-demo-theme';
+const THEME_KEY = 'cloudimage-crop-demo-theme';
 type DemoTheme = 'light' | 'dark';
 
 function getStoredTheme(): DemoTheme {
@@ -66,7 +66,7 @@ function syncToggleButton(btn: HTMLButtonElement, theme: DemoTheme): void {
 }
 
 function applyThemeToWrap(wrap: HTMLElement, theme: DemoTheme): void {
-  wrap.querySelectorAll('sfx-crop').forEach((el) => el.setAttribute('theme', theme));
+  wrap.querySelectorAll('cloudimage-crop').forEach((el) => el.setAttribute('theme', theme));
   const btn = wrap.querySelector<HTMLButtonElement>('.demo-theme-toggle');
   if (btn) syncToggleButton(btn, theme);
 }
@@ -230,10 +230,10 @@ function renderHeader(currentPath: string): string {
           <a href="#/examples/basic"            class="demo-topbar-nav-link${isEx ? ' is-active' : ''}">Examples</a>
         </nav>
         <div class="demo-topbar-actions">
-          <a class="demo-topbar-chip" href="https://github.com/scaleflex/image-crop" target="_blank" rel="noopener" aria-label="GitHub repository">
+          <a class="demo-topbar-chip" href="https://github.com/scaleflex/cloudimage-image-crop" target="_blank" rel="noopener" aria-label="GitHub repository">
             ${ICONS.github}<span>GitHub</span>
           </a>
-          <a class="demo-topbar-chip demo-topbar-chip--icon" href="https://www.npmjs.com/package/@scaleflex/image-crop" target="_blank" rel="noopener" aria-label="npm package">
+          <a class="demo-topbar-chip demo-topbar-chip--icon" href="https://www.npmjs.com/package/@cloudimage/image-crop" target="_blank" rel="noopener" aria-label="npm package">
             ${ICONS.npm}
           </a>
         </div>
@@ -290,8 +290,8 @@ function renderFooter(): string {
         </div>
         <div class="demo-footer-col">
           <h4>Resources</h4>
-          <a href="https://github.com/scaleflex/image-crop" target="_blank" rel="noopener">GitHub</a>
-          <a href="https://www.npmjs.com/package/@scaleflex/image-crop" target="_blank" rel="noopener">npm</a>
+          <a href="https://github.com/scaleflex/cloudimage-image-crop" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.npmjs.com/package/@cloudimage/image-crop" target="_blank" rel="noopener">npm</a>
           <a href="#/docs/getting-started">Documentation</a>
         </div>
         <div class="demo-footer-col">
@@ -302,7 +302,7 @@ function renderFooter(): string {
         </div>
         <div class="demo-footer-col">
           <h4>Support</h4>
-          <a href="https://github.com/scaleflex/image-crop/issues" target="_blank" rel="noopener">Report an Issue</a>
+          <a href="https://github.com/scaleflex/cloudimage-image-crop/issues" target="_blank" rel="noopener">Report an Issue</a>
           <a href="https://www.scaleflex.com/en/contact" target="_blank" rel="noopener">Contact Us</a>
         </div>
       </div>
@@ -335,7 +335,7 @@ function renderHome(): string {
     {
       icon: svg('<circle cx="13.5" cy="6.5" r=".7"/><circle cx="17.5" cy="10.5" r=".7"/><circle cx="8.5" cy="7.5" r=".7"/><circle cx="6.5" cy="12.5" r=".7"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.83-.44-1.12-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.66h1.99c3.05 0 5.56-2.5 5.56-5.56C21.97 6.01 17.46 2 12 2z"/>'),
       title: 'Fully themeable',
-      body: '--sfx-cr-* CSS custom properties + ::part() theming — match any brand.',
+      body: '--ci-crop-* CSS custom properties + ::part() theming — match any brand.',
     },
     {
       icon: svg('<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01"/><path d="M10 10h.01"/><path d="M14 10h.01"/><path d="M18 10h.01"/><path d="M6 14h.01"/><path d="M18 14h.01"/><path d="M10 14h4"/>'),
@@ -345,7 +345,7 @@ function renderHome(): string {
     {
       icon: svg('<circle cx="12" cy="12" r="1.2"/><ellipse cx="12" cy="12" rx="10" ry="4.5"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(120 12 12)"/>'),
       title: 'React binding',
-      body: 'forwardRef wrapper and useSfxCrop() hook via @scaleflex/image-crop/react.',
+      body: 'forwardRef wrapper and useCloudimageCrop() hook via @cloudimage/image-crop/react.',
     },
     {
       icon: svg('<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>'),
@@ -354,21 +354,21 @@ function renderHome(): string {
     },
   ];
 
-  const installSnippet = `npm install @scaleflex/image-crop`;
+  const installSnippet = `npm install @cloudimage/image-crop`;
   const esmSnippet = `<script type="module">
-  import '@scaleflex/image-crop/define';
+  import '@cloudimage/image-crop/define';
 </script>
 
-<sfx-crop
+<cloudimage-crop
   src="/photo.jpg"
   crop-shape="free"
   theme="light"
-></sfx-crop>`;
-  const reactSnippet = `import { SfxCrop } from '@scaleflex/image-crop/react';
+></cloudimage-crop>`;
+  const reactSnippet = `import { CloudimageCrop } from '@cloudimage/image-crop/react';
 
 export function Editor() {
   return (
-    <SfxCrop
+    <CloudimageCrop
       src="/photo.jpg"
       cropShape="free"
       theme="light"
@@ -382,14 +382,14 @@ export function Editor() {
       <div class="demo-hero-inner">
         <div class="demo-hero-badge">
           <span class="demo-hero-badge-dot"></span>
-          @scaleflex/image-crop
+          @cloudimage/image-crop
         </div>
         <h1 class="demo-hero-title">Image <span class="demo-gradient-text">Crop</span></h1>
-        <p class="demo-hero-sub">Framework-agnostic Web Component for interactive image cropping — rotate, flip, zoom, and shape presets in a single <code>&lt;sfx-crop&gt;</code> tag.</p>
+        <p class="demo-hero-sub">Framework-agnostic Web Component for interactive image cropping — rotate, flip, zoom, and shape presets in a single <code>&lt;cloudimage-crop&gt;</code> tag.</p>
         <div class="demo-hero-actions">
           <a class="demo-btn demo-btn--primary" href="#quick-start">Get started ${ICONS.arrow}</a>
-          <a class="demo-btn demo-btn--glass" href="https://github.com/scaleflex/image-crop" target="_blank" rel="noopener">${ICONS.github} GitHub</a>
-          <a class="demo-btn demo-btn--glass" href="https://www.npmjs.com/package/@scaleflex/image-crop" target="_blank" rel="noopener">${ICONS.npm} npm</a>
+          <a class="demo-btn demo-btn--glass" href="https://github.com/scaleflex/cloudimage-image-crop" target="_blank" rel="noopener">${ICONS.github} GitHub</a>
+          <a class="demo-btn demo-btn--glass" href="https://www.npmjs.com/package/@cloudimage/image-crop" target="_blank" rel="noopener">${ICONS.npm} npm</a>
         </div>
         <div class="demo-hero-meta">
           <span>Web Component</span>
@@ -413,7 +413,7 @@ export function Editor() {
           <button type="button" class="demo-theme-toggle" aria-label="Toggle crop theme" aria-pressed="false">${ICONS.moon}</button>
         </div>
         <div class="demo-card demo-card--lg demo-crop-wrap">
-          <sfx-crop id="home-viewer" style="display:block;max-width:1200px;max-height:640px;margin:0 auto"></sfx-crop>
+          <cloudimage-crop id="home-viewer" style="display:block;max-width:1200px;max-height:640px;margin:0 auto"></cloudimage-crop>
         </div>
       </div>
     </section>
@@ -422,7 +422,7 @@ export function Editor() {
       <div class="demo-section-inner">
         <div class="demo-section-label">Quick start</div>
         <h2 class="demo-quick-start-title">Up and running in under a minute</h2>
-        <p class="demo-quick-start-sub">Install from npm, import the custom element, and drop&nbsp;<code>&lt;sfx-crop&gt;</code><br />into your markup with a few lines of code.</p>
+        <p class="demo-quick-start-sub">Install from npm, import the custom element, and drop&nbsp;<code>&lt;cloudimage-crop&gt;</code><br />into your markup with a few lines of code.</p>
 
         <div class="demo-quick-start-tabs" role="tablist" aria-label="Integration method">
           <button class="demo-quick-start-tab is-active" data-tab="npm" role="tab" aria-selected="true">npm</button>
@@ -436,8 +436,8 @@ export function Editor() {
               <h3>Install</h3>
             </div>
             <div class="demo-step-code">
-              <code>npm install @scaleflex/image-crop</code>
-              <button class="demo-step-copy" data-copy-text="npm install @scaleflex/image-crop" aria-label="Copy">${ICONS.copy}</button>
+              <code>npm install @cloudimage/image-crop</code>
+              <button class="demo-step-copy" data-copy-text="npm install @cloudimage/image-crop" aria-label="Copy">${ICONS.copy}</button>
             </div>
           </div>
           <div class="demo-quick-start-step">
@@ -446,8 +446,8 @@ export function Editor() {
               <h3>Import</h3>
             </div>
             <div class="demo-step-code">
-              <code>import '@scaleflex/image-crop/define';</code>
-              <button class="demo-step-copy" data-copy-text="import '@scaleflex/image-crop/define';" aria-label="Copy">${ICONS.copy}</button>
+              <code>import '@cloudimage/image-crop/define';</code>
+              <button class="demo-step-copy" data-copy-text="import '@cloudimage/image-crop/define';" aria-label="Copy">${ICONS.copy}</button>
             </div>
           </div>
           <div class="demo-quick-start-step">
@@ -455,7 +455,7 @@ export function Editor() {
               <span class="demo-step-number">3</span>
               <h3>Use</h3>
             </div>
-            <p class="demo-step-description">Add <code>&lt;sfx-crop&gt;</code> to your HTML, set <code>src</code>, and listen for <code>.change</code>.</p>
+            <p class="demo-step-description">Add <code>&lt;cloudimage-crop&gt;</code> to your HTML, set <code>src</code>, and listen for <code>.change</code>.</p>
           </div>
         </div>
 
@@ -466,8 +466,8 @@ export function Editor() {
               <h3>Add script</h3>
             </div>
             <div class="demo-step-code">
-              <code>&lt;script type="module" src="https://esm.sh/@scaleflex/image-crop/define"&gt;&lt;/script&gt;</code>
-              <button class="demo-step-copy" data-copy-text='<script type="module" src="https://esm.sh/@scaleflex/image-crop/define"></script>' aria-label="Copy">${ICONS.copy}</button>
+              <code>&lt;script type="module" src="https://esm.sh/@cloudimage/image-crop/define"&gt;&lt;/script&gt;</code>
+              <button class="demo-step-copy" data-copy-text='<script type="module" src="https://esm.sh/@cloudimage/image-crop/define"></script>' aria-label="Copy">${ICONS.copy}</button>
             </div>
           </div>
           <div class="demo-quick-start-step">
@@ -475,7 +475,7 @@ export function Editor() {
               <span class="demo-step-number">2</span>
               <h3>Use</h3>
             </div>
-            <p class="demo-step-description">Drop <code>&lt;sfx-crop src="/photo.jpg"&gt;&lt;/sfx-crop&gt;</code> anywhere in your page.</p>
+            <p class="demo-step-description">Drop <code>&lt;cloudimage-crop src="/photo.jpg"&gt;&lt;/cloudimage-crop&gt;</code> anywhere in your page.</p>
           </div>
         </div>
 
@@ -507,7 +507,7 @@ export function Editor() {
 }
 
 function hydrateHome(root: HTMLElement): void {
-  const el = root.querySelector('#home-viewer') as SfxCropElement | null;
+  const el = root.querySelector('#home-viewer') as CloudimageCropElement | null;
   if (el) {
     el.src = DEMO_SRC;
     // Let the library's default cropShape (16:9) stand — previous override
@@ -549,8 +549,8 @@ function hydrateHome(root: HTMLElement): void {
       bleedBtn.setAttribute('aria-pressed', String(next));
     });
   }
-  // The built-in toolbar "Done" button fires `sfx-crop-save`. A single global
-  // handler (see setupSavePreview) catches it from any <sfx-crop> on the page
+  // The built-in toolbar "Done" button fires `cloudimage-crop-save`. A single global
+  // handler (see setupSavePreview) catches it from any <cloudimage-crop> on the page
   // and shows the result preview — no per-editor wiring needed here.
 
   // Theme toggle — now in the same external controls row (no longer overlaid
@@ -617,34 +617,34 @@ function docPage(title: string, lead: string, body: string): string {
 function renderDocGettingStarted(): string {
   return docPage(
     'Getting started',
-    'Install, register the custom element, and drop <code>&lt;sfx-crop&gt;</code> into your markup.',
+    'Install, register the custom element, and drop <code>&lt;cloudimage-crop&gt;</code> into your markup.',
     `
       <h2>Install</h2>
       ${tabbedCode([
-        { label: 'npm',  code: 'npm install @scaleflex/image-crop',  lang: 'bash' },
-        { label: 'pnpm', code: 'pnpm add @scaleflex/image-crop',     lang: 'bash' },
-        { label: 'yarn', code: 'yarn add @scaleflex/image-crop',     lang: 'bash' },
+        { label: 'npm',  code: 'npm install @cloudimage/image-crop',  lang: 'bash' },
+        { label: 'pnpm', code: 'pnpm add @cloudimage/image-crop',     lang: 'bash' },
+        { label: 'yarn', code: 'yarn add @cloudimage/image-crop',     lang: 'bash' },
       ])}
 
       <h2>Register the custom element</h2>
-      <p>A single side-effect import registers <code>&lt;sfx-crop&gt;</code> and its sub-elements (<code>sfx-crop-canvas</code>, <code>sfx-crop-toolbar</code>, <code>sfx-crop-zoom</code>, <code>sfx-crop-rotate</code>, <code>sfx-crop-shapes</code>). The import is idempotent — safe under React StrictMode and repeated module evaluations.</p>
-      ${codeBlock(`import '@scaleflex/image-crop/define';`, 'typescript')}
+      <p>A single side-effect import registers <code>&lt;cloudimage-crop&gt;</code> and its sub-elements (<code>cloudimage-crop-canvas</code>, <code>cloudimage-crop-toolbar</code>, <code>cloudimage-crop-zoom</code>, <code>cloudimage-crop-rotate</code>, <code>cloudimage-crop-shapes</code>). The import is idempotent — safe under React StrictMode and repeated module evaluations.</p>
+      ${codeBlock(`import '@cloudimage/image-crop/define';`, 'typescript')}
 
       <h2>Use it</h2>
       ${tabbedCode([
-        { label: 'HTML', code: `<sfx-crop
+        { label: 'HTML', code: `<cloudimage-crop
   src="/photo.jpg"
   crop-shape="16:9"
   theme="light"
-></sfx-crop>`, lang: 'markup' },
-        { label: 'React', code: `import { SfxCrop, type SfxCropElement } from '@scaleflex/image-crop/react';
+></cloudimage-crop>`, lang: 'markup' },
+        { label: 'React', code: `import { CloudimageCrop, type CloudimageCropElement } from '@cloudimage/image-crop/react';
 import { useRef } from 'react';
 
 export function Editor() {
-  const ref = useRef<SfxCropElement>(null);
+  const ref = useRef<CloudimageCropElement>(null);
 
   return (
-    <SfxCrop
+    <CloudimageCrop
       ref={ref}
       src="/photo.jpg"
       cropShape="16:9"
@@ -653,9 +653,9 @@ export function Editor() {
     />
   );
 }`, lang: 'tsx' },
-        { label: 'CDN', code: `<script type="module" src="https://esm.sh/@scaleflex/image-crop/define"></script>
+        { label: 'CDN', code: `<script type="module" src="https://esm.sh/@cloudimage/image-crop/define"></script>
 
-<sfx-crop src="/photo.jpg" crop-shape="16:9"></sfx-crop>`, lang: 'markup' },
+<cloudimage-crop src="/photo.jpg" crop-shape="16:9"></cloudimage-crop>`, lang: 'markup' },
       ])}
 
       <h2>Browser support</h2>
@@ -709,7 +709,7 @@ function renderDocConfiguration(): string {
       rows: [
         ['theme',                'light | dark',                                 'light',   'Color variant — swaps the token bundle.'],
         ['toolbar-position',     'top | bottom',                                 'top',     'Anchor for the floating toolbar pill.'],
-        ['show-toolbar',         'boolean',                                      'true',    'Toggle the entire toolbar row. The toolbar includes a primary <strong>Done</strong> button (right edge) that calls <code>save()</code> → dispatches <code>sfx-crop-save</code>. Hide the toolbar to drive everything imperatively.'],
+        ['show-toolbar',         'boolean',                                      'true',    'Toggle the entire toolbar row. The toolbar includes a primary <strong>Done</strong> button (right edge) that calls <code>save()</code> → dispatches <code>cloudimage-crop-save</code>. Hide the toolbar to drive everything imperatively.'],
         ['show-rotate-button',   'boolean',                                      'true',    'Show the 90° rotate-left button.'],
         ['show-flip-button',     'boolean',                                      'true',    'Show the flip-horizontal button.'],
         ['show-rotate-slider',   'boolean',                                      'true',    'Show the fine-rotation (±45°) trigger.'],
@@ -770,7 +770,7 @@ function renderDocConfiguration(): string {
     'Every config field has a kebab-case HTML attribute and a matching camelCase DOM property.',
     `
       <h2>Declarative (HTML attributes)</h2>
-      ${codeBlock(`<sfx-crop
+      ${codeBlock(`<cloudimage-crop
   src="/photo.jpg"
   crop-shape="16:9"
   theme="light"
@@ -778,10 +778,10 @@ function renderDocConfiguration(): string {
   max-scale="8"
   show-grid="interaction"
   available-shapes='["free","circle","16:9"]'
-></sfx-crop>`, 'markup')}
+></cloudimage-crop>`, 'markup')}
 
       <h2>Imperative (DOM properties)</h2>
-      ${codeBlock(`const el = document.querySelector('sfx-crop');
+      ${codeBlock(`const el = document.querySelector('cloudimage-crop');
 el.cropShape = '16:9';
 el.minScale = 0.5;
 el.availableShapes = ['free', 'circle', '16:9'];
@@ -789,8 +789,8 @@ el.initialCrop = { x: 0.1, y: 0.1, width: 0.8, height: 0.6 };`, 'typescript')}
 
       <h2>Booleans</h2>
       <p>Boolean attributes accept the presence shorthand, <code>"true"</code>, or <code>"false"</code>:</p>
-      ${codeBlock(`<sfx-crop show-toolbar></sfx-crop>
-<sfx-crop show-toolbar="false"></sfx-crop>`, 'markup')}
+      ${codeBlock(`<cloudimage-crop show-toolbar></cloudimage-crop>
+<cloudimage-crop show-toolbar="false"></cloudimage-crop>`, 'markup')}
 
       ${groups.map((g) => `
         <h2>${g.heading}</h2>
@@ -808,7 +808,7 @@ el.initialCrop = { x: 0.1, y: 0.1, width: 0.8, height: 0.6 };`, 'typescript')}
           </tbody>
         </table>
       </div>
-      ${codeBlock(`const el = document.querySelector('sfx-crop');
+      ${codeBlock(`const el = document.querySelector('cloudimage-crop');
 el.icons = { rotateLeft: '<svg viewBox="0 0 24 24">…</svg>' };
 el.customAspectRatios = [{ name: 'Cinema', ratio: 2.35 }];`, 'typescript')}
     `,
@@ -833,23 +833,23 @@ function renderDocApi(): string {
     ['toCloudimageURL',  '(options?): string',                             'Build a Cloudimage URL that crops / rotates / flips / tilts / zooms / pans server-side.'],
     ['toCropDescriptor', '(): CropDescriptor',                             'Serializable snapshot (state + image/container dims + variant) to rebuild the Cloudimage URL later via <code>buildCloudimageUrlFromDescriptor</code>.'],
     ['reset',            '(): void',                                       'Restore rotation, scale, pan, and crop rect to initial values.'],
-    ['save',             '(type?: string, quality?: number): Promise&lt;void&gt;', 'Export and dispatch <code>sfx-crop-save</code> with the result.'],
-    ['cancel',           '(): void',                                       'Dispatch <code>sfx-crop-cancel</code> — the consumer decides what that means.'],
+    ['save',             '(type?: string, quality?: number): Promise&lt;void&gt;', 'Export and dispatch <code>cloudimage-crop-save</code> with the result.'],
+    ['cancel',           '(): void',                                       'Dispatch <code>cloudimage-crop-cancel</code> — the consumer decides what that means.'],
   ];
 
   const events: [string, string, string][] = [
-    ['sfx-crop-ready',        '{ element: SfxCropElement }',                                          'Element upgraded and controller wired. Safe to call imperative API.'],
-    ['sfx-crop-image-load',   '{ image: HTMLImageElement }',                                          'Image decoded and initial fit applied.'],
-    ['sfx-crop-change',       'TransformState',                                                       'Any state change — rotation, flip, scale, pan, crop.'],
-    ['sfx-crop-crop-change',  'CropRect (image-pixel coords)',                                        'Crop rect moved or resized (subset of <code>-change</code>).'],
-    ['sfx-crop-save',         '{ blob: Blob | null, dataURL: string | null, params: TransformParams, url: string | null, descriptor: CropDescriptor | null }', 'Emitted from <code>save()</code>. <code>blob</code>/<code>dataURL</code> are null in <code>cloudimage</code> output-mode; <code>url</code> is the Cloudimage URL; <code>descriptor</code> rebuilds it server-side.'],
-    ['sfx-crop-cancel',       'void',                                                                 'Emitted from <code>cancel()</code>.'],
-    ['sfx-crop-error',        '{ error: Error }',                                                     'Image load failed or invalid configuration.'],
+    ['cloudimage-crop-ready',        '{ element: CloudimageCropElement }',                                          'Element upgraded and controller wired. Safe to call imperative API.'],
+    ['cloudimage-crop-image-load',   '{ image: HTMLImageElement }',                                          'Image decoded and initial fit applied.'],
+    ['cloudimage-crop-change',       'TransformState',                                                       'Any state change — rotation, flip, scale, pan, crop.'],
+    ['cloudimage-crop-crop-change',  'CropRect (image-pixel coords)',                                        'Crop rect moved or resized (subset of <code>-change</code>).'],
+    ['cloudimage-crop-save',         '{ blob: Blob | null, dataURL: string | null, params: TransformParams, url: string | null, descriptor: CropDescriptor | null }', 'Emitted from <code>save()</code>. <code>blob</code>/<code>dataURL</code> are null in <code>cloudimage</code> output-mode; <code>url</code> is the Cloudimage URL; <code>descriptor</code> rebuilds it server-side.'],
+    ['cloudimage-crop-cancel',       'void',                                                                 'Emitted from <code>cancel()</code>.'],
+    ['cloudimage-crop-error',        '{ error: Error }',                                                     'Image load failed or invalid configuration.'],
   ];
 
   return docPage(
     'API reference',
-    'Imperative methods on the <code>&lt;sfx-crop&gt;</code> element and the seven custom events it emits.',
+    'Imperative methods on the <code>&lt;cloudimage-crop&gt;</code> element and the seven custom events it emits.',
     `
       <h2>Methods</h2>
       <p>Hold a DOM ref (or the React <code>ref.current</code>) and call:</p>
@@ -874,13 +874,13 @@ function renderDocApi(): string {
       </div>
 
       <h2>Vanilla JS example</h2>
-      ${codeBlock(`const crop = document.querySelector('sfx-crop');
+      ${codeBlock(`const crop = document.querySelector('cloudimage-crop');
 
-crop.addEventListener('sfx-crop-change', (e) => {
+crop.addEventListener('cloudimage-crop-change', (e) => {
   console.log('state:', e.detail);
 });
 
-crop.addEventListener('sfx-crop-save', (e) => {
+crop.addEventListener('cloudimage-crop-save', (e) => {
   const { blob, dataURL, params } = e.detail;
   uploadToServer(blob);
 });
@@ -888,53 +888,53 @@ crop.addEventListener('sfx-crop-save', (e) => {
 document.getElementById('save').onclick = () => crop.save();`, 'typescript')}
 
       <h2>React</h2>
-      <p>The <code>&lt;SfxCrop&gt;</code> component wraps the same custom element and forwards every prop + event. It also forwards a ref to the underlying <code>SfxCropElement</code>, so imperative methods work the same way.</p>
+      <p>The <code>&lt;CloudimageCrop&gt;</code> component wraps the same custom element and forwards every prop + event. It also forwards a ref to the underlying <code>CloudimageCropElement</code>, so imperative methods work the same way.</p>
       <div class="demo-table-wrap">
         <table class="demo-table">
           <thead><tr><th>Prop</th><th>Type</th><th>Maps to</th></tr></thead>
           <tbody>
             <tr><td><code>src</code>, <code>cropShape</code>, <code>theme</code>, <code>minScale</code>, <code>maxScale</code>, <code>availableShapes</code>, <code>showToolbar</code>, …</td><td>same as HTML attrs</td><td>Every configuration field listed on the Configuration page.</td></tr>
             <tr><td><code>icons</code></td><td><code>CropIconOverrides</code></td><td>Per-slot SVG overrides.</td></tr>
-            <tr><td><code>onChange</code></td><td><code>(state: TransformState) =&gt; void</code></td><td><code>sfx-crop-change</code></td></tr>
-            <tr><td><code>onCropChange</code></td><td><code>(rect: CropRect) =&gt; void</code></td><td><code>sfx-crop-crop-change</code></td></tr>
-            <tr><td><code>onReady</code></td><td><code>(el: SfxCropElement) =&gt; void</code></td><td><code>sfx-crop-ready</code></td></tr>
-            <tr><td><code>onImageLoad</code></td><td><code>(image: HTMLImageElement) =&gt; void</code></td><td><code>sfx-crop-image-load</code></td></tr>
-            <tr><td><code>onSave</code></td><td><code>(detail: SfxCropSaveDetail) =&gt; void</code></td><td><code>sfx-crop-save</code></td></tr>
-            <tr><td><code>onCancel</code></td><td><code>() =&gt; void</code></td><td><code>sfx-crop-cancel</code></td></tr>
-            <tr><td><code>onError</code></td><td><code>(error: Error) =&gt; void</code></td><td><code>sfx-crop-error</code></td></tr>
+            <tr><td><code>onChange</code></td><td><code>(state: TransformState) =&gt; void</code></td><td><code>cloudimage-crop-change</code></td></tr>
+            <tr><td><code>onCropChange</code></td><td><code>(rect: CropRect) =&gt; void</code></td><td><code>cloudimage-crop-crop-change</code></td></tr>
+            <tr><td><code>onReady</code></td><td><code>(el: CloudimageCropElement) =&gt; void</code></td><td><code>cloudimage-crop-ready</code></td></tr>
+            <tr><td><code>onImageLoad</code></td><td><code>(image: HTMLImageElement) =&gt; void</code></td><td><code>cloudimage-crop-image-load</code></td></tr>
+            <tr><td><code>onSave</code></td><td><code>(detail: CloudimageCropSaveDetail) =&gt; void</code></td><td><code>cloudimage-crop-save</code></td></tr>
+            <tr><td><code>onCancel</code></td><td><code>() =&gt; void</code></td><td><code>cloudimage-crop-cancel</code></td></tr>
+            <tr><td><code>onError</code></td><td><code>(error: Error) =&gt; void</code></td><td><code>cloudimage-crop-error</code></td></tr>
           </tbody>
         </table>
       </div>
 
       <h3>Ref-based imperative usage</h3>
-      ${codeBlock(`import { SfxCrop, type SfxCropElement } from '@scaleflex/image-crop/react';
+      ${codeBlock(`import { CloudimageCrop, type CloudimageCropElement } from '@cloudimage/image-crop/react';
 import { useRef } from 'react';
 
 export function Editor() {
-  const ref = useRef<SfxCropElement>(null);
+  const ref = useRef<CloudimageCropElement>(null);
 
   return (
     <>
-      <SfxCrop ref={ref} src="/photo.jpg" cropShape="16:9" />
+      <CloudimageCrop ref={ref} src="/photo.jpg" cropShape="16:9" />
       <button onClick={() => ref.current?.save()}>Save</button>
       <button onClick={() => ref.current?.reset()}>Reset</button>
     </>
   );
 }`, 'tsx')}
 
-      <h3>Hook alternative — <code>useSfxCrop</code></h3>
-      <p>For consumers that render <code>&lt;sfx-crop&gt;</code> manually (outside React's declarative tree) and just want a typed handle:</p>
-      ${codeBlock(`import { useSfxCrop } from '@scaleflex/image-crop/react';
+      <h3>Hook alternative — <code>useCloudimageCrop</code></h3>
+      <p>For consumers that render <code>&lt;cloudimage-crop&gt;</code> manually (outside React's declarative tree) and just want a typed handle:</p>
+      ${codeBlock(`import { useCloudimageCrop } from '@cloudimage/image-crop/react';
 
-const { ref, save, reset, rotateLeft } = useSfxCrop();
+const { ref, save, reset, rotateLeft } = useCloudimageCrop();
 
-return <sfx-crop ref={ref} src="/photo.jpg" />;`, 'tsx')}
+return <cloudimage-crop ref={ref} src="/photo.jpg" />;`, 'tsx')}
 
-      <h3>Headless — <code>useSfxCropController</code></h3>
+      <h3>Headless — <code>useCloudimageCropController</code></h3>
       <p>Full headless control: the hook owns the controller and returns <code>canvasRef</code> / <code>containerRef</code> / <code>state</code> / <code>actions</code> / <code>api</code> so you can render your own canvas, toolbar, and markup while re-using the engine.</p>
-      ${codeBlock(`import { useSfxCropController } from '@scaleflex/image-crop/react';
+      ${codeBlock(`import { useCloudimageCropController } from '@cloudimage/image-crop/react';
 
-const { canvasRef, containerRef, state, actions } = useSfxCropController({
+const { canvasRef, containerRef, state, actions } = useCloudimageCropController({
   src: '/photo.jpg',
   cropShape: '16:9',
 });
@@ -955,80 +955,80 @@ function renderDocTheming(): string {
     {
       heading: 'Brand &amp; accent',
       rows: [
-        ['--sfx-cr-primary',        'Brand accent — frame, slider thumbs, active option, focus ring.'],
-        ['--sfx-cr-primary-hover',  'Hover state for primary.'],
-        ['--sfx-cr-primary-mid',    'Lighter tint of primary — used for gradients / transitions.'],
-        ['--sfx-cr-primary-bg',     'Soft tint for hover / active button backgrounds.'],
-        ['--sfx-cr-primary-glow',   'Focus / handle-hover halo (translucent).'],
-        ['--sfx-cr-success',        'Confirmation color (e.g. post-save feedback).'],
-        ['--sfx-cr-error',          'Error message color.'],
+        ['--ci-crop-primary',        'Brand accent — frame, slider thumbs, active option, focus ring.'],
+        ['--ci-crop-primary-hover',  'Hover state for primary.'],
+        ['--ci-crop-primary-mid',    'Lighter tint of primary — used for gradients / transitions.'],
+        ['--ci-crop-primary-bg',     'Soft tint for hover / active button backgrounds.'],
+        ['--ci-crop-primary-glow',   'Focus / handle-hover halo (translucent).'],
+        ['--ci-crop-success',        'Confirmation color (e.g. post-save feedback).'],
+        ['--ci-crop-error',          'Error message color.'],
       ],
     },
     {
       heading: 'Text',
       rows: [
-        ['--sfx-cr-text',           'Primary text (values, labels).'],
-        ['--sfx-cr-text-secondary', 'Secondary labels, inactive button glyphs.'],
-        ['--sfx-cr-text-muted',     'Placeholders, range ends.'],
+        ['--ci-crop-text',           'Primary text (values, labels).'],
+        ['--ci-crop-text-secondary', 'Secondary labels, inactive button glyphs.'],
+        ['--ci-crop-text-muted',     'Placeholders, range ends.'],
       ],
     },
     {
       heading: 'Surfaces &amp; borders',
       rows: [
-        ['--sfx-cr-bg',             'Outer card background.'],
-        ['--sfx-cr-surface',        'Secondary surface (inner panels).'],
-        ['--sfx-cr-canvas-bg',      'Backdrop behind the image when it doesn\'t cover the full area.'],
-        ['--sfx-cr-border',         'Hairline borders.'],
-        ['--sfx-cr-border-light',   'Subtler variant used for separators inside the toolbar.'],
-        ['--sfx-cr-radius',         'Outer card corner radius.'],
-        ['--sfx-cr-card-shadow',    'Outer card drop shadow.'],
-        ['--sfx-cr-shadow',         'Generic component shadow token.'],
+        ['--ci-crop-bg',             'Outer card background.'],
+        ['--ci-crop-surface',        'Secondary surface (inner panels).'],
+        ['--ci-crop-canvas-bg',      'Backdrop behind the image when it doesn\'t cover the full area.'],
+        ['--ci-crop-border',         'Hairline borders.'],
+        ['--ci-crop-border-light',   'Subtler variant used for separators inside the toolbar.'],
+        ['--ci-crop-radius',         'Outer card corner radius.'],
+        ['--ci-crop-card-shadow',    'Outer card drop shadow.'],
+        ['--ci-crop-shadow',         'Generic component shadow token.'],
       ],
     },
     {
       heading: 'Frame &amp; handles',
       rows: [
-        ['--sfx-cr-overlay-color',  'Dim mask color over the out-of-crop area.'],
-        ['--sfx-cr-frame-color',    'Crop-frame outline color.'],
-        ['--sfx-cr-frame-shadow',   'Subtle shadow behind the frame outline.'],
-        ['--sfx-cr-handle-fill',    'Corner-handle fill.'],
-        ['--sfx-cr-handle-stroke',  'Corner-handle outline.'],
-        ['--sfx-cr-ruler-ink',      'Fine-tilt ruler ink (ticks, indicator, degree label). Near-white core that floats over the photo.'],
-        ['--sfx-cr-ruler-halo',     'Dark halo wrapped around the ruler ink so it stays legible over bright photos too.'],
+        ['--ci-crop-overlay-color',  'Dim mask color over the out-of-crop area.'],
+        ['--ci-crop-frame-color',    'Crop-frame outline color.'],
+        ['--ci-crop-frame-shadow',   'Subtle shadow behind the frame outline.'],
+        ['--ci-crop-handle-fill',    'Corner-handle fill.'],
+        ['--ci-crop-handle-stroke',  'Corner-handle outline.'],
+        ['--ci-crop-ruler-ink',      'Fine-tilt ruler ink (ticks, indicator, degree label). Near-white core that floats over the photo.'],
+        ['--ci-crop-ruler-halo',     'Dark halo wrapped around the ruler ink so it stays legible over bright photos too.'],
       ],
     },
     {
       heading: 'Toolbar &amp; controls',
       rows: [
-        ['--sfx-cr-toolbar-bg',       'Toolbar pill background (translucent).'],
-        ['--sfx-cr-toolbar-color',    'Default toolbar text color.'],
-        ['--sfx-cr-toolbar-border',   'Toolbar pill border.'],
-        ['--sfx-cr-toolbar-shadow',   'Toolbar drop shadow.'],
-        ['--sfx-cr-btn-size',         'Square button size.'],
-        ['--sfx-cr-btn-radius',       'Toolbar button corner radius.'],
-        ['--sfx-cr-btn-hover-bg',     'Button hover background.'],
-        ['--sfx-cr-btn-active-bg',    'Button pressed background.'],
-        ['--sfx-cr-separator-color',  'Divider color between toolbar groups.'],
-        ['--sfx-cr-slider-track',     'Range-input track.'],
-        ['--sfx-cr-slider-fill',      'Range-input filled portion.'],
-        ['--sfx-cr-slider-thumb',     'Range-input thumb.'],
+        ['--ci-crop-toolbar-bg',       'Toolbar pill background (translucent).'],
+        ['--ci-crop-toolbar-color',    'Default toolbar text color.'],
+        ['--ci-crop-toolbar-border',   'Toolbar pill border.'],
+        ['--ci-crop-toolbar-shadow',   'Toolbar drop shadow.'],
+        ['--ci-crop-btn-size',         'Square button size.'],
+        ['--ci-crop-btn-radius',       'Toolbar button corner radius.'],
+        ['--ci-crop-btn-hover-bg',     'Button hover background.'],
+        ['--ci-crop-btn-active-bg',    'Button pressed background.'],
+        ['--ci-crop-separator-color',  'Divider color between toolbar groups.'],
+        ['--ci-crop-slider-track',     'Range-input track.'],
+        ['--ci-crop-slider-fill',      'Range-input filled portion.'],
+        ['--ci-crop-slider-thumb',     'Range-input thumb.'],
       ],
     },
     {
       heading: 'Popovers &amp; dropdowns',
       rows: [
-        ['--sfx-cr-dropdown-bg',      'Dropdown panel background.'],
-        ['--sfx-cr-dropdown-hover',   'Option hover background.'],
-        ['--sfx-cr-dropdown-shadow',  'Dropdown drop shadow.'],
-        ['--sfx-cr-zoom-bar-bg',      'Zoom ruler popover background.'],
+        ['--ci-crop-dropdown-bg',      'Dropdown panel background.'],
+        ['--ci-crop-dropdown-hover',   'Option hover background.'],
+        ['--ci-crop-dropdown-shadow',  'Dropdown drop shadow.'],
+        ['--ci-crop-zoom-bar-bg',      'Zoom ruler popover background.'],
       ],
     },
     {
       heading: 'Typography &amp; motion',
       rows: [
-        ['--sfx-cr-font',       'Font family stack.'],
-        ['--sfx-cr-ring',       'Focus outline color.'],
-        ['--sfx-cr-transition', 'Default transition timing for interactive states.'],
+        ['--ci-crop-font',       'Font family stack.'],
+        ['--ci-crop-ring',       'Focus outline color.'],
+        ['--ci-crop-transition', 'Default transition timing for interactive states.'],
       ],
     },
   ];
@@ -1045,23 +1045,23 @@ function renderDocTheming(): string {
 
   return docPage(
     'Theming',
-    'Scaleflex design tokens with the <code>--sfx-cr-*</code> prefix — override any from light DOM. No shadow-DOM piercing required.',
+    'Scaleflex design tokens with the <code>--ci-crop-*</code> prefix — override any from light DOM. No shadow-DOM piercing required.',
     `
       <h2>Theme attribute</h2>
       <p>Swap the built-in light / dark token bundle in one line:</p>
-      ${codeBlock(`<sfx-crop theme="light"></sfx-crop>
-<sfx-crop theme="dark"></sfx-crop>`, 'markup')}
+      ${codeBlock(`<cloudimage-crop theme="light"></cloudimage-crop>
+<cloudimage-crop theme="dark"></cloudimage-crop>`, 'markup')}
       <p>Dark re-maps surfaces, text, overlay, and frame colors — palette tokens (primary) stay the same, so brand customisation survives theme flips.</p>
 
       <h2>Overriding tokens</h2>
       <p>Set custom properties on the host element (or any ancestor). They cascade through the shadow boundary via CSS inheritance:</p>
-      ${codeBlock(`sfx-crop {
-  --sfx-cr-primary: #ff3366;
-  --sfx-cr-primary-hover: #e62958;
-  --sfx-cr-primary-bg: #ffe3ec;
-  --sfx-cr-primary-glow: rgba(255, 51, 102, 0.22);
-  --sfx-cr-radius: 20px;
-  --sfx-cr-font: 'SF Pro Display', system-ui, sans-serif;
+      ${codeBlock(`cloudimage-crop {
+  --ci-crop-primary: #ff3366;
+  --ci-crop-primary-hover: #e62958;
+  --ci-crop-primary-bg: #ffe3ec;
+  --ci-crop-primary-glow: rgba(255, 51, 102, 0.22);
+  --ci-crop-radius: 20px;
+  --ci-crop-font: 'SF Pro Display', system-ui, sans-serif;
 }`, 'css')}
 
       ${tokenGroups.map((g) => `
@@ -1076,16 +1076,16 @@ function renderDocTheming(): string {
           <thead><tr><th>Part</th><th>Maps to</th></tr></thead>
           <tbody>
             <tr><td><code>container</code></td><td>Outer editor card.</td></tr>
-            <tr><td><code>canvas-host</code></td><td><code>&lt;sfx-crop-canvas&gt;</code> host wrapping the <code>&lt;canvas&gt;</code>.</td></tr>
+            <tr><td><code>canvas-host</code></td><td><code>&lt;cloudimage-crop-canvas&gt;</code> host wrapping the <code>&lt;canvas&gt;</code>.</td></tr>
             <tr><td><code>toolbar</code></td><td>Floating pill toolbar.</td></tr>
             <tr><td><code>loading</code></td><td>Loading overlay.</td></tr>
             <tr><td><code>error</code></td><td>Error overlay.</td></tr>
           </tbody>
         </table>
       </div>
-      ${codeBlock(`sfx-crop::part(container)   { border: 1px solid #e8edf5; }
-sfx-crop::part(canvas-host) { background: #0f172a; }
-sfx-crop::part(toolbar)     { box-shadow: 0 8px 24px rgba(0,0,0,.2); }`, 'css')}
+      ${codeBlock(`cloudimage-crop::part(container)   { border: 1px solid #e8edf5; }
+cloudimage-crop::part(canvas-host) { background: #0f172a; }
+cloudimage-crop::part(toolbar)     { box-shadow: 0 8px 24px rgba(0,0,0,.2); }`, 'css')}
     `,
   );
 }
@@ -1093,12 +1093,12 @@ sfx-crop::part(toolbar)     { box-shadow: 0 8px 24px rgba(0,0,0,.2); }`, 'css')}
 function renderDocTypes(): string {
   return docPage(
     'TypeScript types',
-    'Public types re-exported from <code>@scaleflex/image-crop</code> and <code>@scaleflex/image-crop/react</code>.',
+    'Public types re-exported from <code>@cloudimage/image-crop</code> and <code>@cloudimage/image-crop/react</code>.',
     `
       <h2>Imports</h2>
       ${codeBlock(`import type {
-  SfxCropElement,
-  SfxCropConfig,
+  CloudimageCropElement,
+  CloudimageCropConfig,
   CropShapeName,
   CropShape,             // deprecated alias for CropShapeName
   CropRect,
@@ -1109,15 +1109,15 @@ function renderDocTypes(): string {
   CropIconOverrides,
   Point,
   Size,
-} from '@scaleflex/image-crop';
+} from '@cloudimage/image-crop';
 
 import type {
-  SfxCropProps,
-  SfxCropSaveDetail,
-  UseSfxCropReturn,
-  UseSfxCropControllerOptions,
-  UseSfxCropControllerReturn,
-} from '@scaleflex/image-crop/react';`, 'typescript')}
+  CloudimageCropProps,
+  CloudimageCropSaveDetail,
+  UseCloudimageCropReturn,
+  UseCloudimageCropControllerOptions,
+  UseCloudimageCropControllerReturn,
+} from '@cloudimage/image-crop/react';`, 'typescript')}
 
       <h2>CropShapeName</h2>
       <p>Union of built-in presets plus any consumer-supplied <code>"W:H"</code> string — autocomplete stays on the built-ins while ad-hoc ratios like <code>"2.35:1"</code> pass through.</p>
@@ -1128,7 +1128,7 @@ import type {
   | (string & {});        // ad-hoc "W:H"`, 'typescript')}
 
       <h2>CropRect</h2>
-      <p>Pixel-space rectangle — what <code>getCropRect()</code> returns and what <code>sfx-crop-crop-change</code> carries.</p>
+      <p>Pixel-space rectangle — what <code>getCropRect()</code> returns and what <code>cloudimage-crop-crop-change</code> carries.</p>
       ${codeBlock(`interface CropRect {
   x: number;       // image-pixel x (left edge, integer)
   y: number;       // image-pixel y (top edge, integer)
@@ -1151,7 +1151,7 @@ import type {
   | 'n'  | 's'  | 'e'  | 'w';     // edge midpoints`, 'typescript')}
 
       <h2>TransformState</h2>
-      <p>Complete editor state — payload of <code>sfx-crop-change</code>.</p>
+      <p>Complete editor state — payload of <code>cloudimage-crop-change</code>.</p>
       ${codeBlock(`interface TransformState {
   quarterTurns: number;            // 0, 90, 180, 270 (CCW)
   rotation: number;                // -45 … +45 fine tilt
@@ -1195,9 +1195,9 @@ import type {
   reset?:           string;   // reset button glyph
 }`, 'typescript')}
 
-      <h2>SfxCropSaveDetail</h2>
-      <p>Payload of the <code>onSave</code> / <code>sfx-crop-save</code> callback.</p>
-      ${codeBlock(`interface SfxCropSaveDetail {
+      <h2>CloudimageCropSaveDetail</h2>
+      <p>Payload of the <code>onSave</code> / <code>cloudimage-crop-save</code> callback.</p>
+      ${codeBlock(`interface CloudimageCropSaveDetail {
   blob: Blob;
   dataURL: string;
   params: TransformParams;
@@ -1228,23 +1228,23 @@ function renderExampleBasic(): string {
     'The minimal embed — one tag plus the side-effect import.',
     `
       <div class="demo-example-live">
-        <sfx-crop id="ex-basic" style="width:100%;height:520px;display:block"></sfx-crop>
+        <cloudimage-crop id="ex-basic" style="width:100%;height:520px;display:block"></cloudimage-crop>
       </div>
 
       ${tabbedCode([
         { label: 'HTML', code: `<script type="module">
-  import '@scaleflex/image-crop/define';
+  import '@cloudimage/image-crop/define';
 </script>
 
-<sfx-crop
+<cloudimage-crop
   src="/photo.jpg"
   crop-shape="free"
   theme="light"
-></sfx-crop>`, lang: 'markup' },
-        { label: 'React', code: `import { SfxCrop } from '@scaleflex/image-crop/react';
+></cloudimage-crop>`, lang: 'markup' },
+        { label: 'React', code: `import { CloudimageCrop } from '@cloudimage/image-crop/react';
 
 export function Editor() {
-  return <SfxCrop src="/photo.jpg" cropShape="free" theme="light" />;
+  return <CloudimageCrop src="/photo.jpg" cropShape="free" theme="light" />;
 }`, lang: 'tsx' },
       ])}
     `,
@@ -1259,27 +1259,27 @@ function renderExampleShapes(): string {
       <div class="demo-example-grid">
         <div class="demo-example-cell">
           <div class="demo-example-cell-label">Free</div>
-          <sfx-crop class="ex-shape" data-shape="free" style="height:320px;display:block"></sfx-crop>
+          <cloudimage-crop class="ex-shape" data-shape="free" style="height:320px;display:block"></cloudimage-crop>
         </div>
         <div class="demo-example-cell">
           <div class="demo-example-cell-label">Circle</div>
-          <sfx-crop class="ex-shape" data-shape="circle" style="height:320px;display:block"></sfx-crop>
+          <cloudimage-crop class="ex-shape" data-shape="circle" style="height:320px;display:block"></cloudimage-crop>
         </div>
         <div class="demo-example-cell">
           <div class="demo-example-cell-label">Rounded 16:9</div>
-          <sfx-crop class="ex-shape" data-shape="rounded-rect" style="height:320px;display:block"></sfx-crop>
+          <cloudimage-crop class="ex-shape" data-shape="rounded-rect" style="height:320px;display:block"></cloudimage-crop>
         </div>
       </div>
 
       ${tabbedCode([
-        { label: 'HTML', code: `<sfx-crop src="/photo.jpg" crop-shape="circle"></sfx-crop>
-<sfx-crop src="/photo.jpg" crop-shape="16:9"></sfx-crop>
-<sfx-crop
+        { label: 'HTML', code: `<cloudimage-crop src="/photo.jpg" crop-shape="circle"></cloudimage-crop>
+<cloudimage-crop src="/photo.jpg" crop-shape="16:9"></cloudimage-crop>
+<cloudimage-crop
   src="/photo.jpg"
   crop-shape="rounded-rect"
   border-radius="28"
-></sfx-crop>`, lang: 'markup' },
-        { label: 'Imperative', code: `const el = document.querySelector('sfx-crop');
+></cloudimage-crop>`, lang: 'markup' },
+        { label: 'Imperative', code: `const el = document.querySelector('cloudimage-crop');
 el.setCropShape('rounded-rect');
 el.borderRadius = 28;`, lang: 'typescript' },
       ])}
@@ -1287,12 +1287,12 @@ el.borderRadius = 28;`, lang: 'typescript' },
       <h2>Custom ratios</h2>
       <p>Pass any <code>"W:H"</code> string — built-in or ad-hoc — to <code>crop-shape</code> and to <code>availableShapes</code>. The component parses the ratio on the fly.</p>
       ${tabbedCode([
-        { label: 'HTML', code: `<sfx-crop
+        { label: 'HTML', code: `<cloudimage-crop
   src="/photo.jpg"
   crop-shape="2.35:1"
   available-shapes='["free","square","16:9","2.35:1","9:16"]'
-></sfx-crop>`, lang: 'markup' },
-        { label: 'React', code: `<SfxCrop
+></cloudimage-crop>`, lang: 'markup' },
+        { label: 'React', code: `<CloudimageCrop
   src="/photo.jpg"
   cropShape="2.35:1"
   availableShapes={['free', 'square', '16:9', '2.35:1', '9:16']}
@@ -1308,25 +1308,25 @@ function renderExampleInitialState(): string {
     'Open the editor with a pre-filled crop, rotation, and zoom — the typical re-edit flow when a user returns to previously saved values.',
     `
       <div class="demo-example-live">
-        <sfx-crop id="ex-initial" style="width:100%;height:520px;display:block"></sfx-crop>
+        <cloudimage-crop id="ex-initial" style="width:100%;height:520px;display:block"></cloudimage-crop>
       </div>
 
       ${tabbedCode([
-        { label: 'HTML', code: `<sfx-crop
+        { label: 'HTML', code: `<cloudimage-crop
   src="/photo.jpg"
   initial-crop='{"x":0.1,"y":0.12,"width":0.6,"height":0.6}'
   initial-rotation="-8"
   initial-scale="1.2"
   crop-shape="free"
-></sfx-crop>`, lang: 'markup' },
-        { label: 'Imperative', code: `const el = document.querySelector('sfx-crop');
+></cloudimage-crop>`, lang: 'markup' },
+        { label: 'Imperative', code: `const el = document.querySelector('cloudimage-crop');
 
 // Seed BEFORE setting src so the first render already reflects them.
 el.initialCrop     = { x: 0.1, y: 0.12, width: 0.6, height: 0.6 };
 el.initialRotation = -8;
 el.initialScale    = 1.2;
 el.src             = '/photo.jpg';`, lang: 'typescript' },
-        { label: 'React', code: `<SfxCrop
+        { label: 'React', code: `<CloudimageCrop
   src="/photo.jpg"
   initialCrop={{ x: 0.1, y: 0.12, width: 0.6, height: 0.6 }}
   initialRotation={-8}
@@ -1350,7 +1350,7 @@ function renderExampleTransforms(): string {
     'Drive rotation, flip, and scale from external controls or keyboard shortcuts. Toggle print bleed guides for print-ready crops.',
     `
       <div class="demo-example-live">
-        <sfx-crop id="ex-tx" style="width:100%;height:520px;display:block"></sfx-crop>
+        <cloudimage-crop id="ex-tx" style="width:100%;height:520px;display:block"></cloudimage-crop>
       </div>
       <div class="demo-example-controls">
         <button class="demo-btn demo-btn--ghost" id="ex-rl">Rotate left</button>
@@ -1358,7 +1358,7 @@ function renderExampleTransforms(): string {
         <button class="demo-btn demo-btn--ghost" id="ex-reset">Reset</button>
       </div>
 
-      ${codeBlock(`const crop = document.querySelector('sfx-crop');
+      ${codeBlock(`const crop = document.querySelector('cloudimage-crop');
 
 document.getElementById('rl').onclick    = () => crop.rotateLeft();
 document.getElementById('fh').onclick    = () => crop.flipHorizontal();
@@ -1385,20 +1385,20 @@ document.getElementById('reset').onclick = () => crop.reset();`, 'typescript')}
         <button type="button" class="demo-bleed-toggle" id="ex-bleed-toggle" aria-label="Toggle print bleed guides" aria-pressed="true">Bleed: on</button>
       </div>
       <div class="demo-example-live">
-        <sfx-crop
+        <cloudimage-crop
           id="ex-bleed"
           show-bleed-margin
           bleed-margin-size="16"
           bleed-margin-color="rgba(37, 99, 235, 0.65)"
           style="width:100%;height:420px;display:block"
-        ></sfx-crop>
+        ></cloudimage-crop>
       </div>
-      ${codeBlock(`<sfx-crop
+      ${codeBlock(`<cloudimage-crop
   src="/photo.jpg"
   show-bleed-margin
   bleed-margin-size="16"
   bleed-margin-color="rgba(37, 99, 235, 0.65)"
-></sfx-crop>`, 'markup')}
+></cloudimage-crop>`, 'markup')}
     `,
   );
 }
@@ -1409,18 +1409,18 @@ function renderExampleEvents(): string {
     'Custom events mirror Scaleflex conventions — bubble through shadow boundaries.',
     `
       <div class="demo-example-live">
-        <sfx-crop id="ex-events" style="width:100%;height:480px;display:block"></sfx-crop>
+        <cloudimage-crop id="ex-events" style="width:100%;height:480px;display:block"></cloudimage-crop>
       </div>
       <div class="demo-example-log" id="ex-events-log" aria-live="polite"></div>
 
       ${tabbedCode([
-        { label: 'Vanilla', code: `const el = document.querySelector('sfx-crop');
+        { label: 'Vanilla', code: `const el = document.querySelector('cloudimage-crop');
 
-el.addEventListener('sfx-crop-ready',       () => console.log('ready'));
-el.addEventListener('sfx-crop-image-load',  (e) => console.log('image', e.detail.image));
-el.addEventListener('sfx-crop-change',      (e) => console.log('state', e.detail));
-el.addEventListener('sfx-crop-crop-change', (e) => console.log('crop',  e.detail));`, lang: 'typescript' },
-        { label: 'React', code: `<SfxCrop
+el.addEventListener('cloudimage-crop-ready',       () => console.log('ready'));
+el.addEventListener('cloudimage-crop-image-load',  (e) => console.log('image', e.detail.image));
+el.addEventListener('cloudimage-crop-change',      (e) => console.log('state', e.detail));
+el.addEventListener('cloudimage-crop-crop-change', (e) => console.log('crop',  e.detail));`, lang: 'typescript' },
+        { label: 'React', code: `<CloudimageCrop
   src="/photo.jpg"
   onReady={({ element }) => element.setScale(1.2)}
   onChange={(state)       => setTransform(state)}
@@ -1439,7 +1439,7 @@ function renderExampleExport(): string {
     'Get the crop result as a Canvas, Blob, data-URL, or a set of <code>TransformParams</code> for server-side rendering.',
     `
       <div class="demo-example-live">
-        <sfx-crop id="ex-export" style="width:100%;height:480px;display:block"></sfx-crop>
+        <cloudimage-crop id="ex-export" style="width:100%;height:480px;display:block"></cloudimage-crop>
       </div>
       <div class="demo-example-controls">
         <button class="demo-btn demo-btn--primary" id="ex-download">Download PNG</button>
@@ -1447,7 +1447,7 @@ function renderExampleExport(): string {
       </div>
       <pre class="demo-example-out" id="ex-export-out"></pre>
 
-      ${codeBlock(`const crop = document.querySelector('sfx-crop');
+      ${codeBlock(`const crop = document.querySelector('cloudimage-crop');
 
 // Download the cropped image
 const blob = await crop.toBlob('image/png');
@@ -1475,7 +1475,7 @@ function renderExampleCloudimage(): string {
         <button class="demo-btn demo-btn--ghost" id="ex-ci-load">Load image</button>
       </div>
       <div class="demo-example-live">
-        <sfx-crop id="ex-ci" output-mode="cloudimage" cloudimage-token="doc" style="width:100%;height:480px;display:block"></sfx-crop>
+        <cloudimage-crop id="ex-ci" output-mode="cloudimage" cloudimage-token="doc" style="width:100%;height:480px;display:block"></cloudimage-crop>
       </div>
       <div class="demo-example-controls">
         <button class="demo-btn demo-btn--primary" id="ex-ci-build">Crop &amp; compare →</button>
@@ -1496,23 +1496,23 @@ function renderExampleCloudimage(): string {
       <pre class="demo-example-out" id="ex-ci-out"></pre>
 
       ${tabbedCode([
-        { label: 'HTML', code: `<sfx-crop
+        { label: 'HTML', code: `<cloudimage-crop
   src="https://samples.scaleflex.com/earth.jpg"
   output-mode="cloudimage"
   cloudimage-token="doc"
-></sfx-crop>
+></cloudimage-crop>
 
 <script type="module">
-  const crop = document.querySelector('sfx-crop');
-  crop.addEventListener('sfx-crop-save', (e) => {
+  const crop = document.querySelector('cloudimage-crop');
+  crop.addEventListener('cloudimage-crop-save', (e) => {
     const { url } = e.detail;   // blob / dataURL are null in this mode
     document.querySelector('img#out').src = url;   // Cloudimage crops on delivery
   });
 </script>`, lang: 'markup' },
-        { label: 'On demand', code: `const crop = document.querySelector('sfx-crop');
+        { label: 'On demand', code: `const crop = document.querySelector('cloudimage-crop');
 const url = crop.toCloudimageURL();
 // → https://doc.cloudimg.io/https://samples.scaleflex.com/earth.jpg?tl_px=…&br_px=…`, lang: 'typescript' },
-        { label: 'Node / server', code: `import { buildCloudimageUrlFromDescriptor } from '@scaleflex/image-crop';
+        { label: 'Node / server', code: `import { buildCloudimageUrlFromDescriptor } from '@cloudimage/image-crop';
 
 // 'descriptor' is what you stored from the editor — the onSave event's
 // detail.descriptor, or crop.toCropDescriptor() (state + dims + variant).
@@ -1530,7 +1530,7 @@ function renderExampleCustomIcons(): string {
   // block so the preview and the code snippet can't drift. Each picked to
   // contrast visibly with the built-in Lucide default — so the override is
   // obvious at a glance.
-  const sample = `const el = document.querySelector('sfx-crop');
+  const sample = `const el = document.querySelector('cloudimage-crop');
 el.icons = {
   rotateLeft:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
                   'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
@@ -1559,12 +1559,12 @@ el.icons = {
     `
       <div class="demo-example-cell demo-example-cell--highlight">
         <div class="demo-example-cell-label">Custom icons</div>
-        <sfx-crop class="ex-icons-cell" data-variant="custom" style="height:480px;display:block"></sfx-crop>
+        <cloudimage-crop class="ex-icons-cell" data-variant="custom" style="height:480px;display:block"></cloudimage-crop>
       </div>
 
       ${tabbedCode([
         { label: 'Imperative', code: sample, lang: 'typescript' },
-        { label: 'React', code: `<SfxCrop
+        { label: 'React', code: `<CloudimageCrop
   src="/photo.jpg"
   icons={{
     rotateLeft:     '<svg viewBox="0 0 24 24" …>…</svg>',
@@ -1603,14 +1603,14 @@ el.icons = {
 function renderExampleReact(): string {
   return examplePage(
     'React wrapper',
-    'A forwardRef component (<code>&lt;SfxCrop&gt;</code>) and a matching hook (<code>useSfxCrop</code>).',
+    'A forwardRef component (<code>&lt;CloudimageCrop&gt;</code>) and a matching hook (<code>useCloudimageCrop</code>).',
     `
       <h2>Component</h2>
       ${codeBlock(`import { useRef } from 'react';
-import { SfxCrop, type SfxCropElement } from '@scaleflex/image-crop/react';
+import { CloudimageCrop, type CloudimageCropElement } from '@cloudimage/image-crop/react';
 
 export function Editor() {
-  const ref = useRef<SfxCropElement>(null);
+  const ref = useRef<CloudimageCropElement>(null);
 
   const handleSave = async () => {
     const blob = await ref.current?.toBlob('image/jpeg', 0.9);
@@ -1619,7 +1619,7 @@ export function Editor() {
 
   return (
     <>
-      <SfxCrop
+      <CloudimageCrop
         ref={ref}
         src="/photo.jpg"
         cropShape="free"
@@ -1633,13 +1633,13 @@ export function Editor() {
 }`, 'tsx')}
 
       <h2>Hook</h2>
-      ${codeBlock(`import { useSfxCrop } from '@scaleflex/image-crop/react';
+      ${codeBlock(`import { useCloudimageCrop } from '@cloudimage/image-crop/react';
 
 export function Editor() {
-  const crop = useSfxCrop();
+  const crop = useCloudimageCrop();
   return (
     <div>
-      <sfx-crop ref={crop.ref} src="/photo.jpg" />
+      <cloudimage-crop ref={crop.ref} src="/photo.jpg" />
       <button disabled={!crop.ready} onClick={() => crop.save()}>
         {crop.ready ? 'Save' : 'Loading…'}
       </button>
@@ -1656,79 +1656,79 @@ export function Editor() {
 function renderExampleTheming(): string {
   return examplePage(
     'Theming tokens',
-    'Override any <code>--sfx-cr-*</code> property from the host page.',
+    'Override any <code>--ci-crop-*</code> property from the host page.',
     `
       <div class="demo-example-cell">
         <div class="demo-example-cell-label">Sunset — full token override</div>
-        <sfx-crop class="ex-theme" data-accent="sunset" style="
-          --sfx-cr-primary:#ea580c;
-          --sfx-cr-primary-hover:#c2410c;
-          --sfx-cr-primary-bg:#ffedd5;
-          --sfx-cr-primary-glow:rgba(234,88,12,.28);
-          --sfx-cr-text:#7c2d12;
-          --sfx-cr-text-secondary:#ea580c;
-          --sfx-cr-text-muted:#fdba74;
-          --sfx-cr-bg:#fff7ed;
-          --sfx-cr-canvas-bg:#fff1e0;
-          --sfx-cr-overlay-color:rgba(255,237,213,.78);
-          --sfx-cr-border:#fed7aa;
-          --sfx-cr-frame-color:#ea580c;
-          --sfx-cr-handle-fill:#ea580c;
-          --sfx-cr-handle-stroke:#fff7ed;
-          --sfx-cr-ring:rgba(234,88,12,.55);
-          --sfx-cr-toolbar-bg:rgba(255,247,237,.92);
-          --sfx-cr-toolbar-border:rgba(234,88,12,.25);
-          --sfx-cr-toolbar-shadow:0 4px 16px rgba(234,88,12,.18);
-          --sfx-cr-dropdown-bg:#fff7ed;
-          --sfx-cr-dropdown-hover:#ffedd5;
-          --sfx-cr-radius:24px;
+        <cloudimage-crop class="ex-theme" data-accent="sunset" style="
+          --ci-crop-primary:#ea580c;
+          --ci-crop-primary-hover:#c2410c;
+          --ci-crop-primary-bg:#ffedd5;
+          --ci-crop-primary-glow:rgba(234,88,12,.28);
+          --ci-crop-text:#7c2d12;
+          --ci-crop-text-secondary:#ea580c;
+          --ci-crop-text-muted:#fdba74;
+          --ci-crop-bg:#fff7ed;
+          --ci-crop-canvas-bg:#fff1e0;
+          --ci-crop-overlay-color:rgba(255,237,213,.78);
+          --ci-crop-border:#fed7aa;
+          --ci-crop-frame-color:#ea580c;
+          --ci-crop-handle-fill:#ea580c;
+          --ci-crop-handle-stroke:#fff7ed;
+          --ci-crop-ring:rgba(234,88,12,.55);
+          --ci-crop-toolbar-bg:rgba(255,247,237,.92);
+          --ci-crop-toolbar-border:rgba(234,88,12,.25);
+          --ci-crop-toolbar-shadow:0 4px 16px rgba(234,88,12,.18);
+          --ci-crop-dropdown-bg:#fff7ed;
+          --ci-crop-dropdown-hover:#ffedd5;
+          --ci-crop-radius:24px;
           max-width:1200px;max-height:520px;display:block;margin:0 auto
-        "></sfx-crop>
+        "></cloudimage-crop>
       </div>
 
       <p class="demo-lead" style="margin-top:24px;text-align:left;">
-        Every <code>--sfx-cr-*</code> token can be re-pointed from the host page. Below is a full sunset palette
-        — note how it repaints the toolbar background, the icon color (<code>--sfx-cr-text-secondary</code>),
+        Every <code>--ci-crop-*</code> token can be re-pointed from the host page. Below is a full sunset palette
+        — note how it repaints the toolbar background, the icon color (<code>--ci-crop-text-secondary</code>),
         the canvas dimming overlay, the crop frame &amp; handles, and even the outer card radius.
       </p>
 
-      ${codeBlock(`sfx-crop.brand-sunset {
+      ${codeBlock(`cloudimage-crop.brand-sunset {
   /* Accent — buttons, hover/active, sliders, focus rings */
-  --sfx-cr-primary:        #ea580c;
-  --sfx-cr-primary-hover:  #c2410c;
-  --sfx-cr-primary-bg:     #ffedd5;
-  --sfx-cr-primary-glow:   rgba(234, 88, 12, 0.28);
+  --ci-crop-primary:        #ea580c;
+  --ci-crop-primary-hover:  #c2410c;
+  --ci-crop-primary-bg:     #ffedd5;
+  --ci-crop-primary-glow:   rgba(234, 88, 12, 0.28);
 
-  /* Text + ICON colors. Toolbar icons inherit --sfx-cr-text-secondary
-     in their idle state. (The fine-tilt ruler uses its own --sfx-cr-ruler-ink
-     + --sfx-cr-ruler-halo so it stays legible over any photo.) */
-  --sfx-cr-text:           #7c2d12;
-  --sfx-cr-text-secondary: #ea580c;   /* idle icon color */
-  --sfx-cr-text-muted:     #fdba74;
+  /* Text + ICON colors. Toolbar icons inherit --ci-crop-text-secondary
+     in their idle state. (The fine-tilt ruler uses its own --ci-crop-ruler-ink
+     + --ci-crop-ruler-halo so it stays legible over any photo.) */
+  --ci-crop-text:           #7c2d12;
+  --ci-crop-text-secondary: #ea580c;   /* idle icon color */
+  --ci-crop-text-muted:     #fdba74;
 
   /* Surfaces */
-  --sfx-cr-bg:             #fff7ed;
-  --sfx-cr-canvas-bg:      #fff1e0;
-  --sfx-cr-overlay-color:  rgba(255, 237, 213, 0.78);  /* outside-crop dim */
-  --sfx-cr-border:         #fed7aa;
+  --ci-crop-bg:             #fff7ed;
+  --ci-crop-canvas-bg:      #fff1e0;
+  --ci-crop-overlay-color:  rgba(255, 237, 213, 0.78);  /* outside-crop dim */
+  --ci-crop-border:         #fed7aa;
 
   /* Crop frame + handle */
-  --sfx-cr-frame-color:    #ea580c;
-  --sfx-cr-handle-fill:    #ea580c;
-  --sfx-cr-handle-stroke:  #fff7ed;
-  --sfx-cr-ring:           rgba(234, 88, 12, 0.55);
+  --ci-crop-frame-color:    #ea580c;
+  --ci-crop-handle-fill:    #ea580c;
+  --ci-crop-handle-stroke:  #fff7ed;
+  --ci-crop-ring:           rgba(234, 88, 12, 0.55);
 
   /* Toolbar pill */
-  --sfx-cr-toolbar-bg:     rgba(255, 247, 237, 0.92);
-  --sfx-cr-toolbar-border: rgba(234, 88, 12, 0.25);
-  --sfx-cr-toolbar-shadow: 0 4px 16px rgba(234, 88, 12, 0.18);
+  --ci-crop-toolbar-bg:     rgba(255, 247, 237, 0.92);
+  --ci-crop-toolbar-border: rgba(234, 88, 12, 0.25);
+  --ci-crop-toolbar-shadow: 0 4px 16px rgba(234, 88, 12, 0.18);
 
   /* Aspect-ratio dropdown */
-  --sfx-cr-dropdown-bg:    #fff7ed;
-  --sfx-cr-dropdown-hover: #ffedd5;
+  --ci-crop-dropdown-bg:    #fff7ed;
+  --ci-crop-dropdown-hover: #ffedd5;
 
   /* Outer card */
-  --sfx-cr-radius:         24px;
+  --ci-crop-radius:         24px;
 }`, 'css')}
     `,
   );
@@ -1739,12 +1739,12 @@ function renderExampleTheming(): string {
 // ---------------------------------------------------------------------------
 
 function hydrateExampleBasic(root: HTMLElement): void {
-  const el = root.querySelector('#ex-basic') as SfxCropElement | null;
+  const el = root.querySelector('#ex-basic') as CloudimageCropElement | null;
   if (el) { el.src = DEMO_SRC; el.showGrid = 'interaction'; el.theme = 'light'; }
 }
 
 function hydrateExampleShapes(root: HTMLElement): void {
-  for (const el of root.querySelectorAll<SfxCropElement>('.ex-shape')) {
+  for (const el of root.querySelectorAll<CloudimageCropElement>('.ex-shape')) {
     el.src = DEMO_SRC;
     el.cropShape = (el.dataset.shape as CropShapeName) ?? 'free';
     el.showToolbar = false;
@@ -1756,7 +1756,7 @@ function hydrateExampleShapes(root: HTMLElement): void {
 }
 
 function hydrateExampleInitialState(root: HTMLElement): void {
-  const el = root.querySelector('#ex-initial') as SfxCropElement | null;
+  const el = root.querySelector('#ex-initial') as CloudimageCropElement | null;
   if (!el) return;
   // Seed the initial-* fields before `src` — the controller reads them
   // once, during image load. Order matters for the imperative path.
@@ -1793,7 +1793,7 @@ function hydrateExampleCustomIcons(root: HTMLElement): void {
       '<path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H11"/></svg>',
   };
 
-  for (const el of root.querySelectorAll<SfxCropElement>('.ex-icons-cell')) {
+  for (const el of root.querySelectorAll<CloudimageCropElement>('.ex-icons-cell')) {
     el.src = DEMO_SRC;
     el.cropShape = '16:9';
     el.showGrid = 'interaction';
@@ -1802,7 +1802,7 @@ function hydrateExampleCustomIcons(root: HTMLElement): void {
 }
 
 function hydrateExampleTransforms(root: HTMLElement): void {
-  const el = root.querySelector('#ex-tx') as SfxCropElement | null;
+  const el = root.querySelector('#ex-tx') as CloudimageCropElement | null;
   if (!el) return;
   el.src = DEMO_SRC;
   el.showGrid = 'interaction';
@@ -1811,7 +1811,7 @@ function hydrateExampleTransforms(root: HTMLElement): void {
   root.querySelector('#ex-reset')?.addEventListener('click', () => el.reset());
 
   // Secondary live demo on the same page — print-bleed guides.
-  const bleed = root.querySelector('#ex-bleed') as SfxCropElement | null;
+  const bleed = root.querySelector('#ex-bleed') as CloudimageCropElement | null;
   if (bleed) {
     bleed.src = DEMO_SRC; bleed.showGrid = true; bleed.theme = 'light';
     const bleedBtn = root.querySelector<HTMLButtonElement>('#ex-bleed-toggle');
@@ -1825,7 +1825,7 @@ function hydrateExampleTransforms(root: HTMLElement): void {
 }
 
 function hydrateExampleEvents(root: HTMLElement): void {
-  const el  = root.querySelector('#ex-events') as SfxCropElement | null;
+  const el  = root.querySelector('#ex-events') as CloudimageCropElement | null;
   const log = root.querySelector<HTMLElement>('#ex-events-log');
   if (!el || !log) return;
   el.src = DEMO_SRC;
@@ -1836,25 +1836,25 @@ function hydrateExampleEvents(root: HTMLElement): void {
     log.prepend(p);
     while (log.children.length > 12) log.lastChild?.remove();
   };
-  el.addEventListener('sfx-crop-ready',       () => append('▸ sfx-crop-ready'));
-  el.addEventListener('sfx-crop-image-load',  () => append('▸ sfx-crop-image-load'));
-  el.addEventListener('sfx-crop-change',      (e: Event) => {
+  el.addEventListener('cloudimage-crop-ready',       () => append('▸ cloudimage-crop-ready'));
+  el.addEventListener('cloudimage-crop-image-load',  () => append('▸ cloudimage-crop-image-load'));
+  el.addEventListener('cloudimage-crop-change',      (e: Event) => {
     const s = (e as CustomEvent).detail;
-    append(`▸ sfx-crop-change  rot=${s.rotation.toFixed(1)}° scale=${s.scale.toFixed(2)}`);
+    append(`▸ cloudimage-crop-change  rot=${s.rotation.toFixed(1)}° scale=${s.scale.toFixed(2)}`);
   });
-  el.addEventListener('sfx-crop-crop-change', (e: Event) => {
+  el.addEventListener('cloudimage-crop-crop-change', (e: Event) => {
     const r = (e as CustomEvent).detail;
-    append(`▸ sfx-crop-crop-change  ${r.x}×${r.y}  ${r.width}×${r.height}`);
+    append(`▸ cloudimage-crop-crop-change  ${r.x}×${r.y}  ${r.width}×${r.height}`);
   });
   // Fired by the toolbar's "Done" button (→ save()).
-  el.addEventListener('sfx-crop-save', (e: Event) => {
+  el.addEventListener('cloudimage-crop-save', (e: Event) => {
     const { params } = (e as CustomEvent).detail as { params: { outputWidth: number; outputHeight: number } };
-    append(`▸ sfx-crop-save  ${params.outputWidth}×${params.outputHeight}px`);
+    append(`▸ cloudimage-crop-save  ${params.outputWidth}×${params.outputHeight}px`);
   });
 }
 
 function hydrateExampleExport(root: HTMLElement): void {
-  const el  = root.querySelector('#ex-export') as SfxCropElement | null;
+  const el  = root.querySelector('#ex-export') as CloudimageCropElement | null;
   const out = root.querySelector<HTMLElement>('#ex-export-out');
   if (!el || !out) return;
   el.src = DEMO_SRC;
@@ -1875,7 +1875,7 @@ function hydrateExampleExport(root: HTMLElement): void {
 }
 
 function hydrateExampleCloudimage(root: HTMLElement): void {
-  const el = root.querySelector('#ex-ci') as SfxCropElement | null;
+  const el = root.querySelector('#ex-ci') as CloudimageCropElement | null;
   const out = root.querySelector<HTMLElement>('#ex-ci-out');
   const compare = root.querySelector<HTMLElement>('#ex-ci-compare');
   const local = root.querySelector<HTMLImageElement>('#ex-ci-local');
@@ -1992,13 +1992,13 @@ function hydrateExampleCloudimage(root: HTMLElement): void {
 
   // The toolbar "Done" button → save(): in cloudimage mode the detail carries
   // `url` (blob / dataURL are null).
-  el.addEventListener('sfx-crop-save', (e: Event) => {
+  el.addEventListener('cloudimage-crop-save', (e: Event) => {
     renderCompare(((e as CustomEvent).detail as { url: string | null }).url);
   });
 }
 
 function hydrateExampleTheming(root: HTMLElement): void {
-  for (const el of root.querySelectorAll<SfxCropElement>('.ex-theme')) {
+  for (const el of root.querySelectorAll<CloudimageCropElement>('.ex-theme')) {
     el.src = DEMO_SRC;
     // Toolbar stays visible so the brand primary is also visible on the
     // hover-ring / focus-ring of the toolbar buttons — without it, the
@@ -2021,31 +2021,31 @@ function renderExampleFixed(): string {
       <div class="demo-example-grid">
         <div class="demo-example-cell">
           <div class="demo-example-cell-label">Square (1:1)</div>
-          <sfx-crop class="ex-fixed" data-shape="square" style="height:360px;display:block"></sfx-crop>
+          <cloudimage-crop class="ex-fixed" data-shape="square" style="height:360px;display:block"></cloudimage-crop>
         </div>
         <div class="demo-example-cell">
           <div class="demo-example-cell-label">Portrait (9:16)</div>
-          <sfx-crop class="ex-fixed" data-shape="9:16" style="height:360px;display:block"></sfx-crop>
+          <cloudimage-crop class="ex-fixed" data-shape="9:16" style="height:360px;display:block"></cloudimage-crop>
         </div>
         <div class="demo-example-cell">
           <div class="demo-example-cell-label">Circle</div>
-          <sfx-crop class="ex-fixed" data-shape="circle" style="height:360px;display:block"></sfx-crop>
+          <cloudimage-crop class="ex-fixed" data-shape="circle" style="height:360px;display:block"></cloudimage-crop>
         </div>
         <div class="demo-example-cell">
           <div class="demo-example-cell-label">Landscape (16:9)</div>
-          <sfx-crop class="ex-fixed" data-shape="16:9" style="height:360px;display:block"></sfx-crop>
+          <cloudimage-crop class="ex-fixed" data-shape="16:9" style="height:360px;display:block"></cloudimage-crop>
         </div>
       </div>
 
       ${tabbedCode([
-        { label: 'HTML', code: `<sfx-crop
+        { label: 'HTML', code: `<cloudimage-crop
   src="/photo.jpg"
   variant="fixed"
   crop-shape="1:1"
-></sfx-crop>`, lang: 'markup' },
-        { label: 'React', code: `import { SfxCrop } from '@scaleflex/image-crop/react';
+></cloudimage-crop>`, lang: 'markup' },
+        { label: 'React', code: `import { CloudimageCrop } from '@cloudimage/image-crop/react';
 
-<SfxCrop
+<CloudimageCrop
   src="/photo.jpg"
   variant="fixed"
   cropShape="1:1"
@@ -2057,9 +2057,9 @@ function renderExampleFixed(): string {
 }
 
 function hydrateExampleFixed(root: HTMLElement): void {
-  for (const el of root.querySelectorAll<SfxCropElement>('.ex-fixed')) {
+  for (const el of root.querySelectorAll<CloudimageCropElement>('.ex-fixed')) {
     el.variant = 'fixed';
-    el.cropShape = (el.dataset.shape ?? '1:1') as SfxCropElement['cropShape'];
+    el.cropShape = (el.dataset.shape ?? '1:1') as CloudimageCropElement['cropShape'];
     el.src = DEMO_SRC;
   }
 }
@@ -2224,7 +2224,7 @@ function navigate(): void {
     applyThemeToWrap(wrap, initialTheme);
     btn.setAttribute('aria-pressed', initialTheme === 'dark' ? 'true' : 'false');
     btn.addEventListener('click', () => {
-      const current = wrap.querySelector('sfx-crop')?.getAttribute('theme') as DemoTheme | null;
+      const current = wrap.querySelector('cloudimage-crop')?.getAttribute('theme') as DemoTheme | null;
       const next: DemoTheme = current === 'dark' ? 'light' : 'dark';
       localStorage.setItem(THEME_KEY, next);
       applyThemeToWrap(wrap, next);
@@ -2236,7 +2236,7 @@ function navigate(): void {
     // via margin:auto. CSS positions the button via `right: calc(
     // (100% - var(--sfx-host-w)) / 2 + 12px)`, so we just publish the
     // host's current pixel width as that custom property.
-    const host = wrap.querySelector<HTMLElement>('sfx-crop');
+    const host = wrap.querySelector<HTMLElement>('cloudimage-crop');
     if (host) {
       const sync = () => {
         wrap.style.setProperty('--sfx-host-w', `${host.offsetWidth}px`);
@@ -2251,8 +2251,8 @@ function navigate(): void {
 
 /**
  * Global "Done" result preview. The toolbar's Done button calls save(), which
- * dispatches a bubbling + composed `sfx-crop-save`, so one document-level
- * listener surfaces the finished crop from ANY <sfx-crop> on the page — home
+ * dispatches a bubbling + composed `cloudimage-crop-save`, so one document-level
+ * listener surfaces the finished crop from ANY <cloudimage-crop> on the page — home
  * or examples — in a single shared modal. This is the demo stand-in for what a
  * real app does on save (upload / persist / close).
  */
@@ -2287,7 +2287,7 @@ function setupSavePreview(): void {
   overlay.querySelector('.demo-save-close')!.addEventListener('click', close);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) close(); });
 
-  document.addEventListener('sfx-crop-save', (e: Event) => {
+  document.addEventListener('cloudimage-crop-save', (e: Event) => {
     const d = (e as CustomEvent).detail as {
       blob: Blob; dataURL: string; params: { outputWidth: number; outputHeight: number };
     };

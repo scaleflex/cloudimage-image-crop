@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `@scaleflex/image-crop` (formerly `js-cloudimage-crop`).
+All notable changes to `@cloudimage/image-crop` (formerly `@scaleflex/image-crop`, originally `js-cloudimage-crop`).
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -28,11 +28,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     the **`fixed` variant for guaranteed parity** (it cover-fits → crop always
     inside the photo), or keep the `classic` crop within the photo.
     `resolveServerCrop(...).clamped` flags it.
-- `toCloudimageURL(options?)` and `toCropDescriptor()` on the `<sfx-crop>`
-  element, the headless controller, and the React `useSfxCrop` /
-  `useSfxCropController` hooks.
+- `toCloudimageURL(options?)` and `toCropDescriptor()` on the `<cloudimage-crop>`
+  element, the headless controller, and the React `useCloudimageCrop` /
+  `useCloudimageCropController` hooks.
 - `buildCloudimageUrlFromDescriptor(descriptor, target)` — exported pure,
-  parity-complete helper (also from `@scaleflex/image-crop/react`) to build the
+  parity-complete helper (also from `@cloudimage/image-crop/react`) to build the
   URL from a stored `CropDescriptor` in Node / on a server. `buildCloudimageUrl`
   (lossy single-pass) is retained for the basic case. New `CropDescriptor` and
   `CloudimageTarget` types.
@@ -49,10 +49,23 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `sfx-crop-save` event detail gains `url` and `descriptor` fields, and
+- **Renamed to `@cloudimage/image-crop`** (from `@scaleflex/image-crop`), moving
+  the plugin into the Cloudimage plugin family (alongside `@cloudimage/360-view`,
+  `@cloudimage/hotspot`, …). This renames the public surface:
+  - npm package `@scaleflex/image-crop` → `@cloudimage/image-crop` (and
+    `/define`, `/react` sub-paths);
+  - custom element `<sfx-crop>` → `<cloudimage-crop>`;
+  - React component `SfxCrop` → `CloudimageCrop` (+ `CloudimageCropElement`,
+    `CloudimageCropProps`, `CloudimageCropSaveDetail`, `useCloudimageCrop`,
+    `useCloudimageCropController`);
+  - events `sfx-crop-*` → `cloudimage-crop-*`;
+  - CSS custom properties `--sfx-cr-*` → `--ci-crop-*`;
+  - CDN bundle served from `/plugins/cloudimage/image-crop/`.
+  Update imports, the tag, event names, and CSS variable names accordingly.
+- `cloudimage-crop-save` event detail gains `url` and `descriptor` fields, and
   `blob`/`dataURL` are now `null` when `output-mode="cloudimage"` (previously
-  always present). The React `SfxCropSaveDetail` type widens `blob`/`dataURL` to
-  `… | null` accordingly.
+  always present). The React `CloudimageCropSaveDetail` type widens
+  `blob`/`dataURL` to `… | null` accordingly.
 
 ## [2.0.3] — 2026-06-12
 

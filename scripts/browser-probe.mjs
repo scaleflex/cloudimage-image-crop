@@ -90,7 +90,7 @@ await send('Runtime.enable');
 await send('Log.enable');
 await send('Page.enable');
 await send('Page.navigate', { url: URL });
-await wait(4000); // let dev server + Lit + <sfx-crop> settle, load image
+await wait(4000); // let dev server + Lit + <cloudimage-crop> settle, load image
 await send('Page.navigate', { url: URL }); // force re-apply hash
 await wait(4000);
 
@@ -98,14 +98,14 @@ const exec = (expression) => send('Runtime.evaluate', { expression, returnByValu
 
 const probe = await exec(`
   (async () => {
-    const host = document.querySelector('sfx-crop');
+    const host = document.querySelector('cloudimage-crop');
     if (!host) return { hostFound: false };
     const out = {
       hostFound: true,
       hostRect: host.getBoundingClientRect().toJSON(),
       shadowHas: !!host.shadowRoot,
     };
-    const canvasHost = host.shadowRoot?.querySelector('sfx-crop-canvas');
+    const canvasHost = host.shadowRoot?.querySelector('cloudimage-crop-canvas');
     const canvas = canvasHost?.shadowRoot?.querySelector('canvas');
     if (canvas) {
       out.canvasW = canvas.width;
@@ -134,17 +134,17 @@ const probe = await exec(`
     } else {
       out.noCanvas = true;
     }
-    out.toolbar = !!host.shadowRoot?.querySelector('sfx-crop-toolbar');
-    out.zoomSlider = !!host.shadowRoot?.querySelector('sfx-crop-zoom');
+    out.toolbar = !!host.shadowRoot?.querySelector('cloudimage-crop-toolbar');
+    out.zoomSlider = !!host.shadowRoot?.querySelector('cloudimage-crop-zoom');
 
     // Theme + computed CSS
     out.hostTheme = host.getAttribute('theme');
-    out.hostCanvasBgVar = getComputedStyle(host).getPropertyValue('--sfx-cr-canvas-bg').trim();
+    out.hostCanvasBgVar = getComputedStyle(host).getPropertyValue('--ci-crop-canvas-bg').trim();
     if (canvasHost) {
       out.canvasHostBg = getComputedStyle(canvasHost).backgroundColor;
-      out.canvasHostCSSVar = getComputedStyle(canvasHost).getPropertyValue('--sfx-cr-canvas-bg').trim();
+      out.canvasHostCSSVar = getComputedStyle(canvasHost).getPropertyValue('--ci-crop-canvas-bg').trim();
     }
-    const container = host.shadowRoot?.querySelector('.sfx-cr-container');
+    const container = host.shadowRoot?.querySelector('.ci-crop-container');
     if (container) out.containerBg = getComputedStyle(container).backgroundColor;
 
     const parent = host.parentElement;

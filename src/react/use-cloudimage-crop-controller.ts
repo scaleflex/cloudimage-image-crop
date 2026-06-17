@@ -6,7 +6,7 @@ import {
 } from '../core/crop-controller';
 import { mergeConfig } from '../core/config';
 import type {
-  SfxCropConfig,
+  CloudimageCropConfig,
   TransformState,
   TransformParams,
   CropRect,
@@ -15,11 +15,11 @@ import type {
 import type { CloudimageUrlOptions, CropDescriptor } from '../export/cloudimage-url';
 
 /**
- * Headless options for {@link useSfxCropController}. Most fields mirror the
+ * Headless options for {@link useCloudimageCropController}. Most fields mirror the
  * built-in element's attributes, minus UI toggles that are irrelevant when
  * the consumer provides their own UI.
  */
-export type UseSfxCropControllerOptions = Partial<SfxCropConfig>;
+export type UseCloudimageCropControllerOptions = Partial<CloudimageCropConfig>;
 
 /** Reactive snapshot exposed by the hook. */
 export interface CropControllerState {
@@ -61,7 +61,7 @@ export interface CropControllerApi {
   getController(): CropController | null;
 }
 
-export interface UseSfxCropControllerReturn extends CropControllerState {
+export interface UseCloudimageCropControllerReturn extends CropControllerState {
   /** Attach to your `<canvas>` node. */
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   /** Attach to a sizing box (e.g. a `<div>` with `max-width`/`max-height`). */
@@ -74,12 +74,12 @@ export interface UseSfxCropControllerReturn extends CropControllerState {
  * Headless React hook — wraps {@link createCropController} so a consumer can
  * drop a `<canvas>` + sizing container anywhere in their tree and wire up
  * their own UI (their design-system buttons, sliders, modals, etc.). The
- * hook never mounts `<sfx-crop>`; there is no Lit, no shadow DOM, no
+ * hook never mounts `<cloudimage-crop>`; there is no Lit, no shadow DOM, no
  * built-in toolbar.
  *
  * Usage:
  * ```tsx
- * const { canvasRef, containerRef, state, actions, api } = useSfxCropController({
+ * const { canvasRef, containerRef, state, actions, api } = useCloudimageCropController({
  *   src: '/photo.jpg',
  *   cropShape: '16:9',
  * });
@@ -94,9 +94,9 @@ export interface UseSfxCropControllerReturn extends CropControllerState {
  * );
  * ```
  */
-export function useSfxCropController(
-  options: UseSfxCropControllerOptions = {},
-): UseSfxCropControllerReturn {
+export function useCloudimageCropController(
+  options: UseCloudimageCropControllerOptions = {},
+): UseCloudimageCropControllerReturn {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLElement | null>(null);
   const controllerRef = useRef<CropController | null>(null);

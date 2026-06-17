@@ -1,12 +1,12 @@
 import { html, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { SfxCropBaseElement } from './base';
+import { CloudimageCropBaseElement } from './base';
 import { clamp } from '../utils/math';
 import { resolveIcon } from './icons';
 import type { CropIconOverrides } from '../core/types';
 import { baseStyles } from '../styles/shared.css';
-import { sfxCropZoomStyles } from './sfx-crop-zoom.styles';
+import { sfxCropZoomStyles } from './cloudimage-crop-zoom.styles';
 import { createPopoverAnchor, type PopoverAnchor } from './popover-anchor';
 
 /**
@@ -28,7 +28,7 @@ const TICK_COUNT = 40; // ticks spread evenly across the [0, 1] slider range.
 const MAJOR_EVERY = 5;
 
 /**
- * `<sfx-crop-zoom>` — loupe trigger + ruler scrubber popover.
+ * `<cloudimage-crop-zoom>` — loupe trigger + ruler scrubber popover.
  *
  * The trigger matches the toolbar's other icon buttons. Click opens a
  * transparent ruler of dotted ticks under a fixed center indicator; drag
@@ -37,9 +37,9 @@ const MAJOR_EVERY = 5;
  * and the center label shows the current percentage of the scale.
  *
  * Event:
- *   `sfx-crop-zoom-change` — `{ detail: { scale: number } }`, bubbles + composed.
+ *   `cloudimage-crop-zoom-change` — `{ detail: { scale: number } }`, bubbles + composed.
  */
-export class SfxCropZoomElement extends SfxCropBaseElement {
+export class CloudimageCropZoomElement extends CloudimageCropBaseElement {
   static styles = [baseStyles, sfxCropZoomStyles];
 
   @property({ type: Number }) min = 0.5;
@@ -69,7 +69,7 @@ export class SfxCropZoomElement extends SfxCropBaseElement {
     }
   };
 
-  private popoverAnchor: PopoverAnchor = createPopoverAnchor(this, '.sfx-cr-zoom-popover');
+  private popoverAnchor: PopoverAnchor = createPopoverAnchor(this, '.ci-crop-zoom-popover');
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -108,22 +108,22 @@ export class SfxCropZoomElement extends SfxCropBaseElement {
 
     return html`
       <div
-        class="sfx-cr-zoom-root"
+        class="ci-crop-zoom-root"
         @click=${(e: Event) => e.stopPropagation()}
         @keydown=${this.onKeyDown}
       >
         <button
           type="button"
-          class="sfx-cr-zoom-trigger"
+          class="ci-crop-zoom-trigger"
           aria-label=${`Zoom — ${percent}%`}
           aria-haspopup="dialog"
           aria-expanded=${this.open ? 'true' : 'false'}
           @click=${this.onTriggerClick}
         >${unsafeHTML(resolveIcon('loupe', this.icons))}</button>
 
-        <div class="sfx-cr-zoom-popover" role="group" aria-label="Zoom controls">
+        <div class="ci-crop-zoom-popover" role="group" aria-label="Zoom controls">
           <div
-            class=${`sfx-cr-zoom-ruler${this.dragging ? ' is-dragging' : ''}`}
+            class=${`ci-crop-zoom-ruler${this.dragging ? ' is-dragging' : ''}`}
             role="slider"
             aria-valuemin=${String(this.min)}
             aria-valuemax=${String(this.max)}
@@ -137,17 +137,17 @@ export class SfxCropZoomElement extends SfxCropBaseElement {
             @pointercancel=${this.onPointerUp}
             @dblclick=${this.onReset}
           >
-            <div class="sfx-cr-zoom-ticks" style=${`transform: translateX(${offset.toFixed(1)}px)`}>
+            <div class="ci-crop-zoom-ticks" style=${`transform: translateX(${offset.toFixed(1)}px)`}>
               ${ticks.map((t) => html`
                 <span
-                  class=${`sfx-cr-zoom-tick${t.major ? ' sfx-cr-zoom-tick--major' : ''}`}
+                  class=${`ci-crop-zoom-tick${t.major ? ' ci-crop-zoom-tick--major' : ''}`}
                   style=${`left: ${(t.pos * PX_PER_UNIT).toFixed(1)}px`}
                 ></span>
               `)}
             </div>
-            <div class="sfx-cr-zoom-indicator" aria-hidden="true"></div>
+            <div class="ci-crop-zoom-indicator" aria-hidden="true"></div>
           </div>
-          <span class="sfx-cr-zoom-value">${percent}%</span>
+          <span class="ci-crop-zoom-value">${percent}%</span>
         </div>
       </div>
     `;
@@ -173,7 +173,7 @@ export class SfxCropZoomElement extends SfxCropBaseElement {
     const wasOpen = this.open;
     this.open = true;
     if (!wasOpen) {
-      this.dispatchEvent(new CustomEvent('sfx-crop-popover-open', {
+      this.dispatchEvent(new CustomEvent('cloudimage-crop-popover-open', {
         detail: { source: 'zoom' },
         bubbles: true,
         composed: true,
@@ -198,7 +198,7 @@ export class SfxCropZoomElement extends SfxCropBaseElement {
     this.clearAutoClose();
     this.open = !this.open;
     if (this.open) {
-      this.dispatchEvent(new CustomEvent('sfx-crop-popover-open', {
+      this.dispatchEvent(new CustomEvent('cloudimage-crop-popover-open', {
         detail: { source: 'zoom' },
         bubbles: true,
         composed: true,
@@ -263,7 +263,7 @@ export class SfxCropZoomElement extends SfxCropBaseElement {
   private emit(scale: number): void {
     if (this.value === scale) return;
     this.value = scale;
-    this.dispatchEvent(new CustomEvent('sfx-crop-zoom-change', {
+    this.dispatchEvent(new CustomEvent('cloudimage-crop-zoom-change', {
       detail: { scale },
       bubbles: true,
       composed: true,
@@ -277,6 +277,6 @@ export class SfxCropZoomElement extends SfxCropBaseElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'sfx-crop-zoom': SfxCropZoomElement;
+    'cloudimage-crop-zoom': CloudimageCropZoomElement;
   }
 }

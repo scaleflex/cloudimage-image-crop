@@ -1,11 +1,11 @@
 import { css } from 'lit';
 
 /**
- * `<sfx-crop>` host + container + loading/error overlay.
+ * `<cloudimage-crop>` host + container + loading/error overlay.
  *
  * Visual language tracks `@scaleflex/uploader`: Inter typography, 16px outer
  * radius, deep soft shadow, primary-blue accents for spinners and focus.
- * Works embedded on any page surface (light or dark); `--sfx-cr-*` tokens
+ * Works embedded on any page surface (light or dark); `--ci-crop-*` tokens
  * swap automatically when the host carries `theme="dark"`.
  */
 export const sfxCropStyles = css`
@@ -14,8 +14,8 @@ export const sfxCropStyles = css`
     position: relative;
     width: 100%;
     height: 100%;
-    font-family: var(--sfx-cr-font);
-    color: var(--sfx-cr-text);
+    font-family: var(--ci-crop-font);
+    color: var(--ci-crop-text);
     /* Establish a named inline-size container so the toolbar / shapes /
        zoom / rotate sub-elements can switch to their compact left-rail
        layout based on the editor's own width — independent of the page
@@ -28,17 +28,17 @@ export const sfxCropStyles = css`
   :host([hidden]) { display: none; }
 
   :host(:focus-visible) {
-    outline: 2px solid var(--sfx-cr-ring);
+    outline: 2px solid var(--ci-crop-ring);
     outline-offset: 2px;
   }
 
-  .sfx-cr-container {
+  .ci-crop-container {
     position: relative;
     overflow: hidden;
     width: 100%;
     height: 100%;
-    background: var(--sfx-cr-bg);
-    border-radius: var(--sfx-cr-radius);
+    background: var(--ci-crop-bg);
+    border-radius: var(--ci-crop-radius);
     /* Editor card frame: shadow-only (no border). A border draws two
        visible curves at the corners (outer + inner padding edge),
        reading as a "double ring"; a slightly stronger shadow gives the
@@ -48,13 +48,13 @@ export const sfxCropStyles = css`
       0 0 0 1px oklch(0 0 0 / 0.05),
       0 4px 6px -1px oklch(0 0 0 / 0.1),
       0 2px 4px -2px oklch(0 0 0 / 0.1);
-    font-family: var(--sfx-cr-font);
+    font-family: var(--ci-crop-font);
     user-select: none;
     -webkit-user-select: none;
   }
 
   /* ====== Loading ====== */
-  .sfx-cr-loading {
+  .ci-crop-loading {
     position: absolute;
     inset: 0;
     display: flex;
@@ -62,33 +62,33 @@ export const sfxCropStyles = css`
     align-items: center;
     justify-content: center;
     gap: 16px;
-    background: var(--sfx-cr-bg);
+    background: var(--ci-crop-bg);
     z-index: 10;
     transition: opacity 280ms ease;
   }
-  .sfx-cr-loading--hidden {
+  .ci-crop-loading--hidden {
     opacity: 0;
     pointer-events: none;
   }
 
-  .sfx-cr-loading-spinner {
+  .ci-crop-loading-spinner {
     width: 36px;
     height: 36px;
-    border: 3px solid var(--sfx-cr-border);
-    border-top-color: var(--sfx-cr-primary);
+    border: 3px solid var(--ci-crop-border);
+    border-top-color: var(--ci-crop-primary);
     border-radius: 50%;
-    animation: sfx-cr-spin 0.8s linear infinite;
+    animation: ci-crop-spin 0.8s linear infinite;
   }
 
-  .sfx-cr-loading-text {
+  .ci-crop-loading-text {
     font-size: 14px;
     font-weight: 500;
-    color: var(--sfx-cr-text-secondary);
+    color: var(--ci-crop-text-secondary);
     letter-spacing: 0.2px;
   }
 
   /* ====== Error ====== */
-  .sfx-cr-error {
+  .ci-crop-error {
     position: absolute;
     inset: 0;
     display: none;
@@ -97,12 +97,12 @@ export const sfxCropStyles = css`
     justify-content: center;
     gap: 12px;
     padding: 32px;
-    background: var(--sfx-cr-bg);
+    background: var(--ci-crop-bg);
     z-index: 10;
-    color: var(--sfx-cr-error);
+    color: var(--ci-crop-error);
     font-size: 14px;
     font-weight: 500;
     text-align: center;
   }
-  .sfx-cr-error--visible { display: flex; }
+  .ci-crop-error--visible { display: flex; }
 `;

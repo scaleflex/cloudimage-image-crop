@@ -14,10 +14,10 @@ export function announceState(
   state: TransformState,
   cropShape: string = 'free',
 ): void {
-  let liveRegion = container.querySelector<HTMLElement>('.sfx-cr-sr-only[aria-live]');
+  let liveRegion = container.querySelector<HTMLElement>('.ci-crop-sr-only[aria-live]');
   if (!liveRegion) {
     liveRegion = document.createElement('div');
-    liveRegion.className = 'sfx-cr-sr-only';
+    liveRegion.className = 'ci-crop-sr-only';
     liveRegion.setAttribute('aria-live', 'polite');
     container.appendChild(liveRegion);
   }

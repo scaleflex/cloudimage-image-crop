@@ -167,7 +167,7 @@ export function createPointerTracker(
   element.addEventListener('contextmenu', preventContext);
 
   // Prevent default touch behaviors. Ideally this comes from the owning
-  // element's CSS (e.g. `:host { touch-action: none }` on <sfx-crop-canvas>);
+  // element's CSS (e.g. `:host { touch-action: none }` on <cloudimage-crop-canvas>);
   // the imperative write stays as an idempotent safety net so consumers who
   // pass a raw canvas without scoped styles still get correct behavior.
   element.style.touchAction = 'none';

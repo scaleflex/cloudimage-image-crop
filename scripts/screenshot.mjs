@@ -79,7 +79,7 @@ await wait(6000);
 
 // Scroll to the live demo section so the crop editor is in the viewport.
 await send('Runtime.evaluate', {
-  expression: "document.querySelector('sfx-crop')?.scrollIntoView({ block: 'center' })",
+  expression: "document.querySelector('cloudimage-crop')?.scrollIntoView({ block: 'center' })",
 });
 await wait(1000);
 
@@ -87,10 +87,10 @@ await wait(1000);
 await send('Runtime.evaluate', {
   expression: `
     (() => {
-      const crop = document.querySelector('sfx-crop');
-      const toolbar = crop?.shadowRoot?.querySelector('sfx-crop-toolbar');
-      const rotate = toolbar?.shadowRoot?.querySelector('sfx-crop-rotate');
-      const trigger = rotate?.shadowRoot?.querySelector('.sfx-cr-rotate-trigger');
+      const crop = document.querySelector('cloudimage-crop');
+      const toolbar = crop?.shadowRoot?.querySelector('cloudimage-crop-toolbar');
+      const rotate = toolbar?.shadowRoot?.querySelector('cloudimage-crop-rotate');
+      const trigger = rotate?.shadowRoot?.querySelector('.ci-crop-rotate-trigger');
       trigger?.click();
     })();
   `,

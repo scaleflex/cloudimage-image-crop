@@ -9,7 +9,7 @@
   "include": [
     "src/react/**/*",
     "src/core/types.ts",
-    "src/elements/sfx-crop.ts",
+    "src/elements/cloudimage-crop.ts",
     "src/vite-env.d.ts"
   ],
   "exclude": ["node_modules", "dist", "dist-demo", "tests", "demo"]

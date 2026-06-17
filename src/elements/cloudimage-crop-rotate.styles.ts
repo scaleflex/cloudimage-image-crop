@@ -14,17 +14,17 @@ export const sfxCropRotateStyles = css`
     align-items: center;
   }
 
-  .sfx-cr-rotate-root {
+  .ci-crop-rotate-root {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
-  .sfx-cr-rotate-popover {
+  .ci-crop-rotate-popover {
     position: fixed;
-    top: var(--sfx-cr-popover-top, 50%);
-    left: var(--sfx-cr-popover-left, 50%);
+    top: var(--ci-crop-popover-top, 50%);
+    left: var(--ci-crop-popover-left, 50%);
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
@@ -40,7 +40,7 @@ export const sfxCropRotateStyles = css`
   }
 
   /* Ruler viewport — fixed width, overflow clipped. Ticks scroll inside. */
-  .sfx-cr-rotate-ruler {
+  .ci-crop-rotate-ruler {
     position: relative;
     width: var(--ruler-w, 260px);
     height: 30px;
@@ -50,16 +50,16 @@ export const sfxCropRotateStyles = css`
     user-select: none;
     -webkit-user-select: none;
   }
-  .sfx-cr-rotate-ruler.is-dragging { cursor: grabbing; }
-  .sfx-cr-rotate-ruler:focus-visible {
-    outline: 2px solid var(--sfx-cr-ring);
+  .ci-crop-rotate-ruler.is-dragging { cursor: grabbing; }
+  .ci-crop-rotate-ruler:focus-visible {
+    outline: 2px solid var(--ci-crop-ring);
     outline-offset: 2px;
     border-radius: 4px;
   }
 
   /* Tick strip — absolutely positioned ticks, the whole strip is
      translated along X in sync with the current value. */
-  .sfx-cr-rotate-ticks {
+  .ci-crop-rotate-ticks {
     position: absolute;
     top: 50%;
     left: 0;
@@ -68,11 +68,11 @@ export const sfxCropRotateStyles = css`
     /* Dark halo wrapping every tick so the white ink stays legible over a
        bright photo. Applied to the strip so all ticks share one shadow pass. */
     filter:
-      drop-shadow(0 0 1px var(--sfx-cr-ruler-halo, oklch(0 0 0 / 0.85)))
-      drop-shadow(0 0 2px var(--sfx-cr-ruler-halo, oklch(0 0 0 / 0.85)));
+      drop-shadow(0 0 1px var(--ci-crop-ruler-halo, oklch(0 0 0 / 0.85)))
+      drop-shadow(0 0 2px var(--ci-crop-ruler-halo, oklch(0 0 0 / 0.85)));
   }
 
-  .sfx-cr-rotate-tick {
+  .ci-crop-rotate-tick {
     position: absolute;
     top: 50%;
     width: 1px;
@@ -80,10 +80,10 @@ export const sfxCropRotateStyles = css`
     margin-left: -0.5px;
     margin-top: -4px;
     border-radius: 0.5px;
-    background: var(--sfx-cr-ruler-ink, var(--sfx-cr-text));
+    background: var(--ci-crop-ruler-ink, var(--ci-crop-text));
     opacity: 0.9;
   }
-  .sfx-cr-rotate-tick--major {
+  .ci-crop-rotate-tick--major {
     width: 1px;
     height: 12px;
     margin-left: -0.5px;
@@ -92,60 +92,60 @@ export const sfxCropRotateStyles = css`
   }
 
   /* Fixed center indicator — single vertical line, slightly taller than ticks. */
-  .sfx-cr-rotate-indicator {
+  .ci-crop-rotate-indicator {
     position: absolute;
     top: calc(50% + 4px);
     height: 16px;
     left: 50%;
     width: 4px;
     margin-left: -2px;
-    background: var(--sfx-cr-ruler-ink, var(--sfx-cr-text));
+    background: var(--ci-crop-ruler-ink, var(--ci-crop-text));
     border-radius: 2px;
     pointer-events: none;
     /* Same dark halo as the ticks so the centre marker stays visible. */
     filter:
-      drop-shadow(0 0 1px var(--sfx-cr-ruler-halo, oklch(0 0 0 / 0.85)))
-      drop-shadow(0 0 2px var(--sfx-cr-ruler-halo, oklch(0 0 0 / 0.85)));
+      drop-shadow(0 0 1px var(--ci-crop-ruler-halo, oklch(0 0 0 / 0.85)))
+      drop-shadow(0 0 2px var(--ci-crop-ruler-halo, oklch(0 0 0 / 0.85)));
   }
 
-  .sfx-cr-rotate-value {
+  .ci-crop-rotate-value {
     font-size: 14px;
     font-weight: 400;
-    color: var(--sfx-cr-ruler-ink, var(--sfx-cr-text));
+    color: var(--ci-crop-ruler-ink, var(--ci-crop-text));
     text-align: center;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.2px;
     /* Dark halo so the degree readout reads over both bright and dark photos. */
     text-shadow:
-      0 0 2px var(--sfx-cr-ruler-halo, oklch(0 0 0 / 0.85)),
-      0 1px 2px var(--sfx-cr-ruler-halo, oklch(0 0 0 / 0.85));
+      0 0 2px var(--ci-crop-ruler-halo, oklch(0 0 0 / 0.85)),
+      0 1px 2px var(--ci-crop-ruler-halo, oklch(0 0 0 / 0.85));
   }
 
   @media (max-width: 768px) {
-    .sfx-cr-rotate-ruler { width: 220px; height: 22px; }
-    .sfx-cr-rotate-tick { height: 6px; margin-top: -3px; }
-    .sfx-cr-rotate-tick--major { height: 9px; margin-top: -4.5px; }
-    .sfx-cr-rotate-indicator {
+    .ci-crop-rotate-ruler { width: 220px; height: 22px; }
+    .ci-crop-rotate-tick { height: 6px; margin-top: -3px; }
+    .ci-crop-rotate-tick--major { height: 9px; margin-top: -4.5px; }
+    .ci-crop-rotate-indicator {
       top: calc(50% + 3px);
       height: 12px;
       width: 3px;
       margin-left: -1.5px;
     }
-    .sfx-cr-rotate-value { font-size: 12px; }
-    .sfx-cr-rotate-popover {
+    .ci-crop-rotate-value { font-size: 12px; }
+    .ci-crop-rotate-popover {
       transform: translateX(-50%) translateY(24px);
     }
   }
   @media (max-width: 480px) {
-    .sfx-cr-rotate-ruler { width: 180px; height: 20px; }
-    .sfx-cr-rotate-tick { height: 5px; margin-top: -2.5px; }
-    .sfx-cr-rotate-tick--major { height: 8px; margin-top: -4px; }
-    .sfx-cr-rotate-indicator {
+    .ci-crop-rotate-ruler { width: 180px; height: 20px; }
+    .ci-crop-rotate-tick { height: 5px; margin-top: -2.5px; }
+    .ci-crop-rotate-tick--major { height: 8px; margin-top: -4px; }
+    .ci-crop-rotate-indicator {
       top: calc(50% + 2px);
       height: 10px;
     }
-    .sfx-cr-rotate-value { font-size: 11px; }
-    .sfx-cr-rotate-popover {
+    .ci-crop-rotate-value { font-size: 11px; }
+    .ci-crop-rotate-popover {
       transform: translateX(-50%) translateY(30px);
     }
   }
@@ -153,15 +153,15 @@ export const sfxCropRotateStyles = css`
   /* Narrow editor — make the ruler more compact when the toolbar
      collapses into the vertical left rail. */
   @container sfxcrop (max-width: 760px) {
-    .sfx-cr-rotate-ruler { width: 140px; height: 18px; }
-    .sfx-cr-rotate-tick { height: 5px; margin-top: -2.5px; }
-    .sfx-cr-rotate-tick--major { height: 8px; margin-top: -4px; }
-    .sfx-cr-rotate-indicator {
+    .ci-crop-rotate-ruler { width: 140px; height: 18px; }
+    .ci-crop-rotate-tick { height: 5px; margin-top: -2.5px; }
+    .ci-crop-rotate-tick--major { height: 8px; margin-top: -4px; }
+    .ci-crop-rotate-indicator {
       top: calc(50% + 2px);
       height: 10px;
       width: 3px;
       margin-left: -1.5px;
     }
-    .sfx-cr-rotate-value { font-size: 11px; }
+    .ci-crop-rotate-value { font-size: 11px; }
   }
 `;

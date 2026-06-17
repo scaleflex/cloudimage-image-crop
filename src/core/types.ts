@@ -55,11 +55,11 @@ export type CropShapeName = CropShapeBuiltin | (string & {});
  *
  * Use from React:
  * ```tsx
- * <SfxCrop icons={{ rotateLeft: '<svg>…</svg>', loupe: '<svg>…</svg>' }} />
+ * <CloudimageCrop icons={{ rotateLeft: '<svg>…</svg>', loupe: '<svg>…</svg>' }} />
  * ```
  * From HTML:
  * ```js
- * document.querySelector('sfx-crop').icons = { rotateLeft: '<svg>…</svg>' };
+ * document.querySelector('cloudimage-crop').icons = { rotateLeft: '<svg>…</svg>' };
  * ```
  */
 export type CropIconOverrides = Partial<{
@@ -202,10 +202,10 @@ export interface LerpConfig {
  *
  * Internal config shape shared with {@link import('./crop-controller').createCropController}
  * so attribute deltas and defaults stay aligned with the element. Consumers
- * interact with `<sfx-crop>` via HTML attributes and DOM properties — see the
- * `@property` declarations in `src/elements/sfx-crop.ts` for the public API.
+ * interact with `<cloudimage-crop>` via HTML attributes and DOM properties — see the
+ * `@property` declarations in `src/elements/cloudimage-crop.ts` for the public API.
  */
-export interface SfxCropConfig {
+export interface CloudimageCropConfig {
   /** Image source URL */
   src: string;
 
@@ -350,6 +350,6 @@ export type CropResult = TransformParams;
 
 // === Instance ===
 //
-// The public imperative instance is the `<sfx-crop>` element itself — see
-// `SfxCropElement` in `src/elements/sfx-crop.ts`. No separate interface is
+// The public imperative instance is the `<cloudimage-crop>` element itself — see
+// `CloudimageCropElement` in `src/elements/cloudimage-crop.ts`. No separate interface is
 // needed because consumers hold an element ref.

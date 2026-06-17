@@ -6,7 +6,7 @@ import {
   useRef,
   type CSSProperties,
 } from 'react';
-import type { SfxCropElement } from '../elements/sfx-crop';
+import type { CloudimageCropElement } from '../elements/cloudimage-crop';
 import type {
   CropShapeName,
   CropRect,
@@ -22,9 +22,9 @@ if (typeof customElements !== 'undefined') {
   void import('../define');
 }
 
-export type { SfxCropElement };
+export type { CloudimageCropElement };
 
-export interface SfxCropSaveDetail {
+export interface CloudimageCropSaveDetail {
   /** Rasterized crop. `null` when `outputMode="cloudimage"`. */
   blob: Blob | null;
   /** Rasterized crop as a data URL. `null` when `outputMode="cloudimage"`. */
@@ -39,10 +39,10 @@ export interface SfxCropSaveDetail {
   descriptor: CropDescriptor | null;
 }
 
-export interface SfxCropProps {
+export interface CloudimageCropProps {
   // --- Core config ---
   src?: string;
-  /** `'classic'` (default) or `'fixed'` — see `<sfx-crop>` `variant`. */
+  /** `'classic'` (default) or `'fixed'` — see `<cloudimage-crop>` `variant`. */
   variant?: 'classic' | 'fixed';
   cropShape?: CropShapeName;
   theme?: 'light' | 'dark';
@@ -93,11 +93,11 @@ export interface SfxCropProps {
   wheelZoom?: boolean;
 
   // --- Event callbacks (bridged from CustomEvent.detail) ---
-  onReady?: (detail: { element: SfxCropElement }) => void;
+  onReady?: (detail: { element: CloudimageCropElement }) => void;
   onImageLoad?: (detail: { image: HTMLImageElement }) => void;
   onChange?: (state: TransformState) => void;
   onCropChange?: (crop: CropRect) => void;
-  onSave?: (detail: SfxCropSaveDetail) => void;
+  onSave?: (detail: CloudimageCropSaveDetail) => void;
   onCancel?: () => void;
   onError?: (detail: { error: Error }) => void;
 
@@ -115,7 +115,7 @@ export interface SfxCropProps {
  * Using properties (not attributes) for arrays/objects keeps identity intact
  * so Lit's diff doesn't thrash.
  */
-function applyPropOrAttr(el: SfxCropElement, key: string, value: unknown): void {
+function applyPropOrAttr(el: CloudimageCropElement, key: string, value: unknown): void {
   if (value === undefined) return;
 
   if (key in el) {
@@ -134,12 +134,12 @@ function applyPropOrAttr(el: SfxCropElement, key: string, value: unknown): void 
 }
 
 /**
- * Property names (camelCase) that `<sfx-crop>` reads directly. Listed once so
+ * Property names (camelCase) that `<cloudimage-crop>` reads directly. Listed once so
  * the React wrapper stays in sync with the element class. `src` is omitted on
  * purpose — it's applied separately AFTER this loop so a src change kicks off
  * `loadImage()` with all other config already in place.
  */
-const FORWARDED_PROPS: readonly (keyof SfxCropProps)[] = [
+const FORWARDED_PROPS: readonly (keyof CloudimageCropProps)[] = [
   'variant',
   'cropShape', 'theme', 'initialRotation', 'initialScale', 'initialCrop',
   'minScale', 'maxScale', 'minCropSize', 'availableShapes', 'handleSize', 'handleColor',
@@ -153,7 +153,7 @@ const FORWARDED_PROPS: readonly (keyof SfxCropProps)[] = [
 ];
 
 /**
- * `<SfxCrop>` — React wrapper around the `<sfx-crop>` custom element.
+ * `<CloudimageCrop>` — React wrapper around the `<cloudimage-crop>` custom element.
  *
  * Pattern follows `@scaleflex/uploader`'s React wrapper: hand-rolled
  * `forwardRef` + dynamic `import('../define')` at module load to auto-register
@@ -170,17 +170,17 @@ const FORWARDED_PROPS: readonly (keyof SfxCropProps)[] = [
  * The ref is the bare element. The factory runs after React's commit phase,
  * so `ref.current` is non-null once a parent component can actually read it.
  * If you need to access methods before the first commit (e.g. during render),
- * guard with `ref.current?.method?.()` or wait for `sfx-crop-ready`.
+ * guard with `ref.current?.method?.()` or wait for `cloudimage-crop-ready`.
  */
-export const SfxCrop = forwardRef<SfxCropElement, SfxCropProps>(function SfxCrop(
+export const CloudimageCrop = forwardRef<CloudimageCropElement, CloudimageCropProps>(function CloudimageCrop(
   props,
   forwardedRef,
 ) {
-  const elRef = useRef<SfxCropElement | null>(null);
-  const cbRef = useRef<SfxCropProps>(props);
+  const elRef = useRef<CloudimageCropElement | null>(null);
+  const cbRef = useRef<CloudimageCropProps>(props);
   cbRef.current = props;
 
-  useImperativeHandle(forwardedRef, () => elRef.current as SfxCropElement, []);
+  useImperativeHandle(forwardedRef, () => elRef.current as CloudimageCropElement, []);
 
   // --- Event bridge (attached once; reads latest callbacks via cbRef) ---
   useEffect(() => {
@@ -188,13 +188,13 @@ export const SfxCrop = forwardRef<SfxCropElement, SfxCropProps>(function SfxCrop
     if (!el) return;
 
     const handlers: Array<[string, EventListener]> = [
-      ['sfx-crop-ready',       (e) => cbRef.current.onReady?.((e as CustomEvent).detail)],
-      ['sfx-crop-image-load',  (e) => cbRef.current.onImageLoad?.((e as CustomEvent).detail)],
-      ['sfx-crop-change',      (e) => cbRef.current.onChange?.((e as CustomEvent).detail)],
-      ['sfx-crop-crop-change', (e) => cbRef.current.onCropChange?.((e as CustomEvent).detail)],
-      ['sfx-crop-save',        (e) => cbRef.current.onSave?.((e as CustomEvent).detail)],
-      ['sfx-crop-cancel',      () => cbRef.current.onCancel?.()],
-      ['sfx-crop-error',       (e) => cbRef.current.onError?.((e as CustomEvent).detail)],
+      ['cloudimage-crop-ready',       (e) => cbRef.current.onReady?.((e as CustomEvent).detail)],
+      ['cloudimage-crop-image-load',  (e) => cbRef.current.onImageLoad?.((e as CustomEvent).detail)],
+      ['cloudimage-crop-change',      (e) => cbRef.current.onChange?.((e as CustomEvent).detail)],
+      ['cloudimage-crop-crop-change', (e) => cbRef.current.onCropChange?.((e as CustomEvent).detail)],
+      ['cloudimage-crop-save',        (e) => cbRef.current.onSave?.((e as CustomEvent).detail)],
+      ['cloudimage-crop-cancel',      () => cbRef.current.onCancel?.()],
+      ['cloudimage-crop-error',       (e) => cbRef.current.onError?.((e as CustomEvent).detail)],
     ];
 
     for (const [name, h] of handlers) el.addEventListener(name, h);
@@ -212,7 +212,7 @@ export const SfxCrop = forwardRef<SfxCropElement, SfxCropProps>(function SfxCrop
     applyPropOrAttr(el, 'src', props.src);
   });
 
-  return createElement('sfx-crop', {
+  return createElement('cloudimage-crop', {
     ref: elRef,
     className: props.className,
     style: props.style,

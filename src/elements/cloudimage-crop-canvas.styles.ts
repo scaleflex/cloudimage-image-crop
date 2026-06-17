@@ -7,7 +7,7 @@ export const sfxCropCanvasStyles = css`
     height: 100%;
     min-width: 0;
     min-height: 0;
-    /* Single source of clipping is .sfx-cr-container (overflow:hidden +
+    /* Single source of clipping is .ci-crop-container (overflow:hidden +
        border-radius). Don't add a second mask here: this host is sized
        by JS to the full outer rect (displayW×displayH), which is 4px
        wider than the container's content-box, so its own border-radius

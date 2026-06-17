@@ -1,5 +1,5 @@
 /* ======================================================================
- *  @scaleflex/image-crop — demo site chrome
+ *  @cloudimage/image-crop — demo site chrome
  *  Dark glass topbar + white docs/examples + dark hero/footer, matching
  *  the visual language of scaleflex.github.io/uploader.
  * ==================================================================== */
@@ -216,16 +216,16 @@ kbd {
 /* Crop card wrapper — anchor for the floating theme toggle (absolute-
    positioned, so it doesn't add flow width) above the editor. We let the
    card shrink to the editor's own box via `width: fit-content` + auto
-   margins, so when <sfx-crop> sizes itself to the photo's aspect there's
+   margins, so when <cloudimage-crop> sizes itself to the photo's aspect there's
    no leftover white gutter. min-width/-height cover the brief moment
    before the image decodes so the card doesn't collapse to nothing. */
 /* Double-class selector bumps specificity above `.demo-card--lg` which
    would otherwise win on tie + source-order and keep its margin/padding. */
 .demo-card.demo-crop-wrap {
-  /* Definite-width block wrap so <sfx-crop>'s fitHostToImage gets a
+  /* Definite-width block wrap so <cloudimage-crop>'s fitHostToImage gets a
      stable parent measurement. The host shrinks to image-aspect inside;
      the wrap stays full-width but is transparent — only the host's
-     internal .sfx-cr-container paints the visible card frame, so no
+     internal .ci-crop-container paints the visible card frame, so no
      gray bars appear in the leftover horizontal space. */
   position: relative;
   width: 100%;
@@ -284,7 +284,7 @@ kbd {
 }
 
 /* Dark variant — `aria-pressed="true"` is set by syncToggleButton() whenever
-   the sibling <sfx-crop> is in dark theme, so the button can't look marooned
+   the sibling <cloudimage-crop> is in dark theme, so the button can't look marooned
    on a dark canvas. */
 .demo-theme-toggle[aria-pressed="true"] {
   color: #e2e8f0;
@@ -1408,7 +1408,7 @@ kbd {
  * ==================================================================== */
 
 .demo-example-live, .demo-example-grid { margin: 24px 0 32px; }
-.demo-example-live sfx-crop, .demo-example-grid sfx-crop {
+.demo-example-live cloudimage-crop, .demo-example-grid cloudimage-crop {
   border-radius: 12px;
   overflow: hidden;
 }

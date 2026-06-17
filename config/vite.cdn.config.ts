@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 /**
- * CDN build — a single self-contained IIFE that registers `<sfx-crop>`.
+ * CDN build — a single self-contained IIFE that registers `<cloudimage-crop>`.
  *
  * Unlike the npm bundle (`vite.config.ts`), `lit` is **bundled in** (not
  * external) so the file works standalone via `<script src=".../image-crop.min.js">`
@@ -18,7 +18,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, '../src/define.ts'),
       formats: ['iife'],
-      name: 'SfxCrop',
+      name: 'CloudimageCrop',
       fileName: () => 'image-crop.min.js',
     },
     cssCodeSplit: false,

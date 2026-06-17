@@ -1,12 +1,12 @@
 /**
- * Position a slider popover (`.sfx-cr-*-popover`) at the bottom of the
- * `<sfx-crop>` canvas rect, regardless of where its trigger sits in the
+ * Position a slider popover (`.ci-crop-*-popover`) at the bottom of the
+ * `<cloudimage-crop>` canvas rect, regardless of where its trigger sits in the
  * toolbar. The popover uses `position: fixed` with CSS variables
- * `--sfx-cr-popover-left` / `--sfx-cr-popover-top` that this helper writes
+ * `--ci-crop-popover-left` / `--ci-crop-popover-top` that this helper writes
  * on the popover element.
  *
- * The `<sfx-crop>` host's bounding rect matches the rendered canvas area
- * (see `SfxCropElement.fitHostToImage`), so anchoring to its bottom edge
+ * The `<cloudimage-crop>` host's bounding rect matches the rendered canvas area
+ * (see `CloudimageCropElement.fitHostToImage`), so anchoring to its bottom edge
  * places the ruler over the lower strip of the photo.
  */
 
@@ -36,7 +36,7 @@ export function createPopoverAnchor(
       if (!(root instanceof ShadowRoot)) break;
       node = root.host;
       const tag = (node as Element).tagName?.toLowerCase();
-      if (tag === 'sfx-crop') return node as HTMLElement;
+      if (tag === 'cloudimage-crop') return node as HTMLElement;
     }
     return null;
   };
@@ -46,8 +46,8 @@ export function createPopoverAnchor(
     const crop = findCropHost();
     if (!popover || !crop) return;
     const rect = crop.getBoundingClientRect();
-    popover.style.setProperty('--sfx-cr-popover-left', `${rect.left + rect.width / 2}px`);
-    popover.style.setProperty('--sfx-cr-popover-top', `${rect.bottom - BOTTOM_INSET}px`);
+    popover.style.setProperty('--ci-crop-popover-left', `${rect.left + rect.width / 2}px`);
+    popover.style.setProperty('--ci-crop-popover-top', `${rect.bottom - BOTTOM_INSET}px`);
   };
 
   const onScrollOrResize = (): void => update();

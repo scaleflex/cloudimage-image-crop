@@ -48,7 +48,7 @@ export type CloudimageTarget = CloudimageUrlOptions;
  * reproduce the editor's crop as a Cloudimage URL with pixel-for-pixel geometry
  * — it carries the complete transform state plus the dimensions needed to
  * resolve zoom/pan and the fixed-variant cover-fit. Persist this (e.g. from the
- * `sfx-crop-save` event) to rebuild the URL later via
+ * `cloudimage-crop-save` event) to rebuild the URL later via
  * {@link buildCloudimageUrlFromDescriptor}.
  */
 export interface CropDescriptor {

@@ -4,21 +4,21 @@
   </a>
 </p>
 
-<h1 align="center">Scaleflex Image Crop</h1>
+<h1 align="center">@cloudimage/image-crop</h1>
 
 <p align="center">
   <strong>An interactive image-crop editor web component — rotation, fine tilt, flip, zoom and shape selection</strong>
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@scaleflex/image-crop">
-    <img src="https://img.shields.io/npm/v/@scaleflex/image-crop.svg" alt="Release">
+  <a href="https://www.npmjs.com/package/@cloudimage/image-crop">
+    <img src="https://img.shields.io/npm/v/@cloudimage/image-crop.svg" alt="Release">
   </a>
-  <a href="https://bundlejs.com/?q=@scaleflex/image-crop">
-    <img src="https://img.shields.io/bundlejs/size/@scaleflex/image-crop" alt="Minified + gzipped size">
+  <a href="https://bundlejs.com/?q=@cloudimage/image-crop">
+    <img src="https://img.shields.io/bundlejs/size/@cloudimage/image-crop" alt="Minified + gzipped size">
   </a>
-  <a href="https://www.npmjs.com/package/@scaleflex/image-crop">
-    <img src="https://img.shields.io/npm/dm/@scaleflex/image-crop.svg" alt="Downloads">
+  <a href="https://www.npmjs.com/package/@cloudimage/image-crop">
+    <img src="https://img.shields.io/npm/dm/@cloudimage/image-crop.svg" alt="Downloads">
   </a>
   <a href="https://opensource.org/licenses/MIT">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
@@ -29,10 +29,10 @@
 </p>
 
 <p align="center">
-  <a href="https://scaleflex.github.io/image-crop/">View Demo</a> ·
-  <a href="https://stackblitz.com/github/scaleflex/image-crop/tree/master/codesandbox/react">React Sandbox</a> ·
-  <a href="https://stackblitz.com/github/scaleflex/image-crop/tree/master/codesandbox/vanilla">Vanilla Sandbox</a> ·
-  <a href="https://github.com/scaleflex/image-crop/issues">Report Bug</a>
+  <a href="https://scaleflex.github.io/cloudimage-image-crop/">View Demo</a> ·
+  <a href="https://stackblitz.com/github/scaleflex/cloudimage-image-crop/tree/master/codesandbox/react">React Sandbox</a> ·
+  <a href="https://stackblitz.com/github/scaleflex/cloudimage-image-crop/tree/master/codesandbox/vanilla">Vanilla Sandbox</a> ·
+  <a href="https://github.com/scaleflex/cloudimage-image-crop/issues">Report Bug</a>
 </p>
 
 ## Table of Contents
@@ -57,10 +57,10 @@
 
 ## Overview
 
-`@scaleflex/image-crop` ships `<sfx-crop>`, a Lit-based custom element that renders a canvas-backed crop editor with rotation, fine tilt (±45°), horizontal/vertical flip, zoom, pan, and a configurable shape palette (free, square, circle, rounded-rect, plus arbitrary `W:H` ratio strings). The same engine is exposed three ways:
+`@cloudimage/image-crop` ships `<cloudimage-crop>`, a Lit-based custom element that renders a canvas-backed crop editor with rotation, fine tilt (±45°), horizontal/vertical flip, zoom, pan, and a configurable shape palette (free, square, circle, rounded-rect, plus arbitrary `W:H` ratio strings). The same engine is exposed three ways:
 
-- a ready-to-mount custom element (`<sfx-crop>`);
-- a React component (`<SfxCrop>`) plus hooks (`useSfxCrop`, `useSfxCropController`);
+- a ready-to-mount custom element (`<cloudimage-crop>`);
+- a React component (`<CloudimageCrop>`) plus hooks (`useCloudimageCrop`, `useCloudimageCropController`);
 - a headless `createCropController({ canvas, host, config })` factory that drives a consumer-owned `<canvas>` with zero built-in UI.
 
 ## Features
@@ -69,7 +69,7 @@
 - Rotation in 90° increments and fine tilt slider (-45°…+45°), horizontal flip, pinch / wheel / button zoom, keyboard shortcuts.
 - Built-in shape presets (`free`, `square`, `circle`, `rounded-rect`, `16:9`, `4:3`, `3:2`, `5:4`, `2:1`, `9:16`, `3:4`, `2:3`, `4:5`, `1:2`) plus on-the-fly `"W:H"` ratios.
 - Optional bleed-margin guides for print workflows.
-- Themeable via a single `theme="light|dark"` attribute or fine-grained `--sfx-cr-*` CSS custom properties (~50 tokens).
+- Themeable via a single `theme="light|dark"` attribute or fine-grained `--ci-crop-*` CSS custom properties (~50 tokens).
 - Per-icon SVG overrides via the `icons` property.
 - Export to `HTMLCanvasElement`, `Blob`, data URL, a serialisable `TransformParams` object — or a ready-made **[Cloudimage URL](#server-side-crop-cloudimage)** that runs the crop server-side on delivery, with full parity to the canvas (crop + flip + 90° + free tilt + zoom + pan, both variants). Persist a `CropDescriptor` to rebuild the URL in Node.
 - Three packaging entry points so consumers pay for only what they use.
@@ -83,20 +83,20 @@ Modern evergreen browsers with Canvas 2D, Pointer Events, ResizeObserver, CSS co
 ### npm / yarn / pnpm
 
 ```bash
-npm install @scaleflex/image-crop
+npm install @cloudimage/image-crop
 # or
-yarn add @scaleflex/image-crop
+yarn add @cloudimage/image-crop
 # or
-pnpm add @scaleflex/image-crop
+pnpm add @cloudimage/image-crop
 ```
 
 ### CDN
 
-The official Scaleflex CDN serves a single self-contained bundle that registers
-`<sfx-crop>` on load (plain `<script>`, no build step):
+The official Cloudimage CDN serves a single self-contained bundle that registers
+`<cloudimage-crop>` on load (plain `<script>`, no build step):
 
 ```html
-<script src="https://cdn.scaleflex.com/image-crop/2.0.3/image-crop.min.js"></script>
+<script src="https://cdn.cloudimage.io/image-crop/2.0.3/image-crop.min.js"></script>
 ```
 
 Or load the ESM build straight from npm via jsDelivr's auto-bundling `+esm`
@@ -104,16 +104,16 @@ endpoint (resolves `lit` for the browser):
 
 ```html
 <script type="module"
-        src="https://cdn.jsdelivr.net/npm/@scaleflex/image-crop/dist/define.js/+esm"></script>
+        src="https://cdn.jsdelivr.net/npm/@cloudimage/image-crop/dist/define.js/+esm"></script>
 ```
 
 ### Package exports
 
 | Specifier | Purpose |
 |---|---|
-| `@scaleflex/image-crop`         | Side-effect-free entry. Exports `SfxCropElement`, `createCropController`, `mergeConfig`, `DEFAULT_CONFIG`, and all public types. |
-| `@scaleflex/image-crop/define`  | Side-effectful — registers the `<sfx-crop>` custom element. Import once at bootstrap. |
-| `@scaleflex/image-crop/react`   | React component `<SfxCrop>`, `useSfxCrop` / `useSfxCropController` hooks, plus re-exports of `createCropController`, `mergeConfig`, `DEFAULT_CONFIG`, and the public types. |
+| `@cloudimage/image-crop`         | Side-effect-free entry. Exports `CloudimageCropElement`, `createCropController`, `mergeConfig`, `DEFAULT_CONFIG`, and all public types. |
+| `@cloudimage/image-crop/define`  | Side-effectful — registers the `<cloudimage-crop>` custom element. Import once at bootstrap. |
+| `@cloudimage/image-crop/react`   | React component `<CloudimageCrop>`, `useCloudimageCrop` / `useCloudimageCropController` hooks, plus re-exports of `createCropController`, `mergeConfig`, `DEFAULT_CONFIG`, and the public types. |
 
 ## Quick Start
 
@@ -121,20 +121,20 @@ endpoint (resolves `lit` for the browser):
 
 ```html
 <script type="module">
-  import '@scaleflex/image-crop/define';
+  import '@cloudimage/image-crop/define';
 </script>
 
-<sfx-crop
+<cloudimage-crop
   src="https://cdn.example.com/photo.jpg"
   crop-shape="16:9"
   theme="light"
   show-bleed-margin
-></sfx-crop>
+></cloudimage-crop>
 
 <script type="module">
-  const crop = document.querySelector('sfx-crop');
-  crop.addEventListener('sfx-crop-ready', () => console.log('ready'));
-  crop.addEventListener('sfx-crop-save', (e) => {
+  const crop = document.querySelector('cloudimage-crop');
+  crop.addEventListener('cloudimage-crop-ready', () => console.log('ready'));
+  crop.addEventListener('cloudimage-crop-save', (e) => {
     const { blob, dataURL, params } = e.detail;
     // upload `blob` or POST `params` to your backend
   });
@@ -144,13 +144,13 @@ endpoint (resolves `lit` for the browser):
 ### React
 
 ```tsx
-import { SfxCrop, type SfxCropElement } from '@scaleflex/image-crop/react';
+import { CloudimageCrop, type CloudimageCropElement } from '@cloudimage/image-crop/react';
 import { useRef } from 'react';
 
 export function Editor() {
-  const ref = useRef<SfxCropElement>(null);
+  const ref = useRef<CloudimageCropElement>(null);
   return (
-    <SfxCrop
+    <CloudimageCrop
       ref={ref}
       src="https://cdn.example.com/photo.jpg"
       cropShape="square"
@@ -165,14 +165,14 @@ export function Editor() {
 ### CDN
 
 ```html
-<!-- Self-contained bundle from the Scaleflex CDN -->
-<script src="https://cdn.scaleflex.com/image-crop/2.0.3/image-crop.min.js"></script>
-<sfx-crop src="https://cdn.example.com/photo.jpg" crop-shape="square"></sfx-crop>
+<!-- Self-contained bundle from the Cloudimage CDN -->
+<script src="https://cdn.cloudimage.io/image-crop/2.0.3/image-crop.min.js"></script>
+<cloudimage-crop src="https://cdn.example.com/photo.jpg" crop-shape="square"></cloudimage-crop>
 ```
 
 ## Configuration
 
-All options below are exposed as both HTML attributes (kebab-case) and DOM properties (camelCase) on `<sfx-crop>`. Object/array options should be set as DOM properties; primitives can be set either way.
+All options below are exposed as both HTML attributes (kebab-case) and DOM properties (camelCase) on `<cloudimage-crop>`. Object/array options should be set as DOM properties; primitives can be set either way.
 
 ### Attributes / Properties
 
@@ -215,7 +215,7 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 > inset `bleed-margin-size` pixels from every edge of the crop, so important
 > content (faces, text, logos) can be kept clear of the trim. It is a
 > **visual guide only** — it is *not* baked into the output: `toCanvas()`,
-> `toBlob()`, `toDataURL()`, and the `sfx-crop-save` payload never contain the
+> `toBlob()`, `toDataURL()`, and the `cloudimage-crop-save` payload never contain the
 > dashed line and the crop is not inset by it.
 
 #### UI toggles
@@ -268,7 +268,7 @@ The photo fills the editor at its own aspect ratio and a **movable / resizable c
 The **editor box itself is the crop frame**, sized to the `crop-shape` aspect and centred (portrait, landscape, square, circle, rounded-rect — anything). The photo is **cover-fit** and panned/zoomed/rotated underneath; there are no resize handles, and the toolbar is overlaid on the frame. This is the avatar- / phone-style "fixed window, moving photo" pattern.
 
 ```html
-<sfx-crop src="/photo.jpg" variant="fixed" crop-shape="1:1"></sfx-crop>
+<cloudimage-crop src="/photo.jpg" variant="fixed" crop-shape="1:1"></cloudimage-crop>
 ```
 
 ### Cover guarantee
@@ -277,11 +277,11 @@ In **both** variants the photo is constrained to always fully cover the crop fra
 
 ### Built-in "Done" button
 
-The toolbar renders a primary **Done** button pinned to the right edge. It calls [`save()`](#public-methods) — building `blob` + `dataURL` + `params` and dispatching `sfx-crop-save` — so a host app can commit the crop without wiring its own button. Handle `sfx-crop-save` to upload / persist / close. (Hide the whole toolbar with `show-toolbar="false"` if you prefer to drive everything imperatively.)
+The toolbar renders a primary **Done** button pinned to the right edge. It calls [`save()`](#public-methods) — building `blob` + `dataURL` + `params` and dispatching `cloudimage-crop-save` — so a host app can commit the crop without wiring its own button. Handle `cloudimage-crop-save` to upload / persist / close. (Hide the whole toolbar with `show-toolbar="false"` if you prefer to drive everything imperatively.)
 
 ## Server-side crop (Cloudimage)
 
-Instead of rasterising the crop in the browser, `<sfx-crop>` can emit a
+Instead of rasterising the crop in the browser, `<cloudimage-crop>` can emit a
 **[Cloudimage](https://www.cloudimage.io/) URL** that carries the crop as
 transformation parameters — crop / flip / rotate / **free tilt** / **zoom** /
 **pan** are then performed on the CDN, on the fly, when the image is requested,
@@ -291,7 +291,7 @@ responsive delivery.
 
 ### Output mode
 
-`output-mode` selects what `save()` (and the `sfx-crop-save` event) produces:
+`output-mode` selects what `save()` (and the `cloudimage-crop-save` event) produces:
 
 | `output-mode` | Result | Crop runs | Use it to |
 |---|---|---|---|
@@ -301,14 +301,14 @@ responsive delivery.
 ### Configure the target
 
 ```html
-<sfx-crop
+<cloudimage-crop
   src="https://example.com/photo.jpg"
   output-mode="cloudimage"
   cloudimage-token="mytoken"
-></sfx-crop>
+></cloudimage-crop>
 
 <script type="module">
-  document.querySelector('sfx-crop').addEventListener('sfx-crop-save', (e) => {
+  document.querySelector('cloudimage-crop').addEventListener('cloudimage-crop-save', (e) => {
     const { url, params } = e.detail;   // blob / dataURL are null in this mode
     // e.g. <img src={url}> — Cloudimage crops on delivery
   });
@@ -333,13 +333,13 @@ const webp = crop.toCloudimageURL({ format: 'image/webp', quality: 0.8 });
 
 #### Reproduce a crop server-side / in Node
 
-Persist `toCropDescriptor()` (or the `descriptor` field on the `sfx-crop-save`
+Persist `toCropDescriptor()` (or the `descriptor` field on the `cloudimage-crop-save`
 event) — a fully serializable snapshot of the transform — and rebuild the URL
 later with the pure `buildCloudimageUrlFromDescriptor(descriptor, target)`. No
 browser or canvas needed; ideal for a backend that stores edits and renders URLs:
 
 ```ts
-import { buildCloudimageUrlFromDescriptor } from '@scaleflex/image-crop';
+import { buildCloudimageUrlFromDescriptor } from '@cloudimage/image-crop';
 
 // 1) in the browser — capture + persist the descriptor (JSON-safe)
 const descriptor = crop.toCropDescriptor();
@@ -352,9 +352,9 @@ const url = buildCloudimageUrlFromDescriptor(descriptor, { src, token: 'mytoken'
 #### React
 
 ```tsx
-import { SfxCrop } from '@scaleflex/image-crop/react';
+import { CloudimageCrop } from '@cloudimage/image-crop/react';
 
-<SfxCrop
+<CloudimageCrop
   src="https://example.com/photo.jpg"
   outputMode="cloudimage"
   cloudimageToken="mytoken"
@@ -372,7 +372,7 @@ can't be matched by a CDN crop. `resolveServerCrop(...)` exposes a `clamped` fla
 so you can fall back to `blob` mode for those:
 
 ```ts
-import { resolveServerCrop } from '@scaleflex/image-crop';
+import { resolveServerCrop } from '@cloudimage/image-crop';
 
 const d = crop.toCropDescriptor();
 const { clamped } = resolveServerCrop(d.state, d.imageWidth, d.imageHeight, d.containerWidth, d.containerHeight, d.variant);
@@ -420,7 +420,7 @@ Editor state maps to Cloudimage v7 ops in pipeline order
 
 ## Public Methods
 
-All methods live on the `<sfx-crop>` element instance. They throw if invoked before `sfx-crop-ready` fires.
+All methods live on the `<cloudimage-crop>` element instance. They throw if invoked before `cloudimage-crop-ready` fires.
 
 | Method | Returns | Description |
 |---|---|---|
@@ -440,8 +440,8 @@ All methods live on the `<sfx-crop>` element instance. They throw if invoked bef
 | `toTransformParams()`               | `TransformParams`       | Serialisable description of the transform — pass to a server-side resizer. |
 | `toCloudimageURL(options?)`         | `string`                | Build a Cloudimage URL reproducing the full transform (crop/flip/90°/tilt/zoom/pan) server-side. See [Server-side crop](#server-side-crop-cloudimage). |
 | `toCropDescriptor()`                | `CropDescriptor`        | Serializable snapshot (state + dims + variant) to rebuild the Cloudimage URL later/server-side. |
-| `save(type?, quality?)`             | `Promise<void>`         | Convenience: builds the result for the current `output-mode` (blob + dataURL + params, or a Cloudimage `url`) and dispatches `sfx-crop-save`. |
-| `cancel()`                          | `void`                  | Dispatches `sfx-crop-cancel`. |
+| `save(type?, quality?)`             | `Promise<void>`         | Convenience: builds the result for the current `output-mode` (blob + dataURL + params, or a Cloudimage `url`) and dispatches `cloudimage-crop-save`. |
+| `cancel()`                          | `void`                  | Dispatches `cloudimage-crop-cancel`. |
 
 ## Events
 
@@ -449,24 +449,24 @@ All events bubble and cross shadow boundaries (`bubbles: true, composed: true`).
 
 | Event | `detail` | Fires on |
 |---|---|---|
-| `sfx-crop-ready`        | `{ element: SfxCropElement }`              | Controller initialised. |
-| `sfx-crop-image-load`   | `{ image: HTMLImageElement }`              | Image decoded and rendered. |
-| `sfx-crop-change`       | `TransformState`                           | Any transform mutation. |
-| `sfx-crop-crop-change`  | `CropRect`                                 | Crop rect changed. |
-| `sfx-crop-save`         | `{ blob, dataURL, params, url, descriptor }` | `.save()` resolved. `blob`/`dataURL` are `null` when `output-mode="cloudimage"`; `url` is the Cloudimage URL (or `null` when no token is configured); `descriptor` is the serializable [`CropDescriptor`](#types-reference) to rebuild that URL server-side. |
-| `sfx-crop-cancel`       | `undefined`                                | `.cancel()` invoked. |
-| `sfx-crop-error`        | `{ error: Error }`                         | Image-load or export error. |
+| `cloudimage-crop-ready`        | `{ element: CloudimageCropElement }`              | Controller initialised. |
+| `cloudimage-crop-image-load`   | `{ image: HTMLImageElement }`              | Image decoded and rendered. |
+| `cloudimage-crop-change`       | `TransformState`                           | Any transform mutation. |
+| `cloudimage-crop-crop-change`  | `CropRect`                                 | Crop rect changed. |
+| `cloudimage-crop-save`         | `{ blob, dataURL, params, url, descriptor }` | `.save()` resolved. `blob`/`dataURL` are `null` when `output-mode="cloudimage"`; `url` is the Cloudimage URL (or `null` when no token is configured); `descriptor` is the serializable [`CropDescriptor`](#types-reference) to rebuild that URL server-side. |
+| `cloudimage-crop-cancel`       | `undefined`                                | `.cancel()` invoked. |
+| `cloudimage-crop-error`        | `{ error: Error }`                         | Image-load or export error. |
 
 ## React API
 
-### `<SfxCrop>` component
+### `<CloudimageCrop>` component
 
-`forwardRef` component that mirrors the element's attributes as camelCase props and bridges every `sfx-crop-*` event into a matching `on*` callback.
+`forwardRef` component that mirrors the element's attributes as camelCase props and bridges every `cloudimage-crop-*` event into a matching `on*` callback.
 
 ```tsx
-import { SfxCrop } from '@scaleflex/image-crop/react';
+import { CloudimageCrop } from '@cloudimage/image-crop/react';
 
-<SfxCrop
+<CloudimageCrop
   src="..."
   cropShape="circle"
   theme="dark"
@@ -482,25 +482,25 @@ import { SfxCrop } from '@scaleflex/image-crop/react';
 />
 ```
 
-The `ref` resolves to the underlying `SfxCropElement`, so every imperative method above is callable directly.
+The `ref` resolves to the underlying `CloudimageCropElement`, so every imperative method above is callable directly.
 
-### `useSfxCrop()` hook
+### `useCloudimageCrop()` hook
 
-For consumers who prefer to render `<sfx-crop>` themselves and pull stable callables off a hook:
+For consumers who prefer to render `<cloudimage-crop>` themselves and pull stable callables off a hook:
 
 ```tsx
-import { useSfxCrop } from '@scaleflex/image-crop/react';
+import { useCloudimageCrop } from '@cloudimage/image-crop/react';
 
-const { ref, ready, save, reset, toBlob, getTransformState } = useSfxCrop();
+const { ref, ready, save, reset, toBlob, getTransformState } = useCloudimageCrop();
 
-return <sfx-crop ref={ref} src="..." />;
+return <cloudimage-crop ref={ref} src="..." />;
 ```
 
-`ready` flips to `true` after `sfx-crop-ready`. All callables are no-ops before then.
+`ready` flips to `true` after `cloudimage-crop-ready`. All callables are no-ops before then.
 
-### `useSfxCropController()` hook (headless)
+### `useCloudimageCropController()` hook (headless)
 
-Drives the same controller against a consumer-owned `<canvas>`. Use this when the built-in toolbar isn't a fit and you need to render every UI affordance yourself. See `CropControllerState`, `CropControllerActions`, and `CropControllerApi` in `src/react/use-sfx-crop-controller.ts`.
+Drives the same controller against a consumer-owned `<canvas>`. Use this when the built-in toolbar isn't a fit and you need to render every UI affordance yourself. See `CropControllerState`, `CropControllerActions`, and `CropControllerApi` in `src/react/use-cloudimage-crop-controller.ts`.
 
 ## Theming
 
@@ -509,30 +509,30 @@ Drives the same controller against a consumer-owned `<canvas>`. Use this when th
 The fastest way to recolour the editor is to override one variable on the host:
 
 ```html
-<sfx-crop style="--sfx-cr-primary:#ff3366"></sfx-crop>
+<cloudimage-crop style="--ci-crop-primary:#ff3366"></cloudimage-crop>
 ```
 
 ### CSS Custom Properties
 
-Every visual surface is keyed off `--sfx-cr-*` tokens. The full list (see `src/styles/shared.css.ts` for the canonical defaults):
+Every visual surface is keyed off `--ci-crop-*` tokens. The full list (see `src/styles/shared.css.ts` for the canonical defaults):
 
 #### Colours
 
-`--sfx-cr-primary`, `--sfx-cr-primary-hover`, `--sfx-cr-primary-mid`, `--sfx-cr-primary-bg`, `--sfx-cr-primary-glow`, `--sfx-cr-success`, `--sfx-cr-error`, `--sfx-cr-text`, `--sfx-cr-text-secondary`, `--sfx-cr-text-muted`, `--sfx-cr-border`, `--sfx-cr-border-light`, `--sfx-cr-bg`, `--sfx-cr-surface`, `--sfx-cr-canvas-bg`.
+`--ci-crop-primary`, `--ci-crop-primary-hover`, `--ci-crop-primary-mid`, `--ci-crop-primary-bg`, `--ci-crop-primary-glow`, `--ci-crop-success`, `--ci-crop-error`, `--ci-crop-text`, `--ci-crop-text-secondary`, `--ci-crop-text-muted`, `--ci-crop-border`, `--ci-crop-border-light`, `--ci-crop-bg`, `--ci-crop-surface`, `--ci-crop-canvas-bg`.
 
 #### Canvas & frame
 
-`--sfx-cr-overlay-color`, `--sfx-cr-frame-color`, `--sfx-cr-frame-shadow`, `--sfx-cr-handle-fill`, `--sfx-cr-handle-stroke`, `--sfx-cr-ruler-ink`, `--sfx-cr-ruler-halo`, `--sfx-cr-ring`, `--sfx-cr-shadow`.
+`--ci-crop-overlay-color`, `--ci-crop-frame-color`, `--ci-crop-frame-shadow`, `--ci-crop-handle-fill`, `--ci-crop-handle-stroke`, `--ci-crop-ruler-ink`, `--ci-crop-ruler-halo`, `--ci-crop-ring`, `--ci-crop-shadow`.
 
-`--sfx-cr-ruler-ink` and `--sfx-cr-ruler-halo` colour the fine-tilt ruler (ticks, centre indicator, degree readout). The ruler floats directly over the photo, whose brightness is unknown, so it can't track the theme: the ink defaults to a near-white core and the halo to a dark glow wrapped around it, so the white core reads over dark images while the halo reads over bright ones (the trick subtitles use). Override both together if you want a different ink/halo pairing.
+`--ci-crop-ruler-ink` and `--ci-crop-ruler-halo` colour the fine-tilt ruler (ticks, centre indicator, degree readout). The ruler floats directly over the photo, whose brightness is unknown, so it can't track the theme: the ink defaults to a near-white core and the halo to a dark glow wrapped around it, so the white core reads over dark images while the halo reads over bright ones (the trick subtitles use). Override both together if you want a different ink/halo pairing.
 
 #### Toolbar & controls
 
-`--sfx-cr-toolbar-bg`, `--sfx-cr-toolbar-color`, `--sfx-cr-toolbar-border`, `--sfx-cr-toolbar-shadow`, `--sfx-cr-btn-size`, `--sfx-cr-btn-radius`, `--sfx-cr-btn-hover-bg`, `--sfx-cr-btn-active-bg`, `--sfx-cr-separator-color`, `--sfx-cr-slider-track`, `--sfx-cr-slider-fill`, `--sfx-cr-slider-thumb`, `--sfx-cr-dropdown-bg`, `--sfx-cr-dropdown-hover`, `--sfx-cr-dropdown-shadow`, `--sfx-cr-zoom-bar-bg`.
+`--ci-crop-toolbar-bg`, `--ci-crop-toolbar-color`, `--ci-crop-toolbar-border`, `--ci-crop-toolbar-shadow`, `--ci-crop-btn-size`, `--ci-crop-btn-radius`, `--ci-crop-btn-hover-bg`, `--ci-crop-btn-active-bg`, `--ci-crop-separator-color`, `--ci-crop-slider-track`, `--ci-crop-slider-fill`, `--ci-crop-slider-thumb`, `--ci-crop-dropdown-bg`, `--ci-crop-dropdown-hover`, `--ci-crop-dropdown-shadow`, `--ci-crop-zoom-bar-bg`.
 
 #### Typography & radius
 
-`--sfx-cr-font`, `--sfx-cr-radius`, `--sfx-cr-card-shadow`, `--sfx-cr-transition`.
+`--ci-crop-font`, `--ci-crop-radius`, `--ci-crop-card-shadow`, `--ci-crop-transition`.
 
 A `[theme="dark"]` selector on the host re-binds the same variables to the dark palette — no other configuration needed.
 
@@ -541,28 +541,28 @@ A `[theme="dark"]` selector on the host re-binds the same variables to the dark 
 Style internal regions from light DOM:
 
 ```css
-sfx-crop::part(toolbar) { /* ... */ }
-sfx-crop::part(canvas-host) { /* ... */ }
-sfx-crop::part(loading) { /* ... */ }
-sfx-crop::part(error) { /* ... */ }
-sfx-crop::part(container) { /* ... */ }
+cloudimage-crop::part(toolbar) { /* ... */ }
+cloudimage-crop::part(canvas-host) { /* ... */ }
+cloudimage-crop::part(loading) { /* ... */ }
+cloudimage-crop::part(error) { /* ... */ }
+cloudimage-crop::part(container) { /* ... */ }
 ```
 
 ## Types Reference
 
-All types live in `src/core/types.ts` and are re-exported from both `@scaleflex/image-crop` and `@scaleflex/image-crop/react`.
+All types live in `src/core/types.ts` and are re-exported from both `@cloudimage/image-crop` and `@cloudimage/image-crop/react`.
 
 - `CropShapeName` — `'free' | 'square' | 'circle' | 'rounded-rect' | '16:9' | …` plus any `"W:H"` string.
 - `CropRect` — `{ x, y, width, height }` in normalised `[0,1]` image coordinates.
 - `TransformState` — full runtime state (`quarterTurns`, `rotation`, `flipH`, `flipV`, `scale`, `panX/Y`, `cropRect`, `rotationPivot?`).
 - `TransformParams` — serialisable export shape (`rotation`, `flipH`, `flipV`, `scale`, `crop` in original-image pixels, `outputWidth`, `outputHeight`).
 - `CropIconOverrides` — per-slot SVG-string overrides for toolbar icons.
-- `SfxCropConfig` — the internal config shape consumed by `createCropController`. Element attributes mirror this 1:1.
+- `CloudimageCropConfig` — the internal config shape consumed by `createCropController`. Element attributes mirror this 1:1.
 - `CloudimageTarget` (alias `CloudimageUrlOptions`) — the Cloudimage delivery target for `toCloudimageURL` / `buildCloudimageUrlFromDescriptor` (`src`, `token`, `domain`, `bgColor`, `format`, `quality`, `maxWidth`, `maxHeight`).
 - `CropDescriptor` — serializable parity snapshot (`state`, `imageWidth/Height`, `containerWidth/Height`, `variant`) returned by `toCropDescriptor()`; pass to `buildCloudimageUrlFromDescriptor` to reproduce the crop server-side.
 - `ServerCrop` — the lower-level crop plan returned by the exported `resolveServerCrop(state, iw, ih, containerW, containerH, variant)`; carries `cropPx`, `rotateCCW`, `flip*`, `tilted`, and **`clamped`** (true when the crop reaches outside the photo, so a CDN URL can't reproduce its background margins).
 
-The package also exports these **functions**: `buildCloudimageUrlFromDescriptor`, `buildCloudimageUrl` (lossy shim), and `resolveServerCrop` — all from both `@scaleflex/image-crop` and `@scaleflex/image-crop/react`.
+The package also exports these **functions**: `buildCloudimageUrlFromDescriptor`, `buildCloudimageUrl` (lossy shim), and `resolveServerCrop` — all from both `@cloudimage/image-crop` and `@cloudimage/image-crop/react`.
 
 ## Browser Support
 

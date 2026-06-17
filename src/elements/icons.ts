@@ -93,7 +93,7 @@ DEFAULT_ICONS.reset           = ICON_RESET;
 /**
  * Resolve an icon slot. Returns the consumer's override when present, else
  * the library's default SVG. `overrides` is typically the `icons` property
- * prop passed down from `<sfx-crop>` to each toolbar / popover sub-element.
+ * prop passed down from `<cloudimage-crop>` to each toolbar / popover sub-element.
  */
 export function resolveIcon(
   key: keyof CropIconOverrides,

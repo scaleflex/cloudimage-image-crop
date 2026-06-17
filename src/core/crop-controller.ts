@@ -1,5 +1,5 @@
 import type {
-  SfxCropConfig,
+  CloudimageCropConfig,
   TransformState,
   CropShapeName,
   TransformParams,
@@ -34,7 +34,7 @@ import { buildCloudimageUrlFromDescriptor, type CloudimageUrlOptions, type CropD
 
 /**
  * Callbacks invoked by the controller in response to state transitions.
- * All are optional. Designed for bridging into CustomEvents (<sfx-crop>)
+ * All are optional. Designed for bridging into CustomEvents (<cloudimage-crop>)
  * or into imperative listeners.
  */
 export interface CropControllerCallbacks {
@@ -63,12 +63,12 @@ export interface CropControllerCallbacks {
 export interface CropControllerOptions {
   /** The canvas the renderer writes to (pre-created by the host element). */
   canvas: HTMLCanvasElement;
-  /** Element hosting resize/keyboard/ARIA — usually the <sfx-crop> host itself. */
+  /** Element hosting resize/keyboard/ARIA — usually the <cloudimage-crop> host itself. */
   host: HTMLElement;
   /** Layout reference — the wrapping container whose dimensions drive the fit-scale math. */
   layoutContainer: HTMLElement;
   /** Merged config (see {@link mergeConfig}). */
-  config: SfxCropConfig;
+  config: CloudimageCropConfig;
   /** Optional callbacks. */
   callbacks?: CropControllerCallbacks;
 }
@@ -101,12 +101,12 @@ export interface CropController {
    * isn't already a Cloudimage/Filerobot URL.
    */
   toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string;
-  update(config: Partial<SfxCropConfig>): void;
+  update(config: Partial<CloudimageCropConfig>): void;
   destroy(): void;
 }
 
 /**
- * Non-DOM-owning factory. The element that owns the DOM (e.g. `<sfx-crop>`)
+ * Non-DOM-owning factory. The element that owns the DOM (e.g. `<cloudimage-crop>`)
  * provides the canvas + layout container and listens to state via callbacks.
  * No toolbar, zoom slider, or overlay divs are created here — those are the
  * host's responsibility.
@@ -749,7 +749,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     });
   }
 
-  function update(partial: Partial<SfxCropConfig>): void {
+  function update(partial: Partial<CloudimageCropConfig>): void {
     if (destroyed) return;
     const oldSrc = config.src;
     const oldVariant = config.variant;

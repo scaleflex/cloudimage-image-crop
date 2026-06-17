@@ -1,5 +1,5 @@
 {
-  "name": "@scaleflex/image-crop",
+  "name": "@cloudimage/image-crop",
   "version": "2.0.3",
   "description": "Interactive image crop tool with rotation, flip, tilt, zoom and shape selection, plus server-side Cloudimage crop URLs — Scaleflex Web Component",
   "license": "MIT",
@@ -99,10 +99,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/scaleflex/image-crop.git"
+    "url": "https://github.com/scaleflex/cloudimage-image-crop.git"
   },
   "bugs": {
-    "url": "https://github.com/scaleflex/image-crop/issues"
+    "url": "https://github.com/scaleflex/cloudimage-image-crop/issues"
   },
-  "homepage": "https://scaleflex.github.io/image-crop/"
+  "homepage": "https://scaleflex.github.io/cloudimage-image-crop/"
 }

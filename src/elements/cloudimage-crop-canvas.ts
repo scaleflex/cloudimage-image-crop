@@ -1,14 +1,14 @@
 import { html } from 'lit';
 import { query } from 'lit/decorators.js';
-import { SfxCropBaseElement } from './base';
-import { sfxCropCanvasStyles } from './sfx-crop-canvas.styles';
+import { CloudimageCropBaseElement } from './base';
+import { sfxCropCanvasStyles } from './cloudimage-crop-canvas.styles';
 
 /**
- * `<sfx-crop-canvas>` — minimal host for the editor's `<canvas>`.
+ * `<cloudimage-crop-canvas>` — minimal host for the editor's `<canvas>`.
  *
  * Owns its own shadow root so the canvas styling + `touch-action: none` live
- * encapsulated alongside the `<canvas>` node. The parent `<sfx-crop>`'s host-
- * level `--sfx-cr-*` tokens cascade in via CSS custom-property inheritance.
+ * encapsulated alongside the `<canvas>` node. The parent `<cloudimage-crop>`'s host-
+ * level `--ci-crop-*` tokens cascade in via CSS custom-property inheritance.
  *
  * The `<canvas>` is rendered once and never re-created, so `setPointerCapture`,
  * non-passive `wheel` listeners, and the ResizeObserver bound by the
@@ -16,7 +16,7 @@ import { sfxCropCanvasStyles } from './sfx-crop-canvas.styles';
  *
  * Theme a consumer via `::part(canvas)` from the parent host.
  */
-export class SfxCropCanvasElement extends SfxCropBaseElement {
+export class CloudimageCropCanvasElement extends CloudimageCropBaseElement {
   static styles = [sfxCropCanvasStyles];
 
   @query('canvas')
@@ -29,6 +29,6 @@ export class SfxCropCanvasElement extends SfxCropBaseElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'sfx-crop-canvas': SfxCropCanvasElement;
+    'cloudimage-crop-canvas': CloudimageCropCanvasElement;
   }
 }

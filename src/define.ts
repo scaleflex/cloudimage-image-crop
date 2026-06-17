@@ -1,30 +1,30 @@
 /**
- * Side-effect entry for `@scaleflex/image-crop/define`.
+ * Side-effect entry for `@cloudimage/image-crop/define`.
  *
  * Importing this module registers all six public custom elements:
- *   - <sfx-crop>          — main editor host
- *   - <sfx-crop-canvas>   — stable <canvas> host inside the shadow root
- *   - <sfx-crop-toolbar>  — action bar (rotate/flip/sliders/shape selector)
- *   - <sfx-crop-zoom>     — zoom slider popover
- *   - <sfx-crop-rotate>   — fine-rotation slider popover
- *   - <sfx-crop-shapes>   — shape preset dropdown
+ *   - <cloudimage-crop>          — main editor host
+ *   - <cloudimage-crop-canvas>   — stable <canvas> host inside the shadow root
+ *   - <cloudimage-crop-toolbar>  — action bar (rotate/flip/sliders/shape selector)
+ *   - <cloudimage-crop-zoom>     — zoom slider popover
+ *   - <cloudimage-crop-rotate>   — fine-rotation slider popover
+ *   - <cloudimage-crop-shapes>   — shape preset dropdown
  *
  * The import is idempotent — repeated imports and React StrictMode double
  * mounts won't throw, thanks to the `safeDefine` guard used by each element.
  */
 import { safeDefine } from './elements/base';
-import { SfxCropElement } from './elements/sfx-crop';
-import { SfxCropCanvasElement } from './elements/sfx-crop-canvas';
-import { SfxCropToolbarElement } from './elements/sfx-crop-toolbar';
-import { SfxCropZoomElement } from './elements/sfx-crop-zoom';
-import { SfxCropRotateElement } from './elements/sfx-crop-rotate';
-import { SfxCropShapesElement } from './elements/sfx-crop-shapes';
+import { CloudimageCropElement } from './elements/cloudimage-crop';
+import { CloudimageCropCanvasElement } from './elements/cloudimage-crop-canvas';
+import { CloudimageCropToolbarElement } from './elements/cloudimage-crop-toolbar';
+import { CloudimageCropZoomElement } from './elements/cloudimage-crop-zoom';
+import { CloudimageCropRotateElement } from './elements/cloudimage-crop-rotate';
+import { CloudimageCropShapesElement } from './elements/cloudimage-crop-shapes';
 
-safeDefine('sfx-crop-zoom', SfxCropZoomElement);
-safeDefine('sfx-crop-rotate', SfxCropRotateElement);
-safeDefine('sfx-crop-shapes', SfxCropShapesElement);
-safeDefine('sfx-crop-canvas', SfxCropCanvasElement);
-safeDefine('sfx-crop-toolbar', SfxCropToolbarElement);
-safeDefine('sfx-crop', SfxCropElement);
+safeDefine('cloudimage-crop-zoom', CloudimageCropZoomElement);
+safeDefine('cloudimage-crop-rotate', CloudimageCropRotateElement);
+safeDefine('cloudimage-crop-shapes', CloudimageCropShapesElement);
+safeDefine('cloudimage-crop-canvas', CloudimageCropCanvasElement);
+safeDefine('cloudimage-crop-toolbar', CloudimageCropToolbarElement);
+safeDefine('cloudimage-crop', CloudimageCropElement);
 
 export {};

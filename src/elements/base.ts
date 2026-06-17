@@ -1,7 +1,7 @@
 import { LitElement } from 'lit';
 
 /**
- * Shared base class for all @scaleflex/image-crop Lit elements.
+ * Shared base class for all @cloudimage/image-crop Lit elements.
  *
  * Provides:
  * - Safe guard for double custom-element registration (StrictMode-safe).
@@ -9,7 +9,7 @@ import { LitElement } from 'lit';
  *
  * Scaleflex convention — every public element extends this.
  */
-export class SfxCropBaseElement extends LitElement {}
+export class CloudimageCropBaseElement extends LitElement {}
 
 /**
  * Idempotent custom-element registration — safe under React StrictMode

@@ -29,13 +29,13 @@ const win = dom.window;
 const doc = win.document;
 const viewer = doc.querySelector('#home-viewer');
 const hasCE = typeof win.customElements?.get === 'function';
-const defined = hasCE ? win.customElements.get('sfx-crop') : null;
+const defined = hasCE ? win.customElements.get('cloudimage-crop') : null;
 
 console.log('--- DOM snapshot ---');
 console.log('viewer tag    :', viewer?.tagName);
 console.log('viewer src    :', viewer?.src || viewer?.getAttribute?.('src'));
 console.log('viewer constr :', viewer?.constructor?.name);
-console.log('sfx-crop def  :', defined?.name || '(undefined)');
+console.log('cloudimage-crop def  :', defined?.name || '(undefined)');
 console.log('appHTML.len   :', doc.getElementById('app')?.innerHTML.length);
 
 console.log('--- Logs (' + logs.length + ') ---');

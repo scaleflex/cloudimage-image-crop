@@ -1,19 +1,19 @@
 import { describe, it, expect, beforeAll, afterEach, beforeEach, vi } from 'vitest';
 import '../../src/define';
-import type { SfxCropZoomElement } from '../../src/elements/sfx-crop-zoom';
+import type { CloudimageCropZoomElement } from '../../src/elements/cloudimage-crop-zoom';
 
 /**
  * Covers the wheel-zoom ↔ popover debounce contract implemented by
- * {@link SfxCropZoomElement.showTemporarily}: controller fires the method
+ * {@link CloudimageCropZoomElement.showTemporarily}: controller fires the method
  * on every wheel notch; the popover opens, rides out a burst, then closes
  * after an idle window — but never hijacks a user-opened popover.
  */
-describe('<sfx-crop-zoom> showTemporarily', () => {
+describe('<cloudimage-crop-zoom> showTemporarily', () => {
   beforeAll(async () => {
-    await customElements.whenDefined('sfx-crop-zoom');
+    await customElements.whenDefined('cloudimage-crop-zoom');
   });
 
-  let el: SfxCropZoomElement;
+  let el: CloudimageCropZoomElement;
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -22,8 +22,8 @@ describe('<sfx-crop-zoom> showTemporarily', () => {
     vi.useRealTimers();
   });
 
-  async function mount(): Promise<SfxCropZoomElement> {
-    el = document.createElement('sfx-crop-zoom') as SfxCropZoomElement;
+  async function mount(): Promise<CloudimageCropZoomElement> {
+    el = document.createElement('cloudimage-crop-zoom') as CloudimageCropZoomElement;
     document.body.appendChild(el);
     await el.updateComplete;
     return el;
@@ -71,10 +71,10 @@ describe('<sfx-crop-zoom> showTemporarily', () => {
     expect(el.open).toBe(true);
   });
 
-  it('dispatches sfx-crop-popover-open only on transition closed → open', async () => {
+  it('dispatches cloudimage-crop-popover-open only on transition closed → open', async () => {
     await mount();
     const events: string[] = [];
-    el.addEventListener('sfx-crop-popover-open', () => events.push('open'));
+    el.addEventListener('cloudimage-crop-popover-open', () => events.push('open'));
 
     el.showTemporarily(500);
     expect(events).toEqual(['open']);

@@ -1,8 +1,8 @@
 /**
- * `@scaleflex/image-crop` — public, side-effect-free entry.
+ * `@cloudimage/image-crop` — public, side-effect-free entry.
  *
  * Three tiers of adoption live here:
- *   1. Ready component — `<sfx-crop>` via `@scaleflex/image-crop/define`.
+ *   1. Ready component — `<cloudimage-crop>` via `@cloudimage/image-crop/define`.
  *   2. (reserved for future sub-element assembly.)
  *   3. Headless controller — `createCropController({ canvas, host, config })`
  *      drives pointer, keyboard, render, and export against a consumer-owned
@@ -10,11 +10,11 @@
  *      sugar on top of this same factory.
  *
  * No side effects — importing this module does not register any custom
- * element. Import `@scaleflex/image-crop/define` for that. React consumers can
- * import from `@scaleflex/image-crop/react` for a `<SfxCrop>` component + hooks.
+ * element. Import `@cloudimage/image-crop/define` for that. React consumers can
+ * import from `@cloudimage/image-crop/react` for a `<CloudimageCrop>` component + hooks.
  */
 
-export { SfxCropElement } from './elements/sfx-crop';
+export { CloudimageCropElement } from './elements/cloudimage-crop';
 
 // Headless tier — build a custom UI around a consumer-owned <canvas>.
 export { createCropController } from './core/crop-controller';
@@ -27,7 +27,7 @@ export type {
 export { mergeConfig, DEFAULT_CONFIG, TOOLBAR_RESERVE_PX } from './core/config';
 
 export type {
-  SfxCropConfig,
+  CloudimageCropConfig,
   TransformState,
   TransformParams,
   CropShapeName,

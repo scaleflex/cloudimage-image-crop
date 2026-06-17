@@ -1,7 +1,7 @@
 import { html, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { SfxCropBaseElement } from './base';
+import { CloudimageCropBaseElement } from './base';
 import type { CropShapeName, CropIconOverrides } from '../core/types';
 import { getAspectRatio, parseRatio } from '../transforms/constrain';
 import {
@@ -11,7 +11,7 @@ import {
   resolveIcon,
 } from './icons';
 import { baseStyles } from '../styles/shared.css';
-import { sfxCropShapesStyles } from './sfx-crop-shapes.styles';
+import { sfxCropShapesStyles } from './cloudimage-crop-shapes.styles';
 
 type Orientation = 'landscape' | 'portrait';
 
@@ -92,7 +92,7 @@ function resolveShape(name: CropShapeName | string): ShapeOption | null {
 }
 
 /**
- * `<sfx-crop-shapes>` — trigger + dropdown with aspect-ratio / shape presets.
+ * `<cloudimage-crop-shapes>` — trigger + dropdown with aspect-ratio / shape presets.
  * Split into an orientation toggle (landscape / portrait) at the top, then a
  * list of shapes that pass both the `shapes` allow-list and the selected
  * orientation filter. Non-ratio shapes (Custom, Circle, Rounded, 1:1) sit in
@@ -102,10 +102,10 @@ function resolveShape(name: CropShapeName | string): ShapeOption | null {
  * Enter/Space commits; Escape closes.
  *
  * Event:
- *   `sfx-crop-shape-change` — `{ detail: { shape: CropShapeName } }`,
+ *   `cloudimage-crop-shape-change` — `{ detail: { shape: CropShapeName } }`,
  *   bubbles + composed.
  */
-export class SfxCropShapesElement extends SfxCropBaseElement {
+export class CloudimageCropShapesElement extends CloudimageCropBaseElement {
   static styles = [baseStyles, sfxCropShapesStyles];
 
   @property({ type: String }) value: CropShapeName = 'free';
@@ -175,21 +175,21 @@ export class SfxCropShapesElement extends SfxCropBaseElement {
       >
         <button
           type="button"
-          class="sfx-cr-shape-trigger"
+          class="ci-crop-shape-trigger"
           aria-label="Select crop shape"
           aria-haspopup="listbox"
           aria-expanded=${this.open ? 'true' : 'false'}
           @click=${this.onTriggerClick}
         >
-          <span class="sfx-cr-shape-trigger-icon">${unsafeHTML(resolveIcon('cropAspect', this.icons))}</span>
-          <span class="sfx-cr-shape-trigger-label">${current.label}</span>
-          <span class="sfx-cr-shape-chevron">${unsafeHTML(resolveIcon('chevronDown', this.icons))}</span>
+          <span class="ci-crop-shape-trigger-icon">${unsafeHTML(resolveIcon('cropAspect', this.icons))}</span>
+          <span class="ci-crop-shape-trigger-label">${current.label}</span>
+          <span class="ci-crop-shape-chevron">${unsafeHTML(resolveIcon('chevronDown', this.icons))}</span>
         </button>
-        <div class="sfx-cr-shape-dropdown" role="listbox">
-          <div class="sfx-cr-shape-orient" role="tablist" aria-label="Orientation">
+        <div class="ci-crop-shape-dropdown" role="listbox">
+          <div class="ci-crop-shape-orient" role="tablist" aria-label="Orientation">
             <button
               type="button"
-              class=${`sfx-cr-shape-orient-btn${this.orientation === 'landscape' ? ' is-active' : ''}`}
+              class=${`ci-crop-shape-orient-btn${this.orientation === 'landscape' ? ' is-active' : ''}`}
               role="tab"
               aria-selected=${this.orientation === 'landscape' ? 'true' : 'false'}
               aria-label="Landscape orientations"
@@ -197,25 +197,25 @@ export class SfxCropShapesElement extends SfxCropBaseElement {
             >${unsafeHTML(resolveIcon('orientLandscape', this.icons))}</button>
             <button
               type="button"
-              class=${`sfx-cr-shape-orient-btn${this.orientation === 'portrait' ? ' is-active' : ''}`}
+              class=${`ci-crop-shape-orient-btn${this.orientation === 'portrait' ? ' is-active' : ''}`}
               role="tab"
               aria-selected=${this.orientation === 'portrait' ? 'true' : 'false'}
               aria-label="Portrait orientations"
               @click=${() => this.setOrientation('portrait')}
             >${unsafeHTML(resolveIcon('orientPortrait', this.icons))}</button>
           </div>
-          <div class="sfx-cr-shape-list" role="presentation">
+          <div class="ci-crop-shape-list" role="presentation">
             ${visible.map((opt, i) => html`
               <button
                 type="button"
-                class=${`sfx-cr-shape-option${opt.value === this.value ? ' sfx-cr-shape-option--active' : ''}`}
+                class=${`ci-crop-shape-option${opt.value === this.value ? ' ci-crop-shape-option--active' : ''}`}
                 role="option"
                 aria-selected=${opt.value === this.value ? 'true' : 'false'}
                 @click=${(e: Event) => this.onOptionClick(e, opt.value)}
                 data-index=${String(i)}
               >
-                <span class="sfx-cr-shape-option-icon">${unsafeHTML(this.optionIcon(opt))}</span>
-                <span class="sfx-cr-shape-option-label">${opt.label}</span>
+                <span class="ci-crop-shape-option-icon">${unsafeHTML(this.optionIcon(opt))}</span>
+                <span class="ci-crop-shape-option-label">${opt.label}</span>
               </button>
             `)}
           </div>
@@ -280,7 +280,7 @@ export class SfxCropShapesElement extends SfxCropBaseElement {
   }
 
   private emit(shape: CropShapeName): void {
-    this.dispatchEvent(new CustomEvent('sfx-crop-shape-change', {
+    this.dispatchEvent(new CustomEvent('cloudimage-crop-shape-change', {
       detail: { shape },
       bubbles: true,
       composed: true,
@@ -300,7 +300,7 @@ export class SfxCropShapesElement extends SfxCropBaseElement {
       this.focusedIndex = Math.max(0, list.findIndex((s) => s.value === this.value));
       this.open = true;
       // Close sibling popovers (zoom, rotate) so only one is expanded.
-      this.dispatchEvent(new CustomEvent('sfx-crop-popover-open', {
+      this.dispatchEvent(new CustomEvent('cloudimage-crop-popover-open', {
         detail: { source: 'shapes' },
         bubbles: true,
         composed: true,
@@ -362,7 +362,7 @@ export class SfxCropShapesElement extends SfxCropBaseElement {
   private focusOption(index: number): void {
     this.focusedIndex = index;
     const opt = this.renderRoot.querySelector<HTMLElement>(
-      `.sfx-cr-shape-option[data-index="${index}"]`,
+      `.ci-crop-shape-option[data-index="${index}"]`,
     );
     opt?.focus();
   }
@@ -370,6 +370,6 @@ export class SfxCropShapesElement extends SfxCropBaseElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'sfx-crop-shapes': SfxCropShapesElement;
+    'cloudimage-crop-shapes': CloudimageCropShapesElement;
   }
 }

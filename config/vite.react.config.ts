@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import dts from 'vite-plugin-dts';
 
 /**
- * React wrapper bundle — thin layer on top of the main `<sfx-crop>` element.
+ * React wrapper bundle — thin layer on top of the main `<cloudimage-crop>` element.
  *
  * Produces:
  *   dist/react/index.js    (ESM)

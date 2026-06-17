@@ -6,20 +6,20 @@ import type { CloudimageUrlOptions, CropDescriptor } from '../export/cloudimage-
 import { mergeConfig } from '../core/config';
 import { setupAria } from '../a11y/aria';
 import type {
-  SfxCropConfig,
+  CloudimageCropConfig,
   CropShapeName,
   CropRect,
   TransformState,
   TransformParams,
   CropIconOverrides,
 } from '../core/types';
-import { SfxCropCanvasElement } from './sfx-crop-canvas';
-import type { SfxCropToolbarElement, SfxCropToolbarCommand } from './sfx-crop-toolbar';
-import { SfxCropBaseElement } from './base';
+import { CloudimageCropCanvasElement } from './cloudimage-crop-canvas';
+import type { CloudimageCropToolbarElement, CloudimageCropToolbarCommand } from './cloudimage-crop-toolbar';
+import { CloudimageCropBaseElement } from './base';
 import { parseAvailableShapes, DEFAULT_SHAPES } from './parse-shapes';
 import { getAspectRatio } from '../transforms/constrain';
 import { designTokens, baseStyles, spinKeyframes } from '../styles/shared.css';
-import { sfxCropStyles } from './sfx-crop.styles';
+import { sfxCropStyles } from './cloudimage-crop.styles';
 
 /**
  * Lit `@property` converter for the tri-state `show-grid` attribute, which
@@ -39,30 +39,30 @@ const SHOW_GRID_CONVERTER = {
 };
 
 /**
- * `<sfx-crop>` — Scaleflex interactive image-crop editor web component.
+ * `<cloudimage-crop>` — Scaleflex interactive image-crop editor web component.
  *
- * Renders `<sfx-crop-canvas>` plus an optional `<sfx-crop-toolbar>` and a zoom
+ * Renders `<cloudimage-crop-canvas>` plus an optional `<cloudimage-crop-toolbar>` and a zoom
  * slider inside an open shadow root. A {@link createCropController} instance
  * drives the canvas / pointer / keyboard pipeline against the pre-created
  * `<canvas>` ref — the canvas node is never re-created, so pointer capture and
  * non-passive `wheel` listeners stay stable across Lit updates.
  *
  * Events (all `bubbles: true, composed: true`):
- *   - `sfx-crop-ready`        `{ element }`
- *   - `sfx-crop-image-load`   `{ image }`
- *   - `sfx-crop-change`       `TransformState`
- *   - `sfx-crop-crop-change`  `CropRect` (image-pixel coords)
- *   - `sfx-crop-save`         `{ blob, dataURL, params, url, descriptor }` (from imperative `.save()`; `blob`/`dataURL` are null when `outputMode="cloudimage"`)
- *   - `sfx-crop-cancel`       (from imperative `.cancel()`)
- *   - `sfx-crop-error`        `{ error }`
+ *   - `cloudimage-crop-ready`        `{ element }`
+ *   - `cloudimage-crop-image-load`   `{ image }`
+ *   - `cloudimage-crop-change`       `TransformState`
+ *   - `cloudimage-crop-crop-change`  `CropRect` (image-pixel coords)
+ *   - `cloudimage-crop-save`         `{ blob, dataURL, params, url, descriptor }` (from imperative `.save()`; `blob`/`dataURL` are null when `outputMode="cloudimage"`)
+ *   - `cloudimage-crop-cancel`       (from imperative `.cancel()`)
+ *   - `cloudimage-crop-error`        `{ error }`
  *
- * Theme via `--sfx-cr-*` custom properties set on the host, or via
+ * Theme via `--ci-crop-*` custom properties set on the host, or via
  * `::part(container|canvas-host|toolbar|loading|error)` from light DOM.
  */
-export class SfxCropElement extends SfxCropBaseElement {
+export class CloudimageCropElement extends CloudimageCropBaseElement {
   static styles = [designTokens, baseStyles, spinKeyframes, sfxCropStyles];
 
-  // === Attributes mirroring SfxCropConfig ===
+  // === Attributes mirroring CloudimageCropConfig ===
 
   @property({ type: String, reflect: true }) src = '';
   @property({ type: String, attribute: 'crop-shape', reflect: true }) cropShape: CropShapeName = '16:9';
@@ -140,9 +140,9 @@ export class SfxCropElement extends SfxCropBaseElement {
   @state() private errorMessage: string | null = null;
 
   // === Queries ===
-  @query('sfx-crop-canvas') private canvasHost!: SfxCropCanvasElement;
-  @query('sfx-crop-toolbar') private toolbarHost?: SfxCropToolbarElement;
-  @query('.sfx-cr-container') private containerEl!: HTMLDivElement;
+  @query('cloudimage-crop-canvas') private canvasHost!: CloudimageCropCanvasElement;
+  @query('cloudimage-crop-toolbar') private toolbarHost?: CloudimageCropToolbarElement;
+  @query('.ci-crop-container') private containerEl!: HTMLDivElement;
 
   // === Runtime references ===
   private controller: CropController | null = null;
@@ -154,16 +154,16 @@ export class SfxCropElement extends SfxCropBaseElement {
   async firstUpdated(): Promise<void> {
     setupAria(this);
 
-    // Guard: if @scaleflex/image-crop/define wasn't imported, canvasHost will be an
+    // Guard: if @cloudimage/image-crop/define wasn't imported, canvasHost will be an
     // un-upgraded HTMLUnknownElement with no Lit lifecycle — bail with a
     // descriptive error rather than a cryptic "undefined.then" crash.
-    if (!(this.canvasHost instanceof SfxCropCanvasElement)) {
+    if (!(this.canvasHost instanceof CloudimageCropCanvasElement)) {
       throw new Error(
-        "<sfx-crop>: custom elements not registered. Import '@scaleflex/image-crop/define' before using the tag.",
+        "<cloudimage-crop>: custom elements not registered. Import '@cloudimage/image-crop/define' before using the tag.",
       );
     }
 
-    // <sfx-crop-canvas> is a child custom element; its template (the <canvas>)
+    // <cloudimage-crop-canvas> is a child custom element; its template (the <canvas>)
     // only materializes after its own first update cycle. Awaiting the child's
     // updateComplete guarantees `canvasEl` is non-null before we hand it to
     // the controller.
@@ -185,17 +185,17 @@ export class SfxCropElement extends SfxCropBaseElement {
       layoutContainer: this.canvasHost,
       config,
       callbacks: {
-        onReady: () => this.dispatch('sfx-crop-ready', { element: this }),
+        onReady: () => this.dispatch('cloudimage-crop-ready', { element: this }),
         onImageLoad: (image) => {
           this.currentImage = image;
           this.fitHostToImage();
-          this.dispatch('sfx-crop-image-load', { image });
+          this.dispatch('cloudimage-crop-image-load', { image });
         },
-        onError: (error) => this.dispatch('sfx-crop-error', { error }),
+        onError: (error) => this.dispatch('cloudimage-crop-error', { error }),
         onChange: (s) => {
-          this.dispatch('sfx-crop-change', s);
+          this.dispatch('cloudimage-crop-change', s);
         },
-        onCropChange: (c) => this.dispatch('sfx-crop-crop-change', c),
+        onCropChange: (c) => this.dispatch('cloudimage-crop-crop-change', c),
         onRotationSync: (deg) => this.toolbarHost?.setRotationValue(deg),
         onShapeSync: (shape) => {
           // Keep the reflected attribute in step with controller-driven
@@ -226,7 +226,7 @@ export class SfxCropElement extends SfxCropBaseElement {
   /** @see LIVE_CONFIG_KEYS for the exact set forwarded to `controller.update()`. */
   updated(changed: PropertyValues): void {
     if (!this.controller) return;
-    const delta: Partial<SfxCropConfig> = {};
+    const delta: Partial<CloudimageCropConfig> = {};
     let has = false;
     for (const key of LIVE_CONFIG_KEYS) {
       if (changed.has(key)) {
@@ -254,10 +254,10 @@ export class SfxCropElement extends SfxCropBaseElement {
 
   render(): unknown {
     return html`
-      <div class="sfx-cr-container" part="container">
-        <sfx-crop-canvas part="canvas-host"></sfx-crop-canvas>
+      <div class="ci-crop-container" part="container">
+        <cloudimage-crop-canvas part="canvas-host"></cloudimage-crop-canvas>
         ${this.showToolbar ? html`
-          <sfx-crop-toolbar
+          <cloudimage-crop-toolbar
             part="toolbar"
             .shape=${this.cropShape}
             ?show-rotate-button=${this.showRotateButton}
@@ -268,14 +268,14 @@ export class SfxCropElement extends SfxCropBaseElement {
             variant=${this.variant}
             .availableShapes=${this.availableShapes}
             .icons=${this.icons}
-            @sfx-crop-toolbar-command=${this.onToolbarCommand}
-          ></sfx-crop-toolbar>
+            @cloudimage-crop-toolbar-command=${this.onToolbarCommand}
+          ></cloudimage-crop-toolbar>
         ` : null}
-        <div class=${classMap({ 'sfx-cr-loading': true, 'sfx-cr-loading--hidden': !this.loading })} part="loading">
-          <div class="sfx-cr-loading-spinner"></div>
-          <div class="sfx-cr-loading-text">Loading…</div>
+        <div class=${classMap({ 'ci-crop-loading': true, 'ci-crop-loading--hidden': !this.loading })} part="loading">
+          <div class="ci-crop-loading-spinner"></div>
+          <div class="ci-crop-loading-text">Loading…</div>
         </div>
-        <div class=${classMap({ 'sfx-cr-error': true, 'sfx-cr-error--visible': !!this.errorMessage })} part="error">
+        <div class=${classMap({ 'ci-crop-error': true, 'ci-crop-error--visible': !!this.errorMessage })} part="error">
           ${this.errorMessage ?? 'Failed to load image'}
         </div>
       </div>
@@ -286,7 +286,7 @@ export class SfxCropElement extends SfxCropBaseElement {
 
   private onToolbarCommand = (e: Event): void => {
     if (!this.controller) return;
-    const detail = (e as CustomEvent<SfxCropToolbarCommand>).detail;
+    const detail = (e as CustomEvent<CloudimageCropToolbarCommand>).detail;
     switch (detail.type) {
       case 'reset': this.controller.reset(); break;
       case 'rotate-left': this.controller.rotateLeft(); break;
@@ -298,7 +298,7 @@ export class SfxCropElement extends SfxCropBaseElement {
         this.cropShape = detail.value;
         break;
       case 'save':
-        // Builds blob + dataURL + params and dispatches `sfx-crop-save`.
+        // Builds blob + dataURL + params and dispatches `cloudimage-crop-save`.
         void this.save();
         break;
     }
@@ -329,7 +329,7 @@ export class SfxCropElement extends SfxCropBaseElement {
   toCropDescriptor(): CropDescriptor { return this.ensure().toCropDescriptor(); }
 
   /**
-   * Emit the crop result via `sfx-crop-save`. In the default `'blob'`
+   * Emit the crop result via `cloudimage-crop-save`. In the default `'blob'`
    * `outputMode` the detail carries the rasterized `blob` + `dataURL` (plus a
    * best-effort Cloudimage `url` when a token is configured). In `'cloudimage'`
    * mode the canvas is never rasterized — `blob`/`dataURL` are `null` and `url`
@@ -343,30 +343,30 @@ export class SfxCropElement extends SfxCropBaseElement {
     try { url = this.toCloudimageURL(); } catch { url = null; }
 
     if (this.outputMode === 'cloudimage') {
-      this.dispatch('sfx-crop-save', { blob: null, dataURL: null, params, url, descriptor });
+      this.dispatch('cloudimage-crop-save', { blob: null, dataURL: null, params, url, descriptor });
       return;
     }
     const blob = await this.toBlob(type, quality);
     const dataURL = this.toDataURL(type, quality);
-    this.dispatch('sfx-crop-save', { blob, dataURL, params, url, descriptor });
+    this.dispatch('cloudimage-crop-save', { blob, dataURL, params, url, descriptor });
   }
 
   cancel(): void {
-    this.dispatch('sfx-crop-cancel', undefined);
+    this.dispatch('cloudimage-crop-cancel', undefined);
   }
 
   // === Internals ===
 
   private ensure(): CropController {
     if (!this.controller) {
-      throw new Error('<sfx-crop> not connected — wait for "sfx-crop-ready" or firstUpdated().');
+      throw new Error('<cloudimage-crop> not connected — wait for "cloudimage-crop-ready" or firstUpdated().');
     }
     return this.controller;
   }
 
   /**
    * Size both the canvas host (to the image's display rect, no letterbox)
-   * and the outer `<sfx-crop>` host (photo rect + measured toolbar stack).
+   * and the outer `<cloudimage-crop>` host (photo rect + measured toolbar stack).
    *
    * Bound order for `max-width` / `max-height`:
    *   1. Consumer-provided values on the host's own CSS / inline style.
@@ -437,7 +437,7 @@ export class SfxCropElement extends SfxCropBaseElement {
     // one-way shrink loop: the host shrinks once on a viewport
     // contraction, then can't grow back because parentH still reads
     // the small previous value. Consumers who need to fit a fixed-
-    // height container should set `max-height` on <sfx-crop> (as the
+    // height container should set `max-height` on <cloudimage-crop> (as the
     // demo does with `max-height: 640px`) — that path is honored above
     // via getComputedStyle(this).maxHeight.
     if (!Number.isFinite(maxH)) maxH = window.innerHeight;
@@ -517,7 +517,7 @@ export class SfxCropElement extends SfxCropBaseElement {
     return { x: r.x, y: r.y, width: r.width, height: r.height };
   }
 
-  private buildConfig(): Partial<SfxCropConfig> {
+  private buildConfig(): Partial<CloudimageCropConfig> {
     return {
       src: this.src,
       variant: this.variant,
@@ -575,7 +575,7 @@ const LIVE_CONFIG_KEYS = [
   'enableAnimations', 'animationSpeed',
   'keyboard', 'pinchZoom', 'wheelZoom',
   'outputMode', 'cloudimageToken', 'cloudimageDomain', 'cloudimageBgColor',
-] as const satisfies ReadonlyArray<keyof SfxCropConfig & keyof SfxCropElement>;
+] as const satisfies ReadonlyArray<keyof CloudimageCropConfig & keyof CloudimageCropElement>;
 
 /**
  * Parse a CSS length to a px number. Returns NaN for non-px-resolved
@@ -598,6 +598,6 @@ function safeJsonParse(s: string): unknown {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'sfx-crop': SfxCropElement;
+    'cloudimage-crop': CloudimageCropElement;
   }
 }
