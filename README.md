@@ -96,7 +96,7 @@ The official Cloudimage CDN serves a single self-contained bundle that registers
 `<cloudimage-crop>` on load (plain `<script>`, no build step):
 
 ```html
-<script src="https://cdn.cloudimage.io/image-crop/2.0.3/image-crop.min.js"></script>
+<script src="https://cdn.cloudimage.io/image-crop/3.0.0/image-crop.min.js"></script>
 ```
 
 Or load the ESM build straight from npm via jsDelivr's auto-bundling `+esm`
@@ -166,7 +166,7 @@ export function Editor() {
 
 ```html
 <!-- Self-contained bundle from the Cloudimage CDN -->
-<script src="https://cdn.cloudimage.io/image-crop/2.0.3/image-crop.min.js"></script>
+<script src="https://cdn.cloudimage.io/image-crop/3.0.0/image-crop.min.js"></script>
 <cloudimage-crop src="https://cdn.example.com/photo.jpg" crop-shape="square"></cloudimage-crop>
 ```
 
