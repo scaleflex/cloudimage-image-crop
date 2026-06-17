@@ -1,5 +1,5 @@
 {
-  "name": "scaleflex-crop-vanilla-example",
+  "name": "cloudimage-image-crop-vanilla-example",
   "version": "1.0.0",
   "description": "@cloudimage/image-crop - Vanilla JavaScript Example",
   "main": "index.html",
@@ -10,6 +10,6 @@
   "devDependencies": {
     "serve": "^14.2.0"
   },
-  "keywords": ["crop", "image-editor", "scaleflex", "web-component"],
+  "keywords": ["crop", "image-editor", "cloudimage", "web-component"],
   "license": "MIT"
 }
