@@ -276,13 +276,22 @@ function normalizeAngle(deg: number): number {
  *   canvas (`innerW×innerH`).
  */
 export interface ServerCrop {
-  /** Crop rect in ORIGINAL image pixels (axis-aligned; the single-pass crop). */
+  /**
+   * The crop rect emitted as `tl_px`/`br_px`. When `tilted === false` it is in
+   * ORIGINAL image pixels (the single-pass crop). When `tilted === true` it
+   * mirrors {@link nested}'s `outerCrop` (the inset-shifted crop in the rotated
+   * bbox), not original pixels.
+   */
   cropPx: { x: number; y: number; width: number; height: number };
   /** Cloudimage rotation (CCW degrees, normalized [0,360)). */
   rotateCCW: number;
   flipH: boolean;
   flipV: boolean;
-  /** Output dimensions (crop window size in display px). */
+  /**
+   * The crop window's size in display px (advisory). NOTE: the emitted URL sizes
+   * the output via `target.maxWidth`/`maxHeight` + `func=bound` (or the crop's
+   * own aspect when those are unset), so the emitters do not read `outW`/`outH`.
+   */
   outW: number;
   outH: number;
   /** True when a non-90° tilt requires the nested (rotate-then-crop) URL. */
@@ -326,6 +335,17 @@ export function resolveServerCrop(
   containerHeight: number,
   variant: 'classic' | 'fixed' = 'classic',
 ): ServerCrop {
+  // Guard degenerate inputs (e.g. a hand-built / corrupted descriptor): a
+  // non-positive image size divides by zero in the draw-space mapping, and a
+  // non-positive scale makes the transform matrix singular (its inverse → NaN).
+  // The editor never produces these (scale is clamped ≥ minScale), so this only
+  // turns bad external input into a clear error instead of a NaN-laden URL.
+  if (!(iw > 0) || !(ih > 0)) {
+    throw new Error('resolveServerCrop: imageWidth and imageHeight must be positive');
+  }
+  if (!Number.isFinite(state.scale) || state.scale <= 0) {
+    throw new Error('resolveServerCrop: state.scale must be a positive finite number');
+  }
   const { drawW, drawH, cropX, cropY, cropW, cropH, imgToDisp } = resolveDisplay(
     state, iw, ih, containerWidth, containerHeight, variant,
   );
@@ -347,7 +367,19 @@ export function resolveServerCrop(
   });
 
   const totalDeg = state.quarterTurns + state.rotation;
-  const rotateCCW = normalizeAngle(-totalDeg);
+  // Flip/rotate order. The editor's transform chain places the flip BETWEEN the
+  // quarter-turn and the fine tilt: the quarter-turn is applied before the flip
+  // (rotate→flip), the tilt after it (flip→rotate). An odd flip (h XOR v) is a
+  // reflection, so it reverses the rotation it sits before — i.e. it negates the
+  // quarter-turn's contribution but NOT the tilt's:
+  //   odd flip  → net rotation = tilt − quarterTurns
+  //   even/none → net rotation = quarterTurns + tilt   (a flip-h+v is a 180°
+  //               rotation, handedness-preserving, so nothing flips)
+  // Cloudimage applies flip→rotate, so this `geomDeg` is the angle it must use,
+  // for both the single-pass `r` and the nested inner rotation + geometry.
+  const oddFlip = state.flipH !== state.flipV;
+  const geomDeg = oddFlip ? state.rotation - state.quarterTurns : totalDeg;
+  const rotateCCW = normalizeAngle(-geomDeg);
   const tilted = Math.abs(((totalDeg % 90) + 90) % 90) > 1e-6;
   const outW = Math.max(1, Math.round(cropW));
   const outH = Math.max(1, Math.round(cropH));
@@ -379,15 +411,17 @@ export function resolveServerCrop(
   // Non-90 tilt → nested. Inner rotates the (flipped) full image into its
   // bounding box; the pre-image rect — rotated by the same angle — becomes
   // axis-aligned, so its bbox in the inner canvas is the outer crop.
-  const rad = degreesToRadians(totalDeg);
+  const rad = degreesToRadians(geomDeg);
   const innerW = Math.round(Math.abs(iw * Math.cos(rad)) + Math.abs(ih * Math.sin(rad)));
   const innerH = Math.round(Math.abs(iw * Math.sin(rad)) + Math.abs(ih * Math.cos(rad)));
 
-  // original px → inner canvas px: flip about image center, rotate by the
-  // editor's net angle, then recenter into innerW×innerH.
+  // original px → inner canvas px: flip about image center, rotate by the net
+  // angle (flip-adjusted: see `geomDeg`), then recenter into innerW×innerH. This
+  // mirrors Cloudimage's inner pass (flip → rotate), so the outer crop lands in
+  // the same place the CDN produces.
   let innerMap = identityMatrix();
   innerMap = multiplyMatrices(innerMap, translateMatrix(innerW / 2, innerH / 2));
-  innerMap = multiplyMatrices(innerMap, rotateMatrix(totalDeg));
+  innerMap = multiplyMatrices(innerMap, rotateMatrix(geomDeg));
   if (state.flipH || state.flipV) {
     innerMap = multiplyMatrices(innerMap, scaleMatrix(state.flipH ? -1 : 1, state.flipV ? -1 : 1));
   }

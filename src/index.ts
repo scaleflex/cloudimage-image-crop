@@ -53,3 +53,8 @@ export { imageToCanvas, canvasToImage, buildTransformMatrix } from './transforms
 // instead of a rasterized Blob (see `outputMode` / `toCloudimageURL()`).
 export { buildCloudimageUrl, buildCloudimageUrlFromDescriptor } from './export/cloudimage-url';
 export type { CloudimageUrlOptions, CloudimageTarget, CropDescriptor } from './export/cloudimage-url';
+// Lower-level crop plan — lets a consumer inspect `clamped` (the crop reaches
+// outside the photo, so the CDN result drops background margins the canvas
+// shows) before committing to a server-side URL.
+export { resolveServerCrop } from './export/exporter';
+export type { ServerCrop } from './export/exporter';

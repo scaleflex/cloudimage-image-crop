@@ -650,7 +650,7 @@ interface SfxCropElement extends HTMLElement {
 | `sfx-crop-image-load` | `{ image: HTMLImageElement }` |
 | `sfx-crop-change` | `TransformState` |
 | `sfx-crop-crop-change` | `CropRect` (image-pixel coords) |
-| `sfx-crop-save` | `{ blob: Blob \| null, dataURL: string \| null, params: TransformParams, url: string \| null }` |
+| `sfx-crop-save` | `{ blob: Blob \| null, dataURL: string \| null, params: TransformParams, url: string \| null, descriptor: CropDescriptor \| null }` |
 | `sfx-crop-cancel` | `void` |
 | `sfx-crop-error` | `{ error: Error }` |
 
@@ -1152,7 +1152,15 @@ multiple of 90) uses a **two-pass nested URL** — an inner pass rotates the pho
 because Cloudimage crops before it rotates. The nested outer `tl_px`/`br_px` are
 shifted by the bbox→photo inset `((innerW-iw)/2, (innerH-ih)/2)`, because Cloudimage
 measures a nested crop from the original image frame's inset position inside the
-rotated bounding box, not from the bbox corner. Geometry is exact; only the CDN's
+rotated bounding box, not from the bbox corner.
+
+**Flip × rotation order.** Cloudimage applies `flip → rotate`, but the editor's
+chain places the flip *between* the quarter-turn and the fine tilt (quarter-turn
+before the flip, tilt after). An odd flip (h XOR v) is a reflection, so it negates
+only the quarter-turn's contribution: the Cloudimage rotation angle is
+`geomDeg = oddFlip ? (rotation − quarterTurns) : (quarterTurns + rotation)`, used for
+both the emitted `r` and the nested inner geometry. (An even flip — h+v — is a 180°
+rotation that preserves handedness, so nothing negates.) Geometry is exact; only the CDN's
 resize kernel differs from the canvas. Verified end-to-end in a real browser
 (puppeteer driving the live element) across tilt / 90° / zoom / pan / flip / both
 variants — mean per-channel diff 3–9 / 255.

@@ -36,6 +36,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   URL from a stored `CropDescriptor` in Node / on a server. `buildCloudimageUrl`
   (lossy single-pass) is retained for the basic case. New `CropDescriptor` and
   `CloudimageTarget` types.
+- `resolveServerCrop(state, iw, ih, containerW, containerH, variant)` and its
+  `ServerCrop` type are exported so consumers can inspect the crop plan —
+  notably `clamped` — and fall back to `blob` mode when a crop can't be
+  reproduced server-side. It throws on a non-positive image size or scale
+  (degenerate / corrupted descriptor) instead of emitting a `NaN` URL.
 - `cloudimage-token`, `cloudimage-domain`, `cloudimage-bg-color` config to point
   the editor at a Cloudimage account (token form, custom domain, or appending to
   an `src` that is already a Cloudimage URL). Cloudimage (`*.cloudimg.io`) and

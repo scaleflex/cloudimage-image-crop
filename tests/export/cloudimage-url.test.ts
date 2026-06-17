@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildCloudimageUrl, buildCloudimageUrlFromDescriptor } from '../../src/export/cloudimage-url';
-import { getTransformParams } from '../../src/export/exporter';
+import { getTransformParams, resolveServerCrop } from '../../src/export/exporter';
 import { createInitialState, applyRotateLeft, applyScale, applyRotation } from '../../src/transforms/transform-state';
 import type { TransformParams } from '../../src/core/types';
 
@@ -200,5 +200,38 @@ describe('buildCloudimageUrlFromDescriptor — full parity', () => {
     expect(inner).toContain('r=338');
     expect(inner).toContain('bg_color=000000');
     expect(inner).not.toContain('tl_px');
+  });
+
+  it('nested: outer tl_px/br_px equal the inset-shifted outerCrop (emitNested passes through)', () => {
+    const state = applyRotation(createInitialState(), 30);
+    const sc = resolveServerCrop(state, DW, DH, DW, DH, 'classic');
+    const url = buildCloudimageUrlFromDescriptor(descriptor(state), { src: 'https://demo.cloudimg.io/p.jpg' });
+    const qp = query(url);
+    const o = sc.nested!.outerCrop;
+    expect(qp.get('tl_px')).toBe(`${o.x},${o.y}`);
+    expect(qp.get('br_px')).toBe(`${o.x + o.width},${o.y + o.height}`);
+  });
+
+  it('nested + token + raw origin src → double-nested URL (inner = token-wrapped rotate, outer crops)', () => {
+    const url = buildCloudimageUrlFromDescriptor(descriptor(applyRotation(createInitialState(), 22)), { src: RAW_SRC, token: 'demo' });
+    expect(url.startsWith('https://demo.cloudimg.io/')).toBe(true);
+    expect(url).toContain('ci_url_encoded=1');
+    expect(query(url).get('tl_px')).toBeTruthy();
+    const enc = url.substring(url.indexOf('/', 8) + 1, url.indexOf('?'));
+    const inner = decodeURIComponent(enc);
+    // The inner is itself the token-form rotate URL of the raw origin image.
+    expect(inner.startsWith('https://demo.cloudimg.io/https://example.com/photo.jpg')).toBe(true);
+    expect(inner).toContain('r=338');
+    expect(inner).not.toContain('tl_px');
+  });
+
+  it('fixed variant: a tilt still emits a nested URL', () => {
+    const full = { ...applyRotation(createInitialState(), 18), cropRect: { x: 0, y: 0, width: 1, height: 1 } };
+    const url = buildCloudimageUrlFromDescriptor(
+      { state: full, imageWidth: DW, imageHeight: DH, containerWidth: 600, containerHeight: 600, variant: 'fixed' },
+      { src: 'https://demo.cloudimg.io/p.jpg' },
+    );
+    expect(url).toContain('ci_url_encoded=1');
+    expect(query(url).get('tl_px')).toBeTruthy();
   });
 });

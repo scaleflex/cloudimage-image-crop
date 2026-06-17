@@ -830,7 +830,8 @@ function renderDocApi(): string {
     ['toBlob',           '(type?: string, quality?: number): Promise&lt;Blob&gt;', 'Export the crop as a <code>Blob</code>. Defaults come from the <code>output-*</code> attributes.'],
     ['toDataURL',        '(type?: string, quality?: number): string',      'Export as a data URL (base64).'],
     ['toTransformParams','(): TransformParams',                            'Summary suitable for server-side rendering (image CDNs).'],
-    ['toCloudimageURL',  '(options?): string',                             'Build a Cloudimage URL that crops / rotates / flips / resizes server-side.'],
+    ['toCloudimageURL',  '(options?): string',                             'Build a Cloudimage URL that crops / rotates / flips / tilts / zooms / pans server-side.'],
+    ['toCropDescriptor', '(): CropDescriptor',                             'Serializable snapshot (state + image/container dims + variant) to rebuild the Cloudimage URL later via <code>buildCloudimageUrlFromDescriptor</code>.'],
     ['reset',            '(): void',                                       'Restore rotation, scale, pan, and crop rect to initial values.'],
     ['save',             '(type?: string, quality?: number): Promise&lt;void&gt;', 'Export and dispatch <code>sfx-crop-save</code> with the result.'],
     ['cancel',           '(): void',                                       'Dispatch <code>sfx-crop-cancel</code> — the consumer decides what that means.'],
@@ -841,7 +842,7 @@ function renderDocApi(): string {
     ['sfx-crop-image-load',   '{ image: HTMLImageElement }',                                          'Image decoded and initial fit applied.'],
     ['sfx-crop-change',       'TransformState',                                                       'Any state change — rotation, flip, scale, pan, crop.'],
     ['sfx-crop-crop-change',  'CropRect (image-pixel coords)',                                        'Crop rect moved or resized (subset of <code>-change</code>).'],
-    ['sfx-crop-save',         '{ blob: Blob | null, dataURL: string | null, params: TransformParams, url: string | null }', 'Emitted from <code>save()</code>. <code>blob</code>/<code>dataURL</code> are null in <code>cloudimage</code> output-mode; <code>url</code> is the Cloudimage URL.'],
+    ['sfx-crop-save',         '{ blob: Blob | null, dataURL: string | null, params: TransformParams, url: string | null, descriptor: CropDescriptor | null }', 'Emitted from <code>save()</code>. <code>blob</code>/<code>dataURL</code> are null in <code>cloudimage</code> output-mode; <code>url</code> is the Cloudimage URL; <code>descriptor</code> rebuilds it server-side.'],
     ['sfx-crop-cancel',       'void',                                                                 'Emitted from <code>cancel()</code>.'],
     ['sfx-crop-error',        '{ error: Error }',                                                     'Image load failed or invalid configuration.'],
   ];

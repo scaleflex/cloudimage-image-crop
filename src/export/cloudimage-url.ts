@@ -72,6 +72,15 @@ const DEFAULT_DOMAIN = 'cloudimg.io';
 const DELIVERY_DOMAINS = ['cloudimg.io', 'filerobot.com'];
 
 /**
+ * ⚠️ **Lossy shim — prefer {@link buildCloudimageUrlFromDescriptor}.** This
+ * builds a single-pass URL from {@link TransformParams} and therefore **ignores
+ * zoom and pan** and only does **best-effort rotation** (crop→rotate, not the
+ * editor's rotate→crop). It silently produces a *different* crop than the canvas
+ * whenever the state has zoom, pan, or a non-90° tilt. For pixel-faithful parity
+ * pass a {@link CropDescriptor} to {@link buildCloudimageUrlFromDescriptor}
+ * instead (that is what `toCloudimageURL()` uses). Kept only for the simple
+ * crop+flip+resize case and for callers that already hold `TransformParams`.
+ *
  * Build a Cloudimage v7 URL that reproduces a crop/transform server-side,
  * instead of rasterising it on a canvas.
  *

@@ -31,7 +31,7 @@ export type {
 
 // Headless primitives re-exported so React consumers don't need to reach
 // into the root `@scaleflex/image-crop` package for types and the factory.
-export { createCropController, DEFAULT_CONFIG, mergeConfig, buildCloudimageUrl, buildCloudimageUrlFromDescriptor } from '../index';
+export { createCropController, DEFAULT_CONFIG, mergeConfig, buildCloudimageUrl, buildCloudimageUrlFromDescriptor, resolveServerCrop } from '../index';
 export type {
   CropController,
   CropControllerOptions,
@@ -40,6 +40,7 @@ export type {
   CloudimageUrlOptions,
   CloudimageTarget,
   CropDescriptor,
+  ServerCrop,
 } from '../index';
 
 export type {

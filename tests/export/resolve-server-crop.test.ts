@@ -113,3 +113,45 @@ describe('resolveServerCrop — nested (free tilt)', () => {
     expect(sc.clamped).toBe(true);
   });
 });
+
+describe('resolveServerCrop — flip × rotation order', () => {
+  // The flip sits between the quarter-turn and the tilt in the editor's chain:
+  // an odd flip negates ONLY the quarter-turn's contribution (rotate→flip), not
+  // the tilt (flip→rotate). Cloudimage's emitted r = normalizeAngle(-geomDeg),
+  // geomDeg = oddFlip ? rotation - quarterTurns : quarterTurns + rotation.
+  it('single-pass: flipH + 90° negates the turn → r=270 (not 90)', () => {
+    const s = { ...createInitialState(), quarterTurns: -90, rotation: 0, flipH: true };
+    expect(resolveServerCrop(s, W, H, W, H, 'classic').rotateCCW).toBe(270);
+  });
+
+  it('nested: flipH + 90° + tilt 15 negates only the turn → r=255', () => {
+    // geomDeg = 15 - (-90) = 105 → r = normalizeAngle(-105) = 255
+    const s = { ...createInitialState(), quarterTurns: -90, rotation: 15, flipH: true };
+    expect(resolveServerCrop(s, W, H, W, H, 'classic').rotateCCW).toBe(255);
+  });
+
+  it('even flip (h+v) preserves handedness → no negation', () => {
+    // geomDeg = totalDeg = -90 + 15 = -75 → r = normalizeAngle(75) = 75
+    const s = { ...createInitialState(), quarterTurns: -90, rotation: 15, flipH: true, flipV: true };
+    expect(resolveServerCrop(s, W, H, W, H, 'classic').rotateCCW).toBe(75);
+  });
+
+  it('no flip is unchanged (regression): r = normalizeAngle(-(qt+tilt))', () => {
+    const s = { ...createInitialState(), quarterTurns: -90, rotation: 15 };
+    // geomDeg = -75 → r = 75
+    expect(resolveServerCrop(s, W, H, W, H, 'classic').rotateCCW).toBe(75);
+  });
+});
+
+describe('resolveServerCrop — input guards', () => {
+  it('throws on a non-positive image dimension (would divide by zero)', () => {
+    expect(() => resolveServerCrop(createInitialState(), 0, H, W, H, 'classic')).toThrow(/positive/);
+    expect(() => resolveServerCrop(createInitialState(), W, 0, W, H, 'classic')).toThrow(/positive/);
+  });
+
+  it('throws on a non-positive / non-finite scale (would make the matrix singular)', () => {
+    expect(() => resolveServerCrop({ ...createInitialState(), scale: 0 }, W, H, W, H, 'classic')).toThrow(/scale/);
+    expect(() => resolveServerCrop({ ...createInitialState(), scale: -1 }, W, H, W, H, 'classic')).toThrow(/scale/);
+    expect(() => resolveServerCrop({ ...createInitialState(), scale: NaN }, W, H, W, H, 'classic')).toThrow(/scale/);
+  });
+});
