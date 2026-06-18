@@ -442,8 +442,19 @@ export function resolveServerCrop(
   // corner. Shift the emitted crop by that inset so the CDN crops the region we
   // computed. (Verified empirically across angles, crop positions and both image
   // orientations; without it every tilted crop is offset by the inset.)
-  const insetX = Math.round((innerW - iw) / 2);
-  const insetY = Math.round((innerH - ih) / 2);
+  // The centred-original-frame inset only holds when the rotated bbox is LARGER
+  // than the original on BOTH axes (moderate tilt). When the effective rotation is
+  // near a quarter-turn, a non-square image's bbox can be NARROWER than the
+  // original on an axis (e.g. a landscape photo turned 90° + slight tilt →
+  // innerW < iw): there the inset turns negative and would push the crop off the
+  // rotated canvas (Cloudimage then clamps → wrong region). In that regime the CDN
+  // uses the plain centred bbox, so fall back to no inset. Verified against the
+  // live CDN on both regimes (portrait/positive-inset and landscape/negative).
+  const rawInsetX = (innerW - iw) / 2;
+  const rawInsetY = (innerH - ih) / 2;
+  const useInset = rawInsetX >= 0 && rawInsetY >= 0;
+  const insetX = useInset ? Math.round(rawInsetX) : 0;
+  const insetY = useInset ? Math.round(rawInsetY) : 0;
   const outerCrop = {
     x: ox - insetX,
     y: oy - insetY,

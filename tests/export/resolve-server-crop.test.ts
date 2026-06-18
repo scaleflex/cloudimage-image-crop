@@ -112,6 +112,23 @@ describe('resolveServerCrop — nested (free tilt)', () => {
     expect(sc.tilted).toBe(true);
     expect(sc.clamped).toBe(true);
   });
+
+  it('landscape image turned 90° + slight tilt (bbox narrower than original) → no inset, crop stays inside the rotated canvas', () => {
+    // Regression for the negative-inset bug: a landscape photo (iw > ih) turned a
+    // quarter + small tilt makes the rotated bbox NARROWER than the original on x
+    // (innerW < iw). The old inset (innerW-iw)/2 went negative and pushed br_px
+    // past innerW, so Cloudimage clamped the crop to a wrong region. The emitted
+    // crop must stay fully within the inner rotated canvas.
+    const s = { ...createInitialState(), quarterTurns: -90, rotation: -6.67, flipH: true };
+    const sc = resolveServerCrop(s, 4032, 2268, 872, 490, 'classic');
+    expect(sc.tilted).toBe(true);
+    const n = sc.nested!;
+    expect(n.innerW).toBeLessThan(4032); // rotated bbox is narrower than the original width
+    expect(n.outerCrop.x).toBeGreaterThanOrEqual(0);
+    expect(n.outerCrop.y).toBeGreaterThanOrEqual(0);
+    expect(n.outerCrop.x + n.outerCrop.width).toBeLessThanOrEqual(n.innerW);
+    expect(n.outerCrop.y + n.outerCrop.height).toBeLessThanOrEqual(n.innerH);
+  });
 });
 
 describe('resolveServerCrop — flip × rotation order', () => {
