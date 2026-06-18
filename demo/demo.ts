@@ -1485,11 +1485,11 @@ function renderExampleCloudimage(): string {
       <div class="demo-ci-compare" id="ex-ci-compare" hidden style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px">
         <figure style="margin:0">
           <figcaption style="font-size:12px;opacity:.7;margin-bottom:6px">① Local canvas crop</figcaption>
-          <img id="ex-ci-local" alt="Crop rendered locally in the browser" style="max-width:100%;display:block;border-radius:10px" />
+          <img id="ex-ci-local" alt="Crop rendered locally in the browser" style="width:100%;height:auto;display:block;border-radius:10px" />
         </figure>
         <figure style="margin:0">
           <figcaption style="font-size:12px;opacity:.7;margin-bottom:6px">② Cloudimage server crop</figcaption>
-          <img id="ex-ci-remote" crossorigin="anonymous" alt="Crop rendered by Cloudimage from the URL" style="max-width:100%;display:block;border-radius:10px" />
+          <img id="ex-ci-remote" crossorigin="anonymous" alt="Crop rendered by Cloudimage from the URL" style="width:100%;height:auto;display:block;border-radius:10px" />
         </figure>
       </div>
       <div id="ex-ci-diff" style="margin-top:10px;font-size:14px;font-weight:600;min-height:1.2em"></div>
