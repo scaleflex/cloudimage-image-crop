@@ -427,12 +427,20 @@ export function createCropController(opts: CropControllerOptions): CropControlle
             startRect: { ...state.cropRect },
           };
         } else if (target.type === 'crop-area') {
-          // Dragging the photo area always pans the image — the crop frame
-          // stays fixed and the image moves under it. Matches the
-          // Cloudimage/uploader pattern and works at any scale (including
-          // scale=1 when the photo fits the viewport but the user still
-          // wants to reposition it under the frame). Crop size is changed
-          // via the corner/edge handles.
+          if (config.variant === 'fixed') {
+            // Fixed variant: the box IS the crop frame (it can't move/resize), so
+            // dragging it pans the photo under the fixed frame.
+            panDragState = { startX: pointer.x, startY: pointer.y, startPanX: state.panX, startPanY: state.panY };
+          } else {
+            // Classic variant: dragging INSIDE the frame MOVES the crop rect —
+            // the photo stays put. Frame and photo move independently (pan the
+            // photo by dragging the area OUTSIDE the frame). The server-crop path
+            // reads the resulting state, so URL parity is unaffected either way.
+            moveRectState = { startX: pointer.x, startY: pointer.y, startRect: { ...state.cropRect } };
+          }
+        } else if (target.type === 'outside') {
+          // On the photo, outside the crop frame → pan the photo (reposition it
+          // under the crop). The frame stays; only panX/panY change.
           panDragState = { startX: pointer.x, startY: pointer.y, startPanX: state.panX, startPanY: state.panY };
         } else if (target.type === 'handle' && target.position) {
           resizeState = startResize('handle-' + target.position, state.cropRect, pointer.x, pointer.y);

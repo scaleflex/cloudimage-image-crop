@@ -48,12 +48,13 @@ export function hitTest(
 
 /** Map hit target to CSS cursor style. */
 export function getCursor(target: HitTarget, isDragging: boolean): CursorStyle {
-  if (isDragging && target.type === 'crop-area') return 'grabbing';
   if (target.type === 'move-handle') return 'move';
 
   switch (target.type) {
+    // Classic: dragging inside the frame moves the crop rect → 'move'.
     case 'crop-area': return 'move';
-    case 'outside': return 'crosshair';
+    // Outside the frame (on the photo) pans the image → grab / grabbing.
+    case 'outside': return isDragging ? 'grabbing' : 'grab';
     case 'handle': {
       switch (target.position) {
         case 'nw': case 'se': return 'nwse-resize';
