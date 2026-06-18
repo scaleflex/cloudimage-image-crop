@@ -1986,8 +1986,12 @@ function hydrateExampleCloudimage(root: HTMLElement): void {
   };
 
   root.querySelector('#ex-ci-build')?.addEventListener('click', () => {
-    try { renderCompare(el.toCloudimageURL()); }
-    catch (err) { out.textContent = err instanceof Error ? err.message : String(err); }
+    // Calibrate the per-image CDN framing first so a free-tilt crop matches the
+    // canvas exactly (cached per image; no-op for non-tilt).
+    el.calibrateCloudimage()
+      .catch(() => null)
+      .then(() => { renderCompare(el.toCloudimageURL()); })
+      .catch((err: unknown) => { out.textContent = err instanceof Error ? err.message : String(err); });
   });
 
   // The toolbar "Done" button → save(): in cloudimage mode the detail carries

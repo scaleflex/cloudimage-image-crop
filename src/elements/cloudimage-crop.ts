@@ -327,6 +327,12 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
   toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string { return this.ensure().toCloudimageURL(options); }
   /** Serializable snapshot to reproduce the crop as a Cloudimage URL server-side. */
   toCropDescriptor(): CropDescriptor { return this.ensure().toCropDescriptor(); }
+  /**
+   * Detect & cache the per-image Cloudimage framing so a FREE-TILT
+   * `toCloudimageURL()` matches the canvas exactly. Probes the CDN once per image
+   * (async); `save()` awaits this automatically for tilted `cloudimage` output.
+   */
+  calibrateCloudimage(): Promise<'centered' | 'inset' | null> { return this.ensure().calibrateCloudimage(); }
 
   /**
    * Emit the crop result via `cloudimage-crop-save`. In the default `'blob'`
@@ -337,6 +343,17 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
    */
   async save(type?: string, quality?: number): Promise<void> {
     const params = this.toTransformParams();
+
+    // For a FREE-TILT cloudimage export, calibrate the per-image CDN framing
+    // first so the emitted `url`/`descriptor` reproduce the canvas exactly.
+    // (Per-image, cached after the first probe; non-tilt crops are exact without
+    // it; failures fall back to the builder's best-effort heuristic.)
+    if (this.outputMode === 'cloudimage') {
+      let tilted = false;
+      try { tilted = this.toCropDescriptor().state.rotation % 90 !== 0; } catch { tilted = false; }
+      if (tilted) { try { await this.ensure().calibrateCloudimage(); } catch { /* keep heuristic */ } }
+    }
+
     let url: string | null = null;
     let descriptor: CropDescriptor | null = null;
     try { descriptor = this.toCropDescriptor(); } catch { descriptor = null; }

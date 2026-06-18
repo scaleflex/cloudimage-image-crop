@@ -129,6 +129,28 @@ describe('resolveServerCrop — nested (free tilt)', () => {
     expect(n.outerCrop.x + n.outerCrop.width).toBeLessThanOrEqual(n.innerW);
     expect(n.outerCrop.y + n.outerCrop.height).toBeLessThanOrEqual(n.innerH);
   });
+
+  it('framing param selects the nested inset (centered=no inset, inset=full inset, auto=heuristic)', () => {
+    // Moderate tilt where the rotated bbox is larger than the original on both
+    // axes → a positive inset, so 'centered' and 'inset' differ by exactly it.
+    const s = { ...createInitialState(), rotation: 25 };
+    const centered = resolveServerCrop(s, W, H, W, H, 'classic', 'centered');
+    const inset = resolveServerCrop(s, W, H, W, H, 'classic', 'inset');
+    const auto = resolveServerCrop(s, W, H, W, H, 'classic'); // default 'auto'
+    const rad = (25 * Math.PI) / 180;
+    const innerW = Math.round(Math.abs(W * Math.cos(rad)) + Math.abs(H * Math.sin(rad)));
+    const innerH = Math.round(Math.abs(W * Math.sin(rad)) + Math.abs(H * Math.cos(rad)));
+    const insetX = Math.round((innerW - W) / 2);
+    const insetY = Math.round((innerH - H) / 2);
+    expect(insetX).toBeGreaterThan(0); // positive-inset regime (both axes)
+    expect(insetY).toBeGreaterThan(0);
+    // 'centered' omits the inset; 'inset' subtracts it → they differ by the inset.
+    expect(centered.nested!.outerCrop.x - inset.nested!.outerCrop.x).toBe(insetX);
+    expect(centered.nested!.outerCrop.y - inset.nested!.outerCrop.y).toBe(insetY);
+    // 'auto' here (positive inset on both axes) matches 'inset'.
+    expect(auto.nested!.outerCrop.x).toBe(inset.nested!.outerCrop.x);
+    expect(auto.nested!.outerCrop.y).toBe(inset.nested!.outerCrop.y);
+  });
 });
 
 describe('resolveServerCrop — flip × rotation order', () => {

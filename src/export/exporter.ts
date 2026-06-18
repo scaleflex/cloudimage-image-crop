@@ -324,6 +324,18 @@ export interface ServerCrop {
 }
 
 /**
+ * How the nested (free-tilt) outer crop is framed inside Cloudimage's rotated
+ * canvas. This turned out to be a PER-IMAGE CDN property that can NOT be derived
+ * from the crop geometry — verified against the live CDN that it is independent
+ * of aspect, format, EXIF, dimensions and rotation angle (some images measure
+ * the nested crop from the centred original frame, others from the rotated-bbox
+ * corner). It must therefore be calibrated once per image (see
+ * `calibrateServerFraming`) and carried in the {@link CropDescriptor}. `'auto'`
+ * is a best-effort heuristic for callers that cannot calibrate.
+ */
+export type ServerFraming = 'auto' | 'centered' | 'inset';
+
+/**
  * Resolve the {@link ServerCrop} plan for a state + display box. Pure; shares
  * {@link resolveDisplay} with the canvas renderer so the two never diverge.
  */
@@ -334,6 +346,7 @@ export function resolveServerCrop(
   containerWidth: number,
   containerHeight: number,
   variant: 'classic' | 'fixed' = 'classic',
+  framing: ServerFraming = 'auto',
 ): ServerCrop {
   // Guard degenerate inputs (e.g. a hand-built / corrupted descriptor): a
   // non-positive image size divides by zero in the draw-space mapping, and a
@@ -442,19 +455,21 @@ export function resolveServerCrop(
   // corner. Shift the emitted crop by that inset so the CDN crops the region we
   // computed. (Verified empirically across angles, crop positions and both image
   // orientations; without it every tilted crop is offset by the inset.)
-  // The centred-original-frame inset only holds when the rotated bbox is LARGER
-  // than the original on BOTH axes (moderate tilt). When the effective rotation is
-  // near a quarter-turn, a non-square image's bbox can be NARROWER than the
-  // original on an axis (e.g. a landscape photo turned 90° + slight tilt →
-  // innerW < iw): there the inset turns negative and would push the crop off the
-  // rotated canvas (Cloudimage then clamps → wrong region). In that regime the CDN
-  // uses the plain centred bbox, so fall back to no inset. Verified against the
-  // live CDN on both regimes (portrait/positive-inset and landscape/negative).
-  const rawInsetX = (innerW - iw) / 2;
-  const rawInsetY = (innerH - ih) / 2;
-  const useInset = rawInsetX >= 0 && rawInsetY >= 0;
-  const insetX = useInset ? Math.round(rawInsetX) : 0;
-  const insetY = useInset ? Math.round(rawInsetY) : 0;
+  // Nested-crop framing — whether Cloudimage measures the outer `tl_px`/`br_px`
+  // from the centred original frame's inset `((innerW-iw)/2, (innerH-ih)/2)`
+  // ('inset') or from the rotated-bbox corner ('centered'). This is a PER-IMAGE
+  // CDN property (see {@link ServerFraming}) selected by `framing`. 'auto' is a
+  // best-effort heuristic: apply the inset only when it is non-negative on both
+  // axes, so a near-quarter-turn landscape (innerW < iw → negative inset) isn't
+  // pushed off the rotated canvas. Use a calibrated 'centered'/'inset' for parity.
+  const fullInsetX = Math.round((innerW - iw) / 2);
+  const fullInsetY = Math.round((innerH - ih) / 2);
+  const applyInset =
+    framing === 'inset' ? true
+      : framing === 'centered' ? false
+        : fullInsetX >= 0 && fullInsetY >= 0;
+  const insetX = applyInset ? fullInsetX : 0;
+  const insetY = applyInset ? fullInsetY : 0;
   const outerCrop = {
     x: ox - insetX,
     y: oy - insetY,

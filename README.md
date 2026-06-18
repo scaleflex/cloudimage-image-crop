@@ -331,6 +331,25 @@ const url = crop.toCloudimageURL();                 // uses the element's config
 const webp = crop.toCloudimageURL({ format: 'image/webp', quality: 0.8 });
 ```
 
+#### Free tilt: calibrate once per image
+
+Cloudimage frames a rotated image's nested crop differently **per image** (a
+CDN-side property not derivable from the crop geometry), so a **free-tilt**
+(non-90°) URL is calibrated against the CDN to match the canvas exactly. `save()`
+does this automatically for `outputMode="cloudimage"`. To build a tilt URL
+yourself, `await crop.calibrateCloudimage()` first — one background probe per
+image, then cached:
+
+```ts
+await crop.calibrateCloudimage();   // detect this image's CDN framing (cached)
+const url = crop.toCloudimageURL(); // now exact for free tilt too
+```
+
+The detected framing is written onto the descriptor (`descriptor.serverFraming`),
+so a persisted descriptor reproduces the tilt exactly in Node — no re-calibration
+needed. **Non-tilt** crops (0 / 90 / 180 / 270°) are exact for every image and
+need no calibration.
+
 #### Reproduce a crop server-side / in Node
 
 Persist `toCropDescriptor()` (or the `descriptor` field on the `cloudimage-crop-save`

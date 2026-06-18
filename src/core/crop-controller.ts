@@ -31,6 +31,7 @@ import { setupKeyboard, type KeyboardHandle } from '../a11y/keyboard';
 import { announceState } from '../a11y/aria';
 import { renderToCanvas, canvasToBlob, getTransformParams } from '../export/exporter';
 import { buildCloudimageUrlFromDescriptor, type CloudimageUrlOptions, type CropDescriptor } from '../export/cloudimage-url';
+import { calibrateServerFraming } from '../export/calibrate';
 
 /**
  * Callbacks invoked by the controller in response to state transitions.
@@ -101,6 +102,14 @@ export interface CropController {
    * isn't already a Cloudimage/Filerobot URL.
    */
   toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string;
+  /**
+   * Detect & cache (per image) the Cloudimage nested-crop framing so FREE-TILT
+   * `toCloudimageURL()`/`toCropDescriptor()` reproduce the canvas exactly. Probes
+   * the live CDN once per image (async). Recommended before a cloudimage export
+   * of a tilted crop; non-tilt crops are exact without it. Returns the detected
+   * framing, or null if there's no image / the probe failed.
+   */
+  calibrateCloudimage(): Promise<'centered' | 'inset' | null>;
   update(config: Partial<CloudimageCropConfig>): void;
   destroy(): void;
 }
@@ -128,6 +137,10 @@ export function createCropController(opts: CropControllerOptions): CropControlle
   // src is assigned (or destroy() is called) before the previous Image decode
   // resolved. Prevents out-of-order completions from overwriting state.
   let loadGeneration = 0;
+  // Per-image calibrated nested-crop framing (see calibrateServerFraming). The
+  // Cloudimage rotation-framing is a per-image CDN property, so it's detected
+  // once per image and reused for any tilted crop; cleared on a new image.
+  let calibratedFraming: 'centered' | 'inset' | null = null;
 
   let dragState: DragCropState | null = null;
   let panDragState: { startX: number; startY: number; startPanX: number; startPanY: number } | null = null;
@@ -296,6 +309,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
       if (destroyed || myGen !== loadGeneration) return;
 
       image = img;
+      calibratedFraming = null; // new image → re-calibrate its CDN framing on demand
       callbacks.onLoadingChange?.(false, null);
       callbacks.onImageLoad?.(img);
       initEditor();
@@ -722,6 +736,40 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     return getTransformParams(state, image.naturalWidth, image.naturalHeight);
   }
 
+  /**
+   * Calibrate the per-image Cloudimage nested-crop framing used by FREE-TILT
+   * URLs. Cloudimage frames a rotated image's nested crop differently per image
+   * (a CDN-side property that can't be derived from the crop geometry), so this
+   * probes the live CDN once with a synthetic tilt and caches the result;
+   * subsequent `toCropDescriptor()`/`toCloudimageURL()` bake it in for exact
+   * tilt parity. The framing is per-image (independent of the actual crop/turn),
+   * so one probe covers every crop on the image; the cache clears on a new image.
+   * No-op (returns null) without an image. Safe to await before each cloudimage
+   * export. Non-tilt crops don't need it (they're exact regardless).
+   */
+  async function calibrateCloudimage(): Promise<'centered' | 'inset' | null> {
+    if (!image || destroyed) return null;
+    const { w, h } = layoutSize();
+    const probe: CropDescriptor = {
+      state: { ...createInitialState(cropShape), rotation: 15, cropRect: { x: 0.35, y: 0.35, width: 0.3, height: 0.3 } },
+      imageWidth: image.naturalWidth,
+      imageHeight: image.naturalHeight,
+      containerWidth: w,
+      containerHeight: h,
+      variant: 'classic',
+    };
+    try {
+      calibratedFraming = await calibrateServerFraming(image, probe, {
+        src: config.src,
+        token: config.cloudimageToken || undefined,
+        domain: config.cloudimageDomain || undefined,
+      });
+    } catch {
+      calibratedFraming = null; // leave un-calibrated → 'auto' heuristic in the builder
+    }
+    return calibratedFraming;
+  }
+
   function toCropDescriptor(): CropDescriptor {
     if (!image) throw new Error('No image loaded');
     const { w, h } = layoutSize();
@@ -732,6 +780,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
       containerWidth: w,
       containerHeight: h,
       variant: config.variant,
+      ...(calibratedFraming ? { serverFraming: calibratedFraming } : {}),
     };
   }
 
@@ -836,6 +885,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     toTransformParams,
     toCropDescriptor,
     toCloudimageURL,
+    calibrateCloudimage,
     update,
     destroy,
   };

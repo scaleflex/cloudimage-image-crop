@@ -26,6 +26,23 @@ function query(url: string): URLSearchParams {
 
 const RAW_SRC = 'https://example.com/photo.jpg';
 
+describe('buildCloudimageUrlFromDescriptor — serverFraming (calibrated nested framing)', () => {
+  it('honors descriptor.serverFraming for the free-tilt outer crop', () => {
+    const state = applyRotation(createInitialState(), 25); // tilted → nested URL
+    const base = {
+      state, imageWidth: 1920, imageHeight: 1080,
+      containerWidth: 1920, containerHeight: 1080, variant: 'classic' as const,
+    };
+    const target = { src: 'https://demo.cloudimg.io/photo.jpg', token: 't' };
+    const centered = buildCloudimageUrlFromDescriptor({ ...base, serverFraming: 'centered' }, target);
+    const inset = buildCloudimageUrlFromDescriptor({ ...base, serverFraming: 'inset' }, target);
+    const cx = Number(query(centered).get('tl_px')!.split(',')[0]);
+    const ix = Number(query(inset).get('tl_px')!.split(',')[0]);
+    // 'centered' omits the leftward inset, so its tl_px starts further right.
+    expect(cx).toBeGreaterThan(ix);
+  });
+});
+
 describe('buildCloudimageUrl — base URL & target', () => {
   it('wraps a raw origin URL in the token host (fetch-from-origin path form)', () => {
     const url = buildCloudimageUrl(makeParams(), { src: RAW_SRC, token: 'demo' });

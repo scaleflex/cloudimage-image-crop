@@ -57,4 +57,7 @@ export type { CloudimageUrlOptions, CloudimageTarget, CropDescriptor } from './e
 // outside the photo, so the CDN result drops background margins the canvas
 // shows) before committing to a server-side URL.
 export { resolveServerCrop } from './export/exporter';
-export type { ServerCrop } from './export/exporter';
+export type { ServerCrop, ServerFraming } from './export/exporter';
+// Browser-only: detect a per-image Cloudimage nested-crop framing against the
+// live CDN, for exact free-tilt server URLs (see `CropDescriptor.serverFraming`).
+export { calibrateServerFraming } from './export/calibrate';

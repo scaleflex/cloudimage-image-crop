@@ -28,6 +28,21 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     the **`fixed` variant for guaranteed parity** (it cover-fits → crop always
     inside the photo), or keep the `classic` crop within the photo.
     `resolveServerCrop(...).clamped` flags it.
+- **Per-image free-tilt calibration (`calibrateCloudimage()` / `serverFraming`).**
+  Cloudimage frames a rotated image's nested crop differently **per image** — it
+  measures the outer crop either from the centred original frame or from the
+  rotated-bbox corner. This is a CDN-side property that can NOT be derived from
+  the crop geometry (verified against the live CDN: independent of aspect, format,
+  EXIF, dimensions and rotation angle), so a free-tilt URL could otherwise land on
+  the wrong region for some images. The editor now **auto-detects** the correct
+  framing per image (one background CDN probe, then cached) and bakes it into the
+  emitted `url`/`descriptor` for exact free-tilt parity. `save()` does this
+  automatically for `cloudimage` output; `calibrateCloudimage()` (element /
+  controller / React hooks) pre-warms it; `CropDescriptor.serverFraming`
+  (`'centered' | 'inset'`) carries it for Node reproduction. New exports:
+  `calibrateServerFraming(image, descriptor, target)`, the `ServerFraming` type,
+  and a `framing` argument on `resolveServerCrop`. Non-tilt crops (0/90/180/270°)
+  are exact for every image and need no calibration.
 - `toCloudimageURL(options?)` and `toCropDescriptor()` on the `<cloudimage-crop>`
   element, the headless controller, and the React `useCloudimageCrop` /
   `useCloudimageCropController` hooks.

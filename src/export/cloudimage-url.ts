@@ -59,6 +59,15 @@ export interface CropDescriptor {
   containerWidth: number;
   containerHeight: number;
   variant: 'classic' | 'fixed';
+  /**
+   * Calibrated nested-crop framing for **free-tilt** URLs. Cloudimage frames a
+   * rotated image's nested crop differently per image (a CDN-side property that
+   * can't be derived from the crop geometry), so the editor detects it once per
+   * image via `calibrateServerFraming` and stores it here; the builder then
+   * reproduces the tilt exactly. Omitted (or for non-tilt crops, where it's
+   * irrelevant) → `resolveServerCrop`'s best-effort `'auto'` heuristic.
+   */
+  serverFraming?: 'centered' | 'inset';
 }
 
 const DEFAULT_DOMAIN = 'cloudimg.io';
@@ -165,6 +174,7 @@ export function buildCloudimageUrlFromDescriptor(d: CropDescriptor, target: Clou
   if (!target.src) throw new Error('buildCloudimageUrlFromDescriptor: target.src is required');
   const sc = resolveServerCrop(
     d.state, d.imageWidth, d.imageHeight, d.containerWidth, d.containerHeight, d.variant,
+    d.serverFraming ?? 'auto',
   );
   return sc.tilted ? emitNested(sc, target) : emitSinglePass(sc, target);
 }

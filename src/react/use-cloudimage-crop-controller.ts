@@ -57,6 +57,8 @@ export interface CropControllerApi {
   toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string | null;
   /** Serializable snapshot to rebuild the Cloudimage URL server-side (null until live). */
   toCropDescriptor(): CropDescriptor | null;
+  /** Calibrate the per-image Cloudimage framing for exact free-tilt URLs (async; cached per image). */
+  calibrateCloudimage(): Promise<'centered' | 'inset' | null>;
   /** Underlying controller handle (null until both refs are attached). */
   getController(): CropController | null;
 }
@@ -213,6 +215,7 @@ export function useCloudimageCropController(
     toTransformParams: () => controllerRef.current?.toTransformParams() ?? null,
     toCloudimageURL: (options) => controllerRef.current?.toCloudimageURL(options) ?? null,
     toCropDescriptor: () => controllerRef.current?.toCropDescriptor() ?? null,
+    calibrateCloudimage: () => controllerRef.current?.calibrateCloudimage() ?? Promise.resolve(null),
     getController: () => controllerRef.current,
   }), []);
 
