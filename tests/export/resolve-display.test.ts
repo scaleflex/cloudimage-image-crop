@@ -35,6 +35,16 @@ describe('resolveDisplay', () => {
     expect(p.y).toBeCloseTo(H / 2 - 100);
   });
 
+  it('classic 90° turn does NOT shrink the photo (no shorter-axis fit) — size preserved', () => {
+    // Free-layer model: a quarter-turn rotates the photo in place at its current
+    // scale; it is NOT letterboxed down to the canvas's short axis. The draw size
+    // stays the full image px (the footprint may overflow the canvas, which is OK
+    // — pan/zoom to reframe). Mirrors image-layer.ts so canvas ↔ server stay synced.
+    const d = resolveDisplay(applyRotateLeft(createInitialState()), W, H, W, H, 'classic');
+    expect(d.drawW).toBe(W);
+    expect(d.drawH).toBe(H);
+  });
+
   it('inverse round-trips (scale + pan)', () => {
     const d = resolveDisplay(applyPan(applyScale(createInitialState(), 1.5, 0.5, 5), 30, -20), W, H, W, H, 'classic');
     const inv = invertMatrix(d.imgToDisp);

@@ -97,14 +97,13 @@ export function drawImageLayer(
     drawW = c.drawW;
     drawH = c.drawH;
   } else {
-    // Classic: the canvas keeps its size across 90° rotations, so on a
-    // quarter-turn we scale the image down to the shorter canvas axis — its
-    // post-rotation bounding box then fits inside the unchanged frame (with
-    // gutters on the long axis) instead of overflowing.
-    const is90 = Math.round(state.quarterTurns / 90) % 2 !== 0;
-    const fit = is90 ? Math.min(w, h) / Math.max(w, h) : 1;
-    drawW = w * fit;
-    drawH = h * fit;
+    // Classic: the photo is a free layer drawn at the container size (the box
+    // carries the photo's aspect) and zoomed/panned by the user. A 90°/270° turn
+    // must NOT change the photo's size — it just rotates in place at the current
+    // scale. Its post-rotation footprint may overflow the canvas (the long axis
+    // sticks out); that's fine in the free-layer model — pan/zoom to reframe.
+    drawW = w;
+    drawH = h;
   }
 
   ctx.drawImage(image, -drawW / 2, -drawH / 2, drawW, drawH);

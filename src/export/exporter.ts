@@ -73,9 +73,10 @@ export interface ResolvedDisplay {
  * canvas) and {@link resolveServerCrop} (inverts it to derive CDN crop coords).
  *
  * Classic: the editor box has the photo aspect, so display space IS image-pixel
- * space (DW=iw, DH=ih) and the photo fills it; a 90°/270° turn letterboxes the
- * photo (shorter-axis fit). Fixed: the box has the FRAME aspect, the photo is
- * cover-fit, and display space is the box scaled up toward native resolution.
+ * space (DW=iw, DH=ih) and the photo fills it; a 90°/270° turn just rotates the
+ * photo in place (no shorter-axis fit — its footprint may overflow). Fixed: the
+ * box has the FRAME aspect, the photo is cover-fit, and display space is the box
+ * scaled up toward native resolution.
  */
 export function resolveDisplay(
   state: TransformState,
@@ -104,10 +105,11 @@ export function resolveDisplay(
   } else {
     DW = iw;
     DH = ih;
-    const is90 = Math.round(state.quarterTurns / 90) % 2 !== 0;
-    const fit = is90 ? Math.min(DW, DH) / Math.max(DW, DH) : 1;
-    drawW = DW * fit;
-    drawH = DH * fit;
+    // Classic: no shorter-axis fit on a 90°/270° turn — the photo keeps its size
+    // and just rotates (mirrors image-layer.ts's free-layer draw). Display space
+    // IS image-pixel space (DW=iw, DH=ih) at every quarter-turn.
+    drawW = DW;
+    drawH = DH;
   }
 
   const cropX = state.cropRect.x * DW;
@@ -238,8 +240,8 @@ export function renderToCanvas(
     ctx.rotate(degreesToRadians(state.quarterTurns));
   }
 
-  // `drawW`/`drawH` computed above: cover-fit (fixed) or shorter-axis fit on a
-  // 90° turn (classic, matches image-layer.ts).
+  // `drawW`/`drawH` computed above: cover-fit (fixed) or the full image px in
+  // classic (no shorter-axis fit on a 90° turn — matches image-layer.ts).
   ctx.drawImage(image, -drawW / 2, -drawH / 2, drawW, drawH);
 
   ctx.restore();
@@ -300,8 +302,8 @@ export interface ServerCrop {
    * True when the crop window extends beyond the (transformed) image and had to
    * be clamped to its bounds — i.e. the canvas shows empty/background margins
    * there that a Cloudimage URL cannot reproduce (CDNs clamp crops to the image,
-   * they don't pad). Happens with a `classic` 90°/270° turn whose crop frame
-   * reaches into the letterbox margin, or any zoom-out below cover. Geometry for
+   * they don't pad). Happens with a `classic` crop frame that reaches past the
+   * (possibly rotated / zoomed-out) photo into the canvas background. Geometry for
    * the in-image region is still exact; only the margin can't be matched.
    */
   clamped: boolean;

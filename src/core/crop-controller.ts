@@ -200,15 +200,14 @@ export function createCropController(opts: CropControllerOptions): CropControlle
   }
 
   /**
-   * Keep the photo covering the crop so the export never has transparent gaps.
-   * Clamps pan + raises scale to the (max-capped) cover floor, and pins the
-   * renderer's lower scale bound to it so the elastic bounce can't dip under
-   * coverage.
+   * `fixed` variant only: keep the photo covering the whole editor box so the
+   * export never has transparent gaps — clamp pan + raise scale to the
+   * (max-capped) cover floor, and pin the renderer's lower scale bound to it so
+   * the elastic bounce can't dip under coverage.
    *
-   * - `fixed`: frame = whole editor box; photo draw model = cover-fit.
-   * - `classic`: frame = movable/resizable crop rect; photo draw model = the
-   *   stretched container box (matches image-layer's classic draw). Skipped on
-   *   a 90°/270° turn, where classic intentionally letterboxes to fit.
+   * `classic` is a free-layer model: the frame and the photo are independent, the
+   * photo may be zoomed/panned freely (including smaller than the frame), so there
+   * is no cover floor and no pan-lock — just the plain `minScale/maxScale` bounds.
    */
   function applyCover(): void {
     if (!image || !renderer) return;
