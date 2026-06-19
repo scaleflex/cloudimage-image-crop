@@ -119,8 +119,6 @@ export function resolveDisplay(
 
   // Build the image(draw-space) → display matrix mirroring renderToCanvas's ctx
   // chain EXACTLY (ctx pre-multiplies, so each op is appended on the right).
-  const liveCx = (state.cropRect.x + state.cropRect.width / 2) * DW;
-  const liveCy = (state.cropRect.y + state.cropRect.height / 2) * DH;
   const tiltPivot = state.rotationPivot ?? {
     x: state.cropRect.x + state.cropRect.width / 2,
     y: state.cropRect.y + state.cropRect.height / 2,
@@ -136,9 +134,13 @@ export function resolveDisplay(
     m = multiplyMatrices(m, translateMatrix(-tiltCx, -tiltCy));
   }
   if (state.flipH || state.flipV) {
-    m = multiplyMatrices(m, translateMatrix(liveCx, liveCy));
+    // Flip pivots about the IMAGE centre (DW/2, DH/2), NOT the crop centre, so a
+    // mirrored photo doesn't slide when the frame is moved/resized. Mirrors
+    // image-layer.ts. Only the pivot (a translation) changes — the reflection is
+    // unchanged, so the flip×rotation `geomDeg` in resolveServerCrop still holds.
+    m = multiplyMatrices(m, translateMatrix(DW / 2, DH / 2));
     m = multiplyMatrices(m, scaleMatrix(state.flipH ? -1 : 1, state.flipV ? -1 : 1));
-    m = multiplyMatrices(m, translateMatrix(-liveCx, -liveCy));
+    m = multiplyMatrices(m, translateMatrix(-DW / 2, -DH / 2));
   }
   m = multiplyMatrices(m, translateMatrix(DW / 2, DH / 2));
   m = multiplyMatrices(m, scaleMatrix(state.scale, state.scale));
@@ -210,8 +212,6 @@ export function renderToCanvas(
   ctx.translate(-cropX, -cropY);
 
   // Mirror image-layer.ts transform chain in DW×DH display space.
-  const liveCx = (state.cropRect.x + state.cropRect.width / 2) * DW;
-  const liveCy = (state.cropRect.y + state.cropRect.height / 2) * DH;
   const tiltPivot = state.rotationPivot ?? {
     x: state.cropRect.x + state.cropRect.width / 2,
     y: state.cropRect.y + state.cropRect.height / 2,
@@ -225,9 +225,12 @@ export function renderToCanvas(
     ctx.translate(-tiltCx, -tiltCy);
   }
   if (state.flipH || state.flipV) {
-    ctx.translate(liveCx, liveCy);
+    // Flip about the IMAGE centre (DW/2, DH/2), matching resolveDisplay and
+    // image-layer.ts — crop-independent, so the mirrored photo holds still when
+    // the frame moves.
+    ctx.translate(DW / 2, DH / 2);
     ctx.scale(state.flipH ? -1 : 1, state.flipV ? -1 : 1);
-    ctx.translate(-liveCx, -liveCy);
+    ctx.translate(-DW / 2, -DH / 2);
   }
 
   ctx.translate(DW / 2, DH / 2);

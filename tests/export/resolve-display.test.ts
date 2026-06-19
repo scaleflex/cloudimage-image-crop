@@ -45,6 +45,21 @@ describe('resolveDisplay', () => {
     expect(d.drawH).toBe(H);
   });
 
+  it('flip pivots about the image centre, not the crop → moving the frame does not move the photo', () => {
+    // Regression for the "after a flip, dragging the frame slides the photo
+    // horizontally" bug: flipH must mirror about the image centre, so the
+    // image→display matrix is independent of where the crop frame sits. A fixed
+    // image pixel must map to the same display point for two different crop rects.
+    const cropA = { ...createInitialState(), flipH: true, cropRect: { x: 0.1, y: 0.1, width: 0.4, height: 0.4 } };
+    const cropB = { ...createInitialState(), flipH: true, cropRect: { x: 0.5, y: 0.5, width: 0.4, height: 0.4 } };
+    const dA = resolveDisplay(cropA, W, H, W, H, 'classic');
+    const dB = resolveDisplay(cropB, W, H, W, H, 'classic');
+    const pA = transformPoint(dA.imgToDisp, 123, -45);
+    const pB = transformPoint(dB.imgToDisp, 123, -45);
+    expect(pA.x).toBeCloseTo(pB.x);
+    expect(pA.y).toBeCloseTo(pB.y);
+  });
+
   it('inverse round-trips (scale + pan)', () => {
     const d = resolveDisplay(applyPan(applyScale(createInitialState(), 1.5, 0.5, 5), 30, -20), W, H, W, H, 'classic');
     const inv = invertMatrix(d.imgToDisp);

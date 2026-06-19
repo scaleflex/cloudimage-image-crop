@@ -44,16 +44,11 @@ export function drawImageLayer(
 
   ctx.save();
 
-  // 1. Fine rotation and flip pivot around the crop-rect center —
-  //    whatever the user framed with zoom/pan stays inside the frame
-  //    while it tilts or mirrors. Applied first, in canvas-pixel space,
-  //    before the image-local transform chain.
-  //    Tilt uses a pivot captured at the moment the user first tilts
-  //    (`state.rotationPivot`); flip uses the live crop centre. Decoupling
-  //    the tilt pivot from the live frame keeps the photo from dragging
-  //    along when the user later resizes the crop.
-  const liveCx = x + (state.cropRect.x + state.cropRect.width / 2) * w;
-  const liveCy = y + (state.cropRect.y + state.cropRect.height / 2) * h;
+  // 1. Fine rotation + flip, applied first in canvas-pixel space before the
+  //    image-local chain. Tilt pivots about a point captured at first tilt
+  //    (`state.rotationPivot`); flip pivots about the IMAGE centre (cx, cy).
+  //    Both are decoupled from the live crop rect, so moving or resizing the
+  //    frame never drags the tilted / mirrored photo along with it.
   const tiltPivot = state.rotationPivot ?? {
     x: state.cropRect.x + state.cropRect.width / 2,
     y: state.cropRect.y + state.cropRect.height / 2,
@@ -66,9 +61,9 @@ export function drawImageLayer(
     ctx.translate(-tiltCx, -tiltCy);
   }
   if (state.flipH !== 1 || state.flipV !== 1) {
-    ctx.translate(liveCx, liveCy);
+    ctx.translate(cx, cy);
     ctx.scale(state.flipH, state.flipV);
-    ctx.translate(-liveCx, -liveCy);
+    ctx.translate(-cx, -cy);
   }
 
   // 2. Translate to image center
