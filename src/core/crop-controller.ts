@@ -215,28 +215,22 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     const { w, h } = layoutSize();
     if (w <= 0 || h <= 0) return;
 
-    let frame: { x: number; y: number; width: number; height: number };
-    let drawW0: number;
-    let drawH0: number;
-    if (config.variant === 'fixed') {
-      frame = { x: 0, y: 0, width: w, height: h };
-      const cover = computeCoverDraw(w, h, image.naturalWidth, image.naturalHeight, state.quarterTurns);
-      drawW0 = cover.drawW;
-      drawH0 = cover.drawH;
-    } else {
-      // Classic keeps the existing letterbox on quarter-turns.
-      if (Math.round(state.quarterTurns / 90) % 2 !== 0) {
-        renderer.setScaleBounds(config.minScale, config.maxScale);
-        return;
-      }
-      const cr = state.cropRect;
-      frame = { x: cr.x * w, y: cr.y * h, width: cr.width * w, height: cr.height * h };
-      // Classic draws the photo stretched to the container box (image-layer.ts).
-      drawW0 = w;
-      drawH0 = h;
+    // Only the FIXED variant forces the photo to cover the frame: there the frame
+    // IS the export, so a gap would show as a transparent hole. CLASSIC treats the
+    // frame and the photo as two independent layers — the photo may be zoomed and
+    // panned freely, INCLUDING smaller than the crop frame, which simply reveals
+    // the canvas background around the photo (a visible, intentional choice; the
+    // server-crop reproduces whatever overlaps the image and clamps the rest). So
+    // classic gets no cover floor and no pan-lock: moving the frame never drags
+    // the photo and panning the photo never tugs the frame.
+    if (config.variant !== 'fixed') {
+      renderer.setScaleBounds(config.minScale, config.maxScale);
+      return;
     }
 
-    const r = clampCoverPanScale(state, w, h, frame, drawW0, drawH0, config.maxScale);
+    const frame = { x: 0, y: 0, width: w, height: h };
+    const cover = computeCoverDraw(w, h, image.naturalWidth, image.naturalHeight, state.quarterTurns);
+    const r = clampCoverPanScale(state, w, h, frame, cover.drawW, cover.drawH, config.maxScale);
     state = { ...state, scale: r.scale, panX: r.panX, panY: r.panY };
     renderer.setScaleBounds(r.minScale, config.maxScale);
   }
@@ -426,18 +420,16 @@ export function createCropController(opts: CropControllerOptions): CropControlle
             startY: pointer.y,
             startRect: { ...state.cropRect },
           };
-        } else if (target.type === 'crop-area') {
-          // First-version (2.0.0) behavior: when ZOOMED IN (scale > 1) — or in the
-          // fixed variant — dragging the frame area PANS the photo under it; when
-          // NOT zoomed (classic, scale ≤ 1) it MOVES the crop frame. So in the
-          // common un-zoomed case the frame and photo are independent (drag = move
-          // crop), and when you've zoomed the photo you reposition it by dragging.
-          // Server-crop reads the resulting state, so URL parity is unaffected.
-          if (config.variant === 'fixed' || state.scale > 1) {
-            panDragState = { startX: pointer.x, startY: pointer.y, startPanX: state.panX, startPanY: state.panY };
-          } else {
-            moveRectState = { startX: pointer.x, startY: pointer.y, startRect: { ...state.cropRect } };
-          }
+        } else if (target.type === 'crop-area' || target.type === 'outside') {
+          // Frame and photo are INDEPENDENT layers. Dragging anywhere on the
+          // canvas — inside the frame or on the photo around it — PANS the photo,
+          // so you can reposition the photo even when it's zoomed out smaller than
+          // the frame. Move the frame itself with the move-handle and resize it
+          // with the corner/edge handles. The cover constraint is off in classic
+          // (see applyCover), so panning the photo never tugs the frame and moving
+          // the frame never tugs the photo. Server-crop reads the resulting state,
+          // so URL parity is unaffected.
+          panDragState = { startX: pointer.x, startY: pointer.y, startPanX: state.panX, startPanY: state.panY };
         } else if (target.type === 'handle' && target.position) {
           resizeState = startResize('handle-' + target.position, state.cropRect, pointer.x, pointer.y);
         }

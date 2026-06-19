@@ -28,16 +28,17 @@ describe('hitTest', () => {
 });
 
 describe('getCursor', () => {
-  it('should return move for crop-area', () => {
-    expect(getCursor({ type: 'crop-area' }, false)).toBe('move');
+  it('should return grab for crop-area (pans the photo)', () => {
+    expect(getCursor({ type: 'crop-area' }, false)).toBe('grab');
   });
 
   it('should return grabbing when dragging crop-area', () => {
     expect(getCursor({ type: 'crop-area' }, true)).toBe('grabbing');
   });
 
-  it('should return crosshair for outside', () => {
-    expect(getCursor({ type: 'outside' }, false)).toBe('crosshair');
+  it('should return grab/grabbing for outside (pans the photo)', () => {
+    expect(getCursor({ type: 'outside' }, false)).toBe('grab');
+    expect(getCursor({ type: 'outside' }, true)).toBe('grabbing');
   });
 
   it('should return resize cursors for handles', () => {

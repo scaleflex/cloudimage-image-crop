@@ -59,6 +59,26 @@ describe('resolveServerCrop — single pass (no tilt)', () => {
     expect(sc.cropPx.x + sc.cropPx.width).toBeLessThanOrEqual(W);
     expect(sc.clamped).toBe(false); // fixed cover-fits → frame always within the photo
   });
+
+  it('classic photo zoomed out smaller than the frame (scale < 1) → crop clamps to the photo, flagged', () => {
+    // With the cover constraint off in classic, the photo may shrink below the
+    // crop frame; the crop window then spills past the photo into the canvas
+    // background. The server crop reproduces only what overlaps the image
+    // (clamped to its bounds) and flags `clamped` — i.e. it returns the result
+    // "as is" rather than throwing or emitting out-of-bounds pixels.
+    const s = { ...createInitialState(), scale: 0.5 };
+    const sc = resolveServerCrop(s, W, H, W, H, 'classic');
+    expect(sc.tilted).toBe(false);
+    expect(sc.clamped).toBe(true);
+    // cropPx stays a valid sub-rect of the photo — no negative or over-bounds px.
+    expect(sc.cropPx.x).toBeGreaterThanOrEqual(0);
+    expect(sc.cropPx.y).toBeGreaterThanOrEqual(0);
+    expect(sc.cropPx.x + sc.cropPx.width).toBeLessThanOrEqual(W);
+    expect(sc.cropPx.y + sc.cropPx.height).toBeLessThanOrEqual(H);
+    // output dimensions stay positive → a well-formed URL, not a degenerate crop.
+    expect(sc.outW).toBeGreaterThan(0);
+    expect(sc.outH).toBeGreaterThan(0);
+  });
 });
 
 describe('resolveServerCrop — nested (free tilt)', () => {
