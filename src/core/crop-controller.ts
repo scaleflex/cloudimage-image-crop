@@ -427,21 +427,17 @@ export function createCropController(opts: CropControllerOptions): CropControlle
             startRect: { ...state.cropRect },
           };
         } else if (target.type === 'crop-area') {
-          if (config.variant === 'fixed') {
-            // Fixed variant: the box IS the crop frame (it can't move/resize), so
-            // dragging it pans the photo under the fixed frame.
+          // First-version (2.0.0) behavior: when ZOOMED IN (scale > 1) — or in the
+          // fixed variant — dragging the frame area PANS the photo under it; when
+          // NOT zoomed (classic, scale ≤ 1) it MOVES the crop frame. So in the
+          // common un-zoomed case the frame and photo are independent (drag = move
+          // crop), and when you've zoomed the photo you reposition it by dragging.
+          // Server-crop reads the resulting state, so URL parity is unaffected.
+          if (config.variant === 'fixed' || state.scale > 1) {
             panDragState = { startX: pointer.x, startY: pointer.y, startPanX: state.panX, startPanY: state.panY };
           } else {
-            // Classic variant: dragging INSIDE the frame MOVES the crop rect —
-            // the photo stays put. Frame and photo move independently (pan the
-            // photo by dragging the area OUTSIDE the frame). The server-crop path
-            // reads the resulting state, so URL parity is unaffected either way.
             moveRectState = { startX: pointer.x, startY: pointer.y, startRect: { ...state.cropRect } };
           }
-        } else if (target.type === 'outside') {
-          // On the photo, outside the crop frame → pan the photo (reposition it
-          // under the crop). The frame stays; only panX/panY change.
-          panDragState = { startX: pointer.x, startY: pointer.y, startPanX: state.panX, startPanY: state.panY };
         } else if (target.type === 'handle' && target.position) {
           resizeState = startResize('handle-' + target.position, state.cropRect, pointer.x, pointer.y);
         }

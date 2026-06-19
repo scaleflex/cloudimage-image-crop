@@ -32,13 +32,12 @@ describe('getCursor', () => {
     expect(getCursor({ type: 'crop-area' }, false)).toBe('move');
   });
 
-  it('should return move when dragging crop-area (classic: drags the crop frame)', () => {
-    expect(getCursor({ type: 'crop-area' }, true)).toBe('move');
+  it('should return grabbing when dragging crop-area', () => {
+    expect(getCursor({ type: 'crop-area' }, true)).toBe('grabbing');
   });
 
-  it('should return grab/grabbing for outside (pans the photo)', () => {
-    expect(getCursor({ type: 'outside' }, false)).toBe('grab');
-    expect(getCursor({ type: 'outside' }, true)).toBe('grabbing');
+  it('should return crosshair for outside', () => {
+    expect(getCursor({ type: 'outside' }, false)).toBe('crosshair');
   });
 
   it('should return resize cursors for handles', () => {
