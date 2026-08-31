@@ -9,40 +9,55 @@ import { css } from 'lit';
 export const sfxCropToolbarStyles = css`
   :host {
     position: absolute;
-    top: 16px;
+    top: 12px;
     left: 0;
     right: 0;
     display: flex;
     justify-content: center;
     z-index: 5;
-    animation: ci-crop-toolbar-enter 300ms ease forwards;
+    /* No "forwards" fill mode: with it, the finished animation's effect
+       (opacity:1, its own "to" keyframe) keeps outranking the regular CSS
+       cascade forever — including the opacity:0.25 below for
+       [interacting], which a fill-mode:forwards animation on the SAME
+       property silently wins over no matter its specificity. Dropping
+       "forwards" hands control back to the plain opacity declarations
+       the instant the 300ms intro finishes; since the animation's own
+       endpoint already is opacity:1, matching the base rule below, there's
+       no visible seam at the handoff. */
+    animation: ci-crop-toolbar-enter 300ms ease;
     pointer-events: none;
+    opacity: 1;
+    transition: opacity 150ms ease;
   }
 
   :host([toolbar-position="bottom"]) {
     top: auto;
-    bottom: 16px;
+    bottom: 12px;
+  }
+
+  /* Dragging/resizing/panning the crop frame — fade every control
+     (buttons + the nested rotate ruler, both descendants of :host, so one
+     opacity here covers both) nearly all the way out so the photo
+     underneath gets the user's full attention while their cursor is busy
+     elsewhere. Not display:none / visibility:hidden: still technically
+     there (a very faint outline), just out of the way — and no layout
+     shift when it returns. Not fully 0 either — a totally invisible
+     toolbar mid-drag reads as "the controls vanished," not "faded." */
+  :host([interacting]) {
+    opacity: 0.08;
   }
 
   /* Fixed variant: the editor box IS the crop frame, so the floating bar sits
-     directly over the photo. Classic gets its button contrast for free from
-     the dimmed crop mask; fixed has none, so give each control its own
-     translucent pill to stay legible over arbitrary image content.
+     directly over the photo. Each button's own dark pill (below) already
+     gives Reset / Rotate / Flip / Ratio their contrast regardless of
+     variant, so no separate spacing/skin override is needed here — fixed
+     uses the exact same gaps/padding as classic.
 
-     IMPORTANT: backgrounds only — no backdrop-filter / transform / filter
-     here or on any ancestor. Those create a containing block for
-     position:fixed descendants, which would re-anchor the canvas-bottom ruler
-     + shape popover (both fixed-positioned) to the bar and knock the 45-deg
-     tilt ruler off-screen. A plain background is safe. */
-  :host([variant="fixed"]) .ci-crop-toolbar,
-  :host([variant="fixed"]) .ci-crop-toolbar-group {
-    /* Fixed variant runs a slightly tighter uniform gap than classic. */
-    gap: 12px;
-  }
-  :host([variant="fixed"]) .ci-crop-reset-btn,
-  :host([variant="fixed"]) .ci-crop-toolbar-btn {
-    background: var(--ci-crop-overlay-color);
-  }
+     IMPORTANT: no backdrop-filter / transform / filter on :host or any
+     ancestor. Those create a containing block for position:fixed
+     descendants, which would re-anchor the canvas-bottom ruler + shape
+     popover (both fixed-positioned) to the bar and knock the 45-deg tilt
+     ruler off-screen. */
 
   /* Primary "Done" action — pinned to the right edge of the toolbar strip,
      away from the centered control cluster. The host spans the full block
@@ -50,8 +65,14 @@ export const sfxCropToolbarStyles = css`
   .ci-crop-done-btn {
     position: absolute;
     right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
+    /* :host itself sits at top:12px (see :host above); the toolbar row's
+       own 4px top padding puts its content at an absolute 16px from the
+       crop box edge. This 4px is that SAME local offset (relative to
+       :host, which is Done's containing block) so Done lines up with the
+       toolbar row at that same absolute 16px — not top:50%+translateY
+       (-50%), which centers against :host's content-shrunk height and can
+       drift away from the row whenever that height isn't exactly 36px. */
+    top: 4px;
     pointer-events: auto;
     display: inline-flex;
     align-items: center;
@@ -69,20 +90,67 @@ export const sfxCropToolbarStyles = css`
     letter-spacing: 0.1px;
     white-space: nowrap;
     box-shadow: var(--ci-crop-toolbar-shadow);
-    transition:
-      background var(--ci-crop-transition),
-      transform var(--ci-crop-transition);
+    transition: background var(--ci-crop-transition);
   }
   .ci-crop-done-btn:hover {
     background: var(--ci-crop-primary-hover);
-    transform: translateY(-50%) scale(1.02);
-  }
-  .ci-crop-done-btn:active {
-    transform: translateY(-50%) scale(0.97);
   }
   .ci-crop-done-btn:focus-visible {
     outline: 2px solid var(--ci-crop-ring);
     outline-offset: 2px;
+  }
+
+  /* Secondary "Cancel" — mirrors Done at the opposite (left) edge. A fixed
+     neutral dark pill rather than a theme token: it overlays arbitrary photo
+     content (any brightness, either theme), so it needs its own guaranteed
+     contrast rather than inheriting a token that assumes a page background. */
+  .ci-crop-cancel-btn {
+    position: absolute;
+    left: 16px;
+    top: 4px;
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    padding: 0 18px;
+    background: oklch(0 0 0 / 0.55);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: var(--ci-crop-font);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    white-space: nowrap;
+    box-shadow: var(--ci-crop-toolbar-shadow);
+    transition: background var(--ci-crop-transition);
+  }
+  .ci-crop-cancel-btn:hover {
+    background: oklch(0 0 0 / 0.7);
+  }
+  .ci-crop-cancel-btn:focus-visible {
+    outline: 2px solid var(--ci-crop-ring);
+    outline-offset: 2px;
+  }
+
+  /* Cancel/Done render both an icon and a text label so the narrow-editor
+     breakpoint (below) can swap to icon-only circles without a JS-driven
+     state — just flip which span is visible. Text-label layout is the
+     default. */
+  .ci-crop-cancel-btn-icon,
+  .ci-crop-done-btn-icon {
+    display: none;
+    width: 18px;
+    height: 18px;
+  }
+  .ci-crop-cancel-btn-icon svg,
+  .ci-crop-done-btn-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    stroke-width: 1.5;
   }
 
   /* Hole-punch pattern: the toolbar host is pointer-transparent and
@@ -105,13 +173,28 @@ export const sfxCropToolbarStyles = css`
     pointer-events: none;
   }
 
+  /* Reset / Rotate / Flip / Ratio each keep their OWN dark pill (set on
+     .ci-crop-reset-btn / .ci-crop-toolbar-btn / .ci-crop-shape-trigger
+     below) — the group itself is just a transparent flex row spacing them
+     apart, with a thin divider between segments. */
   .ci-crop-toolbar-group {
     display: flex;
     flex-direction: row;
     align-items: center;
-    /* Match the toolbar's own gap so spacing is uniform across every button
-       (Reset, rotate, flip, shapes), not tighter inside the group. */
-    gap: 16px;
+    gap: 8px;
+    height: 36px;
+  }
+
+  /* Segment divider between Reset / Rotate+Flip / Ratio inside the group.
+     Rendered as an explicit element (conditionally, in toolbar.ts) rather
+     than a CSS ::after so it only ever appears between segments that are
+     actually visible — no stray line when a segment is toggled off via
+     show-rotate-button / show-flip-button / show-shape-selector. */
+  .ci-crop-toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: oklch(1 0 0 / 0.25);
+    flex: none;
   }
 
   /* Sub-element hosts — same hole-punch opt-in as the plain buttons.
@@ -138,27 +221,25 @@ export const sfxCropToolbarStyles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
-    color: var(--ci-crop-text-secondary);
-    /* Transparent default border → hover swaps in a colored ring without
-       the layout shifting from 0 → 1 px. */
-    border: 1px solid transparent;
+    background: oklch(0 0 0 / 0.55);
+    color: #fff;
+    border: none;
     border-radius: 999px;
     cursor: pointer;
     padding: 0;
     transition:
-      border-color var(--ci-crop-transition),
+      background var(--ci-crop-transition),
       color var(--ci-crop-transition),
       transform var(--ci-crop-transition);
   }
 
   .ci-crop-toolbar-btn:hover {
-    border-color: var(--ci-crop-primary);
-    transform: translateY(-1px);
+    background: oklch(0 0 0 / 0.7);
+    transform: none;
   }
 
   .ci-crop-toolbar-btn:active {
-    transform: translateY(0) scale(0.96);
+    transform: scale(0.96);
   }
 
   .ci-crop-toolbar-btn:disabled {
@@ -167,9 +248,7 @@ export const sfxCropToolbarStyles = css`
   }
 
   .ci-crop-toolbar-btn:disabled:hover {
-    border-color: transparent;
-    color: var(--ci-crop-text-muted);
-    transform: none;
+    background: oklch(0 0 0 / 0.55);
   }
 
   .ci-crop-toolbar-btn:focus-visible {
@@ -181,197 +260,123 @@ export const sfxCropToolbarStyles = css`
     width: 20px;
     height: 20px;
     display: block;
+    /* Thinner than the icons' own stroke-width="2" attribute — a CSS
+       property on stroke-width beats a presentation attribute, so this
+       doesn't require touching the shared icon strings in icons.ts. */
+    stroke-width: 1.5;
   }
 
-  /* Reset pill — mirrors the shape-selector trigger visual language:
-     capsule border, transparent fill, primary-blue tint on hover. Lives
-     before every other control so the user can wipe back to the initial
-     state in one click. */
+  /* Reset — icon-only capsule (title/aria-label carry the "Reset all
+     changes" meaning). Lives before every other control so the user can
+     wipe back to the initial state in one click. */
   .ci-crop-reset-btn {
     pointer-events: auto;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    min-width: 84px;
+    justify-content: center;
+    width: 52px;
     height: 36px;
-    background: transparent;
-    color: var(--ci-crop-text-secondary);
-    border: 1.5px solid var(--ci-crop-border);
-    border-radius: 50px;
+    padding: 0;
+    background: oklch(0 0 0 / 0.55);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
     cursor: pointer;
     font-family: var(--ci-crop-font);
     font-size: 14px;
     font-weight: 500;
     letter-spacing: 0.1px;
     white-space: nowrap;
-    transition:
-      background var(--ci-crop-transition),
-      border-color var(--ci-crop-transition),
-      color var(--ci-crop-transition),
-      transform var(--ci-crop-transition),
-      box-shadow var(--ci-crop-transition);
+    transition: background var(--ci-crop-transition);
   }
   .ci-crop-reset-btn:hover {
-    border-color: var(--ci-crop-primary);
-    transform: translateY(-1px);
+    background: oklch(0 0 0 / 0.7);
   }
   .ci-crop-reset-btn:focus-visible {
     outline: 2px solid var(--ci-crop-ring);
     outline-offset: 2px;
   }
   .ci-crop-reset-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     display: block;
-  }
-
-  @media (max-width: 768px) {
-    .ci-crop-toolbar {
-      flex-wrap: wrap;
-      justify-content: center;
-    }
+    stroke-width: 1.5;
   }
 
   @media (max-width: 480px) {
-    .ci-crop-toolbar {
-      padding: 6px 8px;
-      gap: 8px;
-    }
     .ci-crop-toolbar-group {
-      gap: 8px;
+      gap: 6px;
     }
+  }
+
+  /* Narrow editor (component itself is small, regardless of viewport) —
+     SAME behavior for both variants, and for both width-narrow and
+     tall-narrow (portrait phone) boxes: Cancel and Done NEVER leave their
+     pinned corners — no "order" tricks moving them into the tool group's
+     flex flow. That previous approach put every control on one shared
+     flex line and let justify-content:center center the WHOLE line —
+     Cancel and Done ended up centered flush against the group instead of
+     anchored to the block's edges, which is the opposite of what a
+     "Cancel / Done" affordance should look like.
+
+     Instead: Cancel/Done stay exactly where they are (just shrink to
+     icon-only circles to free up horizontal room) and the tool group
+     (Reset/Rotate/Flip/Ratio) stays on the SAME row, centered as always —
+     .ci-crop-toolbar reserves a left/right gutter the width of one corner
+     circle + its gap (36px + 16px edge offset + 8px gap = 60px) so the
+     centered content can never render underneath Cancel/Done, without
+     needing to drop to a separate row. If the group still doesn't fit in
+     what's left, it wraps onto additional centered lines below — but
+     starts at the same top level as Cancel/Done, not artificially pushed
+     down by a fixed margin regardless of whether that room was needed. */
+  @container sfxcrop (max-width: 640px) {
+    :host {
+      top: 8px;
+      left: 4px;
+      right: 4px;
+    }
+    :host([toolbar-position="bottom"]) {
+      top: auto;
+      bottom: 8px;
+    }
+
+    /* Icon-only Cancel/Done — same 36px circle as Reset/Rotate/Flip, so a
+       narrow box doesn't burn width on "Cancel"/"Done" text next to them. */
+    .ci-crop-cancel-btn,
+    .ci-crop-done-btn {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+    }
+    .ci-crop-cancel-btn-label,
+    .ci-crop-done-btn-label {
+      display: none;
+    }
+    .ci-crop-cancel-btn-icon,
+    .ci-crop-done-btn-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ci-crop-toolbar {
+      width: 100%;
+      padding-left: 60px;
+      padding-right: 60px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .ci-crop-reset-btn,
     .ci-crop-toolbar-btn {
-      width: 40px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
+      min-width: 0;
+      padding: 0;
     }
     .ci-crop-toolbar-btn svg {
       width: 18px;
       height: 18px;
-      display: block;
     }
-  }
-
-  /* Narrow editor (component itself is small, regardless of viewport):
-     stack the toolbar vertically along the LEFT edge, icons only.
-     Tucked tight against the edge with a compact 30×30 footprint so
-     the photo behind keeps maximum breathing room. Triggered by the
-     sfxcrop container set on the cloudimage-crop host — matches editor
-     width, not viewport width, so a narrow column on a wide desktop
-     gets the same compact layout.
-
-     EXCLUDED from the fixed variant via :not([variant="fixed"]): a fixed
-     frame is often portrait/phone-shaped (narrow but tall), where the left
-     rail looks wrong — fixed keeps the horizontal top bar at any width. */
-  @container sfxcrop (max-width: 760px) {
-    :host(:not([variant="fixed"])) {
-      top: 8px;
-      bottom: 8px;
-      /* Stay full-width (don't collapse to a left-hugging strip): the Done
-         button is absolutely positioned against this host, so the host must
-         keep spanning to the container's right edge for Done to stay in the
-         top-right corner. The button column is tucked left with padding
-         instead of by repositioning the whole host. */
-      left: 0;
-      right: 0;
-      padding-left: 4px;
-      justify-content: flex-start;
-      /* Cross-axis centers the stacked button column vertically inside
-         the full-height host strip — toolbar floats in the middle of
-         the photo regardless of its content height. */
-      align-items: center;
-    }
-    :host(:not([variant="fixed"])[toolbar-position="bottom"]) {
-      top: 8px;
-      bottom: 8px;
-    }
-    /* Keep Done pinned to the editor's top-right corner — exactly where the
-       desktop bar puts it — even though the host now spans the full photo
-       height (top:50% would otherwise drop it to the vertical middle). A bit
-       smaller and tucked tighter into the corner to free up the photo. */
-    :host(:not([variant="fixed"])) .ci-crop-done-btn {
-      top: 6px;
-      right: 8px;
-      height: 28px;
-      padding: 0 12px;
-      font-size: 12px;
-      transform: none;
-    }
-    :host(:not([variant="fixed"])) .ci-crop-done-btn:hover { transform: scale(1.02); }
-    :host(:not([variant="fixed"])) .ci-crop-done-btn:active { transform: scale(0.97); }
-    :host(:not([variant="fixed"])) .ci-crop-toolbar {
-      flex-direction: column;
-      flex-wrap: nowrap;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 4px;
-      padding: 3px;
-    }
-    :host(:not([variant="fixed"])) .ci-crop-toolbar-group {
-      flex-direction: column;
-      gap: 4px;
-    }
-    :host(:not([variant="fixed"])) .ci-crop-toolbar-btn {
-      width: 30px;
-      height: 30px;
-    }
-    :host(:not([variant="fixed"])) .ci-crop-toolbar-btn svg {
-      width: 16px;
-      height: 16px;
-    }
-    :host(:not([variant="fixed"])) .ci-crop-reset-btn {
-      width: 30px;
-      height: 30px;
-      min-width: 0;
-      padding: 0;
-      gap: 0;
-      justify-content: center;
-    }
-    :host(:not([variant="fixed"])) .ci-crop-reset-btn svg {
-      width: 16px;
-      height: 16px;
-    }
-    :host(:not([variant="fixed"])) .ci-crop-reset-btn span {
-      display: none;
-    }
-  }
-
-  /* Fixed + narrow (portrait/phone frame): keep the horizontal top bar, but
-     render every control as a uniform 40×40 round icon button, centered in
-     the frame. (Reset / shapes labels are dropped — icon only.) */
-  @container sfxcrop (max-width: 760px) {
-    :host([variant="fixed"]) .ci-crop-toolbar {
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-    }
-    :host([variant="fixed"]) .ci-crop-toolbar-group {
-      gap: 10px;
-    }
-    :host([variant="fixed"]) .ci-crop-reset-btn,
-    :host([variant="fixed"]) .ci-crop-toolbar-btn {
-      width: 40px;
-      height: 40px;
-      min-width: 0;
-      padding: 0;
-      gap: 0;
-      justify-content: center;
-    }
-    :host([variant="fixed"]) .ci-crop-reset-btn span {
-      display: none;
-    }
-    :host([variant="fixed"]) .ci-crop-done-btn {
-      /* Stay in the top-right corner when the bar wraps to multiple rows
-         (top:50% would otherwise centre Done over the taller wrapped bar),
-         a bit smaller and tucked tighter into the corner. */
-      top: 6px;
-      right: 8px;
-      height: 28px;
-      padding: 0 12px;
-      font-size: 12px;
-      transform: none;
-    }
-    :host([variant="fixed"]) .ci-crop-done-btn:hover { transform: scale(1.02); }
-    :host([variant="fixed"]) .ci-crop-done-btn:active { transform: scale(0.97); }
   }
 `;

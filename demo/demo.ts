@@ -490,6 +490,8 @@ export function Editor() {
           <button type="button" class="demo-variant-toggle" aria-label="Toggle crop variant" aria-pressed="false">Variant: classic</button>
           <button type="button" class="demo-grid-toggle" aria-label="Toggle rule-of-thirds grid" aria-pressed="false">Grid: off</button>
           <button type="button" class="demo-bleed-toggle" aria-label="Toggle print bleed guides" aria-pressed="false">Bleed: off</button>
+          <button type="button" class="demo-cancel-toggle" aria-label="Toggle the toolbar's Cancel button" aria-pressed="false">Cancel button: off</button>
+          <button type="button" class="demo-dim-toggle" aria-label="Toggle dimming the toolbar while dragging" aria-pressed="false">Dim toolbar on drag: off</button>
           <button type="button" class="demo-theme-toggle" aria-label="Toggle crop theme" aria-pressed="false">${ICONS.moon}</button>
         </div>
         <div class="demo-card demo-card--lg demo-crop-wrap">
@@ -627,6 +629,28 @@ function hydrateHome(root: HTMLElement): void {
       el.showBleedMargin = next;
       bleedBtn.textContent = `Bleed: ${next ? 'on' : 'off'}`;
       bleedBtn.setAttribute('aria-pressed', String(next));
+    });
+  }
+  // Cancel-button toggle — shows/hides the toolbar's optional top-left
+  // "Cancel" button (off by default; see CloudimageCropElement.showCancelButton).
+  const cancelBtn = root.querySelector<HTMLButtonElement>('.demo-cancel-toggle');
+  if (el && cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      const next = !el.showCancelButton;
+      el.showCancelButton = next;
+      cancelBtn.textContent = `Cancel button: ${next ? 'on' : 'off'}`;
+      cancelBtn.setAttribute('aria-pressed', String(next));
+    });
+  }
+  // Dim-toolbar-on-drag toggle — opt-in fade of the toolbar while the user
+  // is actively dragging/resizing/panning the crop frame; off by default.
+  const dimBtn = root.querySelector<HTMLButtonElement>('.demo-dim-toggle');
+  if (el && dimBtn) {
+    dimBtn.addEventListener('click', () => {
+      const next = !el.dimToolbarOnDrag;
+      el.dimToolbarOnDrag = next;
+      dimBtn.textContent = `Dim toolbar on drag: ${next ? 'on' : 'off'}`;
+      dimBtn.setAttribute('aria-pressed', String(next));
     });
   }
   // The built-in toolbar "Done" button fires `cloudimage-crop-save`. A single global

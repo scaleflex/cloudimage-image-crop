@@ -59,6 +59,13 @@ export interface CropControllerCallbacks {
   onWheelZoomActivity?(): void;
   /** Fired when loading/error UI needs to change. */
   onLoadingChange?(loading: boolean, error: string | null): void;
+  /**
+   * Fired when the user starts/stops actively dragging the crop frame —
+   * moving, resizing, or panning (not pinch-zoom, which has its own
+   * momentary gesture). Lets the host fade the toolbar out of the way
+   * while the user's attention is on the photo, not the controls.
+   */
+  onInteractingChange?(interacting: boolean): void;
 }
 
 export interface CropControllerOptions {
@@ -84,6 +91,15 @@ export interface CropController {
   flipHorizontal(): void;
   setRotation(deg: number): void;
   setScale(scale: number): void;
+  /**
+   * Restore a previously-saved {@link CropDescriptor} — full parity with what
+   * `toCropDescriptor()` captured (quarter-turns, fine rotation, flip, crop
+   * rect, scale). Pan is rescaled from the descriptor's captured editor-box
+   * size to the current one, so reopening in a differently-sized editor still
+   * lines up. Call after the image has loaded (e.g. on
+   * `cloudimage-crop-image-load`) so the current layout size is known.
+   */
+  restoreState(descriptor: CropDescriptor): void;
   reset(): void;
   toCanvas(): HTMLCanvasElement;
   toBlob(type?: string, quality?: number): Promise<Blob>;
@@ -111,6 +127,19 @@ export interface CropController {
    */
   calibrateCloudimage(): Promise<'centered' | 'inset' | null>;
   update(config: Partial<CloudimageCropConfig>): void;
+  /**
+   * Resize + redraw the canvas to the layout container's CURRENT size right
+   * now, bypassing the ResizeObserver's 16ms debounce. That debounce exists
+   * to coalesce many rapid, EXTERNAL resize notifications (window resize,
+   * sidebar collapse, ...) into one recompute — the right tradeoff for
+   * "reflow settled elsewhere, catch up once." A caller that is ITSELF
+   * driving the size synchronously, tick by tick (e.g. cloudimage-crop.ts's
+   * own ResizableFrame element-edge drag), needs the opposite: the canvas
+   * kept in lockstep every frame. Debounced there, a fast drag keeps
+   * resetting the timer and the canvas visibly lags the box, showing empty
+   * container background in the gap until the drag slows down or stops.
+   */
+  forceResize(): void;
   destroy(): void;
 }
 
@@ -263,6 +292,23 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     callbacks.onCropChange?.(getCropRect());
   }
 
+  function applyResize(): void {
+    renderer?.resize();
+    // Cover bounds are in container px, so re-clamp after the box resizes
+    // (both variants). applyCover() inside is a no-op until an image loads.
+    syncDisplayState();
+    renderer?.markDirty();
+  }
+
+  function forceResize(): void {
+    if (destroyed) return;
+    if (resizeDebounceTimer) {
+      clearTimeout(resizeDebounceTimer);
+      resizeDebounceTimer = null;
+    }
+    applyResize();
+  }
+
   // === Resize observer ===
   resizeObserver = new ResizeObserver(() => {
     if (destroyed) return;
@@ -270,11 +316,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     resizeDebounceTimer = setTimeout(() => {
       resizeDebounceTimer = null;
       if (destroyed) return;
-      renderer?.resize();
-      // Cover bounds are in container px, so re-clamp after the box resizes
-      // (both variants). applyCover() inside is a no-op until an image loads.
-      syncDisplayState();
-      renderer?.markDirty();
+      applyResize();
     }, 16);
   });
   resizeObserver.observe(layoutContainer);
@@ -324,7 +366,12 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     // explicitly pinned an `initialCrop`.
     if (config.variant === 'fixed') {
       // The frame box itself is the crop — pan/zoom moves the photo under it.
-      // initialCrop is ignored in this variant.
+      // initialCrop is ignored in this variant. Full box on entry even for
+      // `free`: `createInitialState('free', ...)` defaults to an 0.8×0.8
+      // centered inset (the classic-variant look) — wrong for fixed, where
+      // the frame always coincides with the whole box (resizing the box
+      // itself, for `cropShape:'free'`, is a DOM-edge drag on the element —
+      // see ResizableFrame in cloudimage-crop.ts).
       state = { ...state, cropRect: { ...FIXED_CROP_RECT } };
     } else if (!config.initialCrop) {
       state = applyShapeChange(state, cropShape, image.naturalWidth, image.naturalHeight);
@@ -405,11 +452,16 @@ export function createCropController(opts: CropControllerOptions): CropControlle
         let target: HitTarget = hitTest(pointer.x, pointer.y, cropRect);
         // Fixed variant: the frame can't be resized or moved — every grab on
         // it pans the photo. Coerce handle / move-handle hits to a plain
-        // crop-area drag so they fall into the pan branch below.
+        // crop-area drag so they fall into the pan branch below. (Resizing
+        // the fixed variant's box for `cropShape:'free'` is a whole-element
+        // DOM-edge drag, handled at the <cloudimage-crop> element level —
+        // see ResizableFrame in cloudimage-crop.ts — not through the canvas
+        // hit-test / cropRect at all.)
         if (config.variant === 'fixed' && (target.type === 'handle' || target.type === 'move-handle')) {
           target = { type: 'crop-area' };
         }
         isInteracting = true;
+        callbacks.onInteractingChange?.(true);
 
         if (target.type === 'move-handle') {
           // Dedicated diagonal move-handle: drags the crop frame as-is
@@ -532,7 +584,10 @@ export function createCropController(opts: CropControllerOptions): CropControlle
           panDragState = null;
           moveRectState = null;
           resizeState = null;
-          isInteracting = false;
+          if (isInteracting) {
+            isInteracting = false;
+            callbacks.onInteractingChange?.(false);
+          }
           // Forget the tap anchor on release so a stray hover-move cannot form
           // the tail half of a phantom double-tap.
           lastTapX = 0;
@@ -653,6 +708,34 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     callbacks.onScaleSync?.(state.scale);
     syncDisplayState();
     emitChange();
+  }
+
+  function restoreState(descriptor: CropDescriptor): void {
+    if (destroyed) return;
+    const s = descriptor.state;
+    const { w } = layoutSize();
+    // panX/panY are absolute editor-box CSS px; rescale from the descriptor's
+    // captured box width to the current one. Everything else (quarterTurns,
+    // rotation, flip, cropRect, scale) is container-size-independent.
+    const panFactor = descriptor.containerWidth > 0 && w > 0 ? w / descriptor.containerWidth : 1;
+    state = {
+      ...state,
+      quarterTurns: s.quarterTurns,
+      rotation: s.rotation,
+      flipH: s.flipH,
+      flipV: s.flipV,
+      scale: s.scale,
+      panX: s.panX * panFactor,
+      panY: s.panY * panFactor,
+      cropRect: { ...s.cropRect },
+      rotationPivot: s.rotationPivot ? { ...s.rotationPivot } : undefined,
+    };
+    callbacks.onRotationSync?.(state.rotation);
+    callbacks.onScaleSync?.(state.scale);
+    syncDisplayState();
+    announceState(host, state, cropShape);
+    emitChange();
+    emitCropChange();
   }
 
   function reset(): void {
@@ -802,6 +885,9 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     if (partial.variant !== undefined && partial.variant !== oldVariant) {
       renderer?.setFixedFrame(config.variant === 'fixed');
       if (config.variant === 'fixed') {
+        // Entering fixed (from classic) always starts full box — the
+        // classic-mode frame being restored below is an arbitrary
+        // user-resized rect, not a sane fixed-mode starting point.
         state = { ...state, cropRect: { ...FIXED_CROP_RECT } };
       } else {
         // Back to classic: restore an editable, centered frame and the
@@ -873,6 +959,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     flipHorizontal,
     setRotation,
     setScale,
+    restoreState,
     reset,
     toCanvas,
     toBlob,
@@ -882,6 +969,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     toCloudimageURL,
     calibrateCloudimage,
     update,
+    forceResize,
     destroy,
   };
 }

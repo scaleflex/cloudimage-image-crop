@@ -12,6 +12,17 @@ import {
 } from './icons';
 import { baseStyles } from '../styles/shared.css';
 import { sfxCropShapesStyles } from './cloudimage-crop-shapes.styles';
+import { findCropHost } from './popover-anchor';
+
+/** Gap (px) reserved below the available space before comparing it to the
+ *  dropdown's real content height — matches the trigger-to-dropdown gap
+ *  plus a little breathing room, so "just barely fits" doesn't count as
+ *  fitting. */
+const DOWN_MARGIN = 16;
+/** Minimum room (px) to the right of the trigger for an open-right flip to
+ *  actually help — without this, flipping sideways would just trade a
+ *  clipped/scrolling list for a clipped one in the other direction. */
+const MIN_SPACE_RIGHT = 120;
 
 type Orientation = 'landscape' | 'portrait';
 
@@ -126,6 +137,15 @@ export class CloudimageCropShapesElement extends CloudimageCropBaseElement {
   @property({ type: String, reflect: true }) variant: 'classic' | 'fixed' = 'classic';
   @property({ attribute: false }) icons: CropIconOverrides = {};
 
+  /** Which side the dropdown opens on — recomputed each time it opens (see
+   *  `updated()`), never a fixed CSS breakpoint: a short-but-wide box (e.g.
+   *  a 5:1 crop) has plenty of width but little height below the trigger,
+   *  so "open right" only helps case by case, not at a given container
+   *  size. Reflected purely so cloudimage-crop-shapes.styles.ts can select
+   *  on it — internal, not a public API. */
+  @property({ type: String, attribute: 'open-side', reflect: true })
+  openSide: 'down' | 'right' = 'down';
+
   @state() private orientation: Orientation = 'landscape';
   @state() private focusedIndex = -1;
   private focusRafId: number | null = null;
@@ -155,6 +175,16 @@ export class CloudimageCropShapesElement extends CloudimageCropBaseElement {
       const active = resolveShape(this.value);
       if (active && active.show !== 'both') this.orientation = active.show;
 
+      // `updateComplete` resolves once the orientation change above (if
+      // any) has actually re-rendered — a microtask, so it lands before
+      // the browser paints this frame (unlike requestAnimationFrame, which
+      // would paint the wrong open-side once, then visibly snap). Reading
+      // scrollHeight any earlier could measure the previous orientation's
+      // option list instead of the one that's about to show.
+      void this.updateComplete.then(() => {
+        this.openSide = this.computeOpenSide();
+      });
+
       this.focusRafId = requestAnimationFrame(() => {
         this.focusRafId = null;
         const list = this.getVisibleOptions();
@@ -162,6 +192,37 @@ export class CloudimageCropShapesElement extends CloudimageCropBaseElement {
         this.focusOption(activeIdx >= 0 ? activeIdx : 0);
       });
     }
+  }
+
+  /**
+   * Measures real available room against the enclosing crop box (not the
+   * viewport — `.ci-crop-container`'s overflow:clip cuts at the box edge,
+   * which can be well inside the viewport) to decide whether the dropdown
+   * should open downward (default) or flip to the right. Falls back to
+   * 'down' whenever the crop host can't be found — 'down' already degrades
+   * gracefully via its own scroll, so it's the safe default either way.
+   *
+   * Compares against the dropdown's OWN natural content height
+   * (`scrollHeight`), not a guessed fixed threshold — it's already in the
+   * layout (position:absolute, just opacity/pointer-events hidden while
+   * closed per cloudimage-crop-shapes.styles.ts), so its real height is
+   * available to measure directly. A fixed px threshold either flips too
+   * eagerly on a short list or, as happened with the 11-ratio default
+   * list, not eagerly enough on a genuinely short box like a 5:1 crop.
+   */
+  private computeOpenSide(): 'down' | 'right' {
+    const trigger = this.shadowRoot?.querySelector('.ci-crop-shape-trigger');
+    const dropdown = this.shadowRoot?.querySelector('.ci-crop-shape-dropdown');
+    const crop = findCropHost(this);
+    if (!trigger || !dropdown || !crop) return 'down';
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const cropRect = crop.getBoundingClientRect();
+    const spaceBelow = cropRect.bottom - triggerRect.bottom - DOWN_MARGIN;
+    const spaceRight = cropRect.right - triggerRect.right;
+    const neededHeight = (dropdown as HTMLElement).scrollHeight;
+
+    return neededHeight > spaceBelow && spaceRight >= MIN_SPACE_RIGHT ? 'right' : 'down';
   }
 
   render(): unknown {
@@ -177,11 +238,11 @@ export class CloudimageCropShapesElement extends CloudimageCropBaseElement {
           type="button"
           class="ci-crop-shape-trigger"
           aria-label="Select crop shape"
+          title="Select crop shape"
           aria-haspopup="listbox"
           aria-expanded=${this.open ? 'true' : 'false'}
           @click=${this.onTriggerClick}
         >
-          <span class="ci-crop-shape-trigger-icon">${unsafeHTML(resolveIcon('cropAspect', this.icons))}</span>
           <span class="ci-crop-shape-trigger-label">${current.label}</span>
           <span class="ci-crop-shape-chevron">${unsafeHTML(resolveIcon('chevronDown', this.icons))}</span>
         </button>
@@ -193,6 +254,7 @@ export class CloudimageCropShapesElement extends CloudimageCropBaseElement {
               role="tab"
               aria-selected=${this.orientation === 'landscape' ? 'true' : 'false'}
               aria-label="Landscape orientations"
+              title="Landscape orientations"
               @click=${() => this.setOrientation('landscape')}
             >${unsafeHTML(resolveIcon('orientLandscape', this.icons))}</button>
             <button
@@ -201,6 +263,7 @@ export class CloudimageCropShapesElement extends CloudimageCropBaseElement {
               role="tab"
               aria-selected=${this.orientation === 'portrait' ? 'true' : 'false'}
               aria-label="Portrait orientations"
+              title="Portrait orientations"
               @click=${() => this.setOrientation('portrait')}
             >${unsafeHTML(resolveIcon('orientPortrait', this.icons))}</button>
           </div>

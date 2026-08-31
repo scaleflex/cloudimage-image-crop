@@ -53,6 +53,12 @@ export const ICON_LOUPE = '<svg aria-hidden="true" xmlns="http://www.w3.org/2000
 // Lucide `rotate-ccw` — counter-clockwise reset arrow.
 export const ICON_RESET = '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>';
 
+// Lucide `x` — icon-only Cancel, used on narrow mobile-portrait screens.
+export const ICON_CLOSE = '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+
+// Lucide `check` — icon-only Done, used on narrow mobile-portrait screens.
+export const ICON_CHECK = '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
 /**
  * Map from slot name to built-in SVG. {@link resolveIcon} consults a
  * consumer-supplied `CropIconOverrides` first, falling through to this table.
@@ -73,6 +79,8 @@ const DEFAULT_ICONS: Record<keyof CropIconOverrides, string> = {
   orientPortrait:  '',
   chevronDown:     '',
   reset:           '',
+  close:           '',
+  check:           '',
 };
 // Assigned after every ICON_* const in this module has been initialized.
 DEFAULT_ICONS.rotateLeft      = ICON_ROTATE_LEFT;
@@ -89,6 +97,8 @@ DEFAULT_ICONS.orientLandscape = ICON_ORIENT_LANDSCAPE;
 DEFAULT_ICONS.orientPortrait  = ICON_ORIENT_PORTRAIT;
 DEFAULT_ICONS.chevronDown     = ICON_CHEVRON_DOWN;
 DEFAULT_ICONS.reset           = ICON_RESET;
+DEFAULT_ICONS.close           = ICON_CLOSE;
+DEFAULT_ICONS.check           = ICON_CHECK;
 
 /**
  * Resolve an icon slot. Returns the consumer's override when present, else

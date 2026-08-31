@@ -16,12 +16,16 @@ export const sfxCropStyles = css`
     height: 100%;
     font-family: var(--ci-crop-font);
     color: var(--ci-crop-text);
-    /* Establish a named inline-size container so the toolbar / shapes /
-       zoom / rotate sub-elements can switch to their compact left-rail
-       layout based on the editor's own width — independent of the page
-       viewport. A narrow column on a wide desktop (sidebar preview,
-       split view) gets the same compact UI as a phone. */
-    container-type: inline-size;
+    /* Named SIZE container (both axes) so sub-elements can switch layout
+       based on the editor's own WIDTH — independent of the page viewport,
+       so a narrow column on a wide desktop gets the same compact UI as a
+       phone — and so the shape-selector dropdown can clamp its own
+       max-height to the box's real HEIGHT via cqh units (see
+       cloudimage-crop-shapes.styles.ts) instead of the viewport's, which
+       overflows/clips in a short, wide box (e.g. a 5:1 crop). Safe to
+       size-contain: fitHostToImage() always sets an explicit pixel
+       width/height on :host before layout matters here. */
+    container-type: size;
     container-name: sfxcrop;
   }
 
@@ -34,7 +38,16 @@ export const sfxCropStyles = css`
 
   .ci-crop-container {
     position: relative;
-    overflow: hidden;
+    /* "clip", not "hidden": this box clips the photo to the crop frame's
+     * shape but must never actually SCROLL. Popovers positioned inside it
+     * (e.g. the shape-selector dropdown) are position:absolute and their
+     * open height can exceed the container — overflow:hidden still lets
+     * the browser silently scrollTop it into view whenever an option
+     * receives focus, dragging the canvas out of frame and exposing this
+     * element's own background as a blank strip underneath. "clip" clips
+     * identically but makes the box non-scrollable, so scrollTop can never
+     * move (programmatically or via focus) — no visual jump. */
+    overflow: clip;
     width: 100%;
     height: 100%;
     background: var(--ci-crop-bg);
@@ -105,4 +118,59 @@ export const sfxCropStyles = css`
     text-align: center;
   }
   .ci-crop-error--visible { display: flex; }
+
+  /* ====== ResizableFrame (variant:'fixed', cropShape:'free') ======
+   * Drag-the-box's-own-edge handles. Siblings of .ci-crop-container (which
+   * overflow:clip's the photo to the frame shape) so a handle sitting half
+   * outside the box's edge isn't itself clipped away — :host is the
+   * outermost un-clipped box they can anchor to.
+   *
+   * Visual language borrowed straight from classic's own canvas-drawn frame
+   * (crop-frame.ts): small circular corner dots (--ci-crop-handle-fill/
+   * -stroke, the same tokens, so it matches whatever theme is active) — NOT
+   * a separate big colored square per handle. Classic doesn't draw a visible
+   * mark on the edges at all, only an enlarged hit zone with a resize
+   * cursor; the n/s/e/w handles here do the same — hit target only, nothing
+   * painted, so the frame doesn't get visually busier than classic's. */
+  .ci-crop-resize-handle {
+    position: absolute;
+    z-index: 20;
+    touch-action: none;
+  }
+
+  .ci-crop-resize-handle--n,
+  .ci-crop-resize-handle--s {
+    left: 12px;
+    right: 12px;
+    height: 16px;
+    cursor: ns-resize;
+  }
+  .ci-crop-resize-handle--n { top: -8px; }
+  .ci-crop-resize-handle--s { bottom: -8px; }
+
+  .ci-crop-resize-handle--e,
+  .ci-crop-resize-handle--w {
+    top: 12px;
+    bottom: 12px;
+    width: 16px;
+    cursor: ew-resize;
+  }
+  .ci-crop-resize-handle--e { right: -8px; }
+  .ci-crop-resize-handle--w { left: -8px; }
+
+  .ci-crop-resize-handle--ne,
+  .ci-crop-resize-handle--nw,
+  .ci-crop-resize-handle--se,
+  .ci-crop-resize-handle--sw {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ci-crop-handle-fill);
+    border: 1px solid var(--ci-crop-handle-stroke);
+    box-shadow: 0 1px 2px oklch(0 0 0 / 0.2);
+  }
+  .ci-crop-resize-handle--ne { top: -6px; right: -6px; cursor: nesw-resize; }
+  .ci-crop-resize-handle--nw { top: -6px; left: -6px; cursor: nwse-resize; }
+  .ci-crop-resize-handle--se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+  .ci-crop-resize-handle--sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
 `;

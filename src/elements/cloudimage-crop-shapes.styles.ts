@@ -11,53 +11,37 @@ export const sfxCropShapesStyles = css`
     display: inline-block;
   }
 
+  /* Own dark pill — same skin as Reset/Rotate/Flip in
+     cloudimage-crop-toolbar.styles.ts, kept as a separate pill rather than
+     merged into one shared capsule. */
   .ci-crop-shape-trigger {
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 8px 14px;
-    min-width: 84px;
+    min-width: 0;
     height: 36px;
-    background: transparent;
-    color: var(--ci-crop-text-secondary);
-    border: 1.5px solid var(--ci-crop-border);
-    border-radius: 50px;
+    background: oklch(0 0 0 / 0.55);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
     cursor: pointer;
     font-family: var(--ci-crop-font);
     font-size: 14px;
     font-weight: 500;
-    transition:
-      background var(--ci-crop-transition),
-      border-color var(--ci-crop-transition),
-      color var(--ci-crop-transition),
-      transform var(--ci-crop-transition),
-      box-shadow var(--ci-crop-transition);
+    transition: background var(--ci-crop-transition);
     white-space: nowrap;
     letter-spacing: 0.1px;
   }
 
-  /* Fixed variant: translucent pill so the trigger reads over the photo
-     (no dimmed crop mask behind it). Plain background — no filter/transform. */
-  :host([variant="fixed"]) .ci-crop-shape-trigger {
-    background: var(--ci-crop-overlay-color);
-  }
-
   .ci-crop-shape-trigger:hover {
-    border-color: var(--ci-crop-primary);
-    transform: translateY(-1px);
+    background: oklch(0 0 0 / 0.7);
   }
 
   .ci-crop-shape-trigger:focus-visible {
     outline: 2px solid var(--ci-crop-ring);
     outline-offset: 2px;
   }
-
-  .ci-crop-shape-trigger-icon {
-    display: flex;
-    width: 20px;
-    height: 20px;
-  }
-  .ci-crop-shape-trigger-icon svg { width: 100%; height: 100%; display: block; }
 
   .ci-crop-shape-trigger-label { line-height: 1; }
 
@@ -68,7 +52,7 @@ export const sfxCropShapesStyles = css`
     margin-left: auto;
     transition: transform var(--ci-crop-transition);
   }
-  .ci-crop-shape-chevron svg { width: 100%; height: 100%; display: block; }
+  .ci-crop-shape-chevron svg { width: 100%; height: 100%; display: block; stroke-width: 1.5; }
 
   :host([open]) .ci-crop-shape-chevron {
     transform: rotate(180deg);
@@ -78,12 +62,20 @@ export const sfxCropShapesStyles = css`
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    /* Size to the widest option + orientation toggle. Clamp to avoid
-       spilling off the viewport on very narrow screens. */
+    /* Size to the widest option + orientation toggle. Clamp width to avoid
+       spilling off the viewport on very narrow screens. Clamp height to
+       the crop box's own real height (100cqh, from the size container on
+       <cloudimage-crop>'s :host — see cloudimage-crop.styles.ts), not just
+       the viewport: a short, wide box (e.g. a 5:1 crop) can be far shorter
+       than 55vh, and a viewport-only clamp let the list overflow past the
+       box's bottom edge, where .ci-crop-container's overflow:clip cut it
+       off. The 90px subtracted is the trigger's own top offset + height +
+       gap + a small bottom margin — an approximation, not exact, but
+       erring smaller only means slightly earlier scrolling, never clipping. */
     width: max-content;
     min-width: 88px;
     max-width: min(92vw, 200px);
-    max-height: min(55vh, 360px);
+    max-height: min(55vh, 360px, calc(100cqh - 90px));
     padding: 4px;
     /* Barely-there grey tint with translucency so the panel picks up
        whatever sits behind it (image, dark overlay, etc.) without reading
@@ -171,6 +163,23 @@ export const sfxCropShapesStyles = css`
                 transform 220ms cubic-bezier(0.34, 1.2, 0.64, 1);
   }
 
+  /* open-side="right" — flips the dropdown to the trigger's right edge
+     instead of below it, set by CloudimageCropShapesElement.computeOpenSide()
+     only when there isn't enough room below (a short, wide box like a 5:1
+     crop). Aligning top:0 with the trigger (rather than centering) lets it
+     use nearly the box's FULL height instead of just "trigger to box
+     bottom" — the entire point of flipping sideways in the first place. */
+  :host([open-side="right"]) .ci-crop-shape-dropdown {
+    top: 0;
+    right: auto;
+    left: calc(100% + 8px);
+    max-height: min(80vh, 420px, calc(100cqh - 24px));
+    transform: translateX(-6px) scale(0.96);
+  }
+  :host([open-side="right"][open]) .ci-crop-shape-dropdown {
+    transform: translateX(0) scale(1);
+  }
+
   .ci-crop-shape-option {
     display: flex;
     align-items: center;
@@ -219,74 +228,20 @@ export const sfxCropShapesStyles = css`
   .ci-crop-shape-option-icon svg { width: 100%; height: 100%; display: block; }
   .ci-crop-shape-option--active .ci-crop-shape-option-icon { color: var(--ci-crop-primary); }
 
-  @media (max-width: 768px) {
-    /* Drop label + chevron and shrink to a square icon-only pill so
-       the shape icon sits dead-center. The base 84px min-width was
-       sized for the desktop "[icon] Aspect 16:9 ▾" layout and leaves
-       empty pill space on the right once those pieces are hidden. */
-    .ci-crop-shape-trigger-label { display: none; }
+  /* Narrow editor: drop the chevron to save room — the ratio label ("5:4")
+     stays, since with no icon it's the only thing identifying this control
+     among the other round icon buttons. Matches the toolbar's compact
+     breakpoint in cloudimage-crop-toolbar.styles.ts exactly (same
+     max-width), so the trigger lines up with Reset/Rotate/Flip in the same
+     wrapped row. The dropdown keeps its normal downward-opening default —
+     there's no side rail anymore for it to dodge. */
+  @container sfxcrop (max-width: 640px) {
     .ci-crop-shape-chevron { display: none; }
     .ci-crop-shape-trigger {
       min-width: 0;
-      width: 36px;
-      padding: 0;
+      height: 36px;
+      padding: 0 12px;
       gap: 0;
-      justify-content: center;
-    }
-  }
-
-  /* Narrow editor: drop the textual label + chevron so the trigger
-     reduces to an icon-only 30×30 capsule that matches the rest of
-     the compact left-rail toolbar. Anchor the dropdown to the left
-     edge since the trigger now lives in the left column. Container
-     query keyed off the sfxcrop named container so a narrow editor on
-     a wide desktop also collapses. */
-  @container sfxcrop (max-width: 760px) {
-    /* Label/chevron also need hiding when only the editor (not viewport)
-       is narrow — the 768px @media above only triggers on small viewports. */
-    .ci-crop-shape-trigger-label { display: none; }
-    .ci-crop-shape-chevron { display: none; }
-    .ci-crop-shape-trigger {
-      min-width: 0;
-      width: 30px;
-      height: 30px;
-      padding: 0;
-      gap: 0;
-      justify-content: center;
-    }
-    /* Shrink the icon SLOT (not just the SVG) and center its contents,
-       so the 16×16 SVG sits dead-center inside the 30×30 trigger. The
-       base .ci-crop-shape-trigger-icon is 20×20 with display:flex but
-       no justify/align — leaving a 16×16 SVG inside top-left aligned. */
-    .ci-crop-shape-trigger-icon {
-      width: 16px;
-      height: 16px;
-      align-items: center;
-      justify-content: center;
-    }
-    .ci-crop-shape-trigger svg {
-      width: 16px;
-      height: 16px;
-    }
-    /* Fixed variant: match the toolbar's uniform 40×40 round icon buttons. */
-    :host([variant="fixed"]) .ci-crop-shape-trigger {
-      width: 40px;
-      height: 40px;
-    }
-    /* Classic left-rail only: the trigger sits in the vertical rail, so the
-       dropdown opens to the SIDE (right of the trigger). Excluded from the
-       fixed variant — there the toolbar is a horizontal top bar, so the menu
-       must keep the default downward opening (below the trigger) to avoid
-       running off the screen edge. */
-    :host(:not([variant="fixed"])) .ci-crop-shape-dropdown {
-      right: auto;
-      left: calc(100% + 6px);
-      top: auto;
-      bottom: -30px;
-      transform: translateY(6px) scale(0.96);
-    }
-    :host(:not([variant="fixed"])[open]) .ci-crop-shape-dropdown {
-      transform: translateY(0) scale(1);
     }
   }
 `;

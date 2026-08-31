@@ -11,8 +11,8 @@ import { parseRatio } from '../transforms/constrain';
 const DEFAULT_SHAPES: CropShapeName[] = [
   'free',
   'square',
-  // Landscape
-  '16:9', '4:3', '3:2', '5:4', '2:1',
+  // Landscape — widest to narrowest, matching JoliPage's aspect-ratio picker.
+  '6:1', '5:1', '4:1', '3:1', '16:6', '21:9', '2:1', '16:9', '3:2', '7:5', '4:3', '5:4',
   // Portrait
   '9:16', '3:4', '2:3', '4:5', '1:2',
 ];

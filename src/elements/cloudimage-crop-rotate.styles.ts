@@ -23,13 +23,15 @@ export const sfxCropRotateStyles = css`
 
   .ci-crop-rotate-popover {
     position: fixed;
-    top: var(--ci-crop-popover-top, 50%);
+    /* Bottom-anchored, not top: keeps the block's bottom edge (the degree
+       label) pinned a constant distance above the canvas edge regardless of
+       how tall the ruler+label content currently is — see popover-anchor.ts. */
+    bottom: var(--ci-crop-popover-bottom, 16px);
     left: var(--ci-crop-popover-left, 50%);
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
     padding: 0;
     background: transparent;
     border: none;
@@ -37,13 +39,50 @@ export const sfxCropRotateStyles = css`
     pointer-events: auto;
     white-space: nowrap;
     z-index: 10;
+
+    /*
+     * Single source of truth for every fluid size below (ruler, ticks,
+     * indicator, label, gap) — defined here, on the common ancestor, so
+     * .ci-crop-rotate-ruler and .ci-crop-rotate-value (siblings, not one
+     * descended from the other) can both read it via inheritance.
+     *
+     * Hold-then-shrink, not shrink-the-whole-time: "100cqi - RULER_GUTTER"
+     * only drops below the 260px ceiling once the editor box is narrower
+     * than (260px + RULER_GUTTER) — until then the clamp() just returns the
+     * ceiling, i.e. full size, however much the box shrinks. Only past that
+     * point does the ruler actually start tracking the shrinking box
+     * 1:1 (not a fraction of it, unlike the old "34cqi" rate), down to the
+     * 140px floor (hit at 140px + RULER_GUTTER). RULER_GUTTER (116px) is
+     * tuned so shrinking starts at ~376px editor-box width (260 + 116) —
+     * the point past which the ruler is the one actually running out of
+     * room, not a cosmetic shrink from the first pixel of drag.
+     */
+    --ruler-w: clamp(140px, 100cqi - 116px, 260px);
+    /* 0 at the 140px floor, 1 at the 260px ceiling — every other fluid size
+       below is this same progress mapped onto its own min..max range, so
+       everything moves in lockstep and hits floor/ceiling at the same time.
+       Divide by 120px (a LENGTH), not 120 (a bare number): length ÷ length
+       is a unitless ratio; length ÷ number is still a length. Dividing by
+       the bare number left --ruler-t as a length in disguise, which made
+       every "--ruler-t * Npx" below (height, gap, font-size) a px² product
+       — invalid at computed-value time, so those properties silently fell
+       back to their initial value (height: auto), and since every child of
+       .ci-crop-rotate-ruler is position:absolute (no auto-height
+       contribution), the ruler collapsed to 0 height — ticks/indicator
+       still there in the DOM, just clipped to nothing visible. */
+    --ruler-t: calc((var(--ruler-w) - 140px) / 120px);
+    gap: calc(2px + var(--ruler-t) * 2px);
   }
 
-  /* Ruler viewport — fixed width, overflow clipped. Ticks scroll inside. */
+  /* Ruler viewport — overflow clipped, ticks scroll inside. */
   .ci-crop-rotate-ruler {
     position: relative;
-    width: var(--ruler-w, 260px);
-    height: 30px;
+    width: var(--ruler-w);
+    height: calc(18px + var(--ruler-t) * 12px);
+    --tick-h: calc(5px + var(--ruler-t) * 3px);
+    --tick-h-major: calc(8px + var(--ruler-t) * 4px);
+    --indicator-h: calc(10px + var(--ruler-t) * 6px);
+    --indicator-w: calc(3px + var(--ruler-t) * 1px);
     overflow: hidden;
     cursor: grab;
     touch-action: none;
@@ -76,29 +115,29 @@ export const sfxCropRotateStyles = css`
     position: absolute;
     top: 50%;
     width: 1px;
-    height: 8px;
+    height: var(--tick-h);
     margin-left: -0.5px;
-    margin-top: -4px;
+    margin-top: calc(var(--tick-h) / -2);
     border-radius: 0.5px;
     background: var(--ci-crop-ruler-ink, var(--ci-crop-text));
     opacity: 0.9;
   }
   .ci-crop-rotate-tick--major {
     width: 1px;
-    height: 12px;
+    height: var(--tick-h-major);
     margin-left: -0.5px;
-    margin-top: -6px;
+    margin-top: calc(var(--tick-h-major) / -2);
     opacity: 1;
   }
 
   /* Fixed center indicator — single vertical line, slightly taller than ticks. */
   .ci-crop-rotate-indicator {
     position: absolute;
-    top: calc(50% + 4px);
-    height: 16px;
+    top: calc(50% + var(--indicator-h, 16px) / 4);
+    height: var(--indicator-h);
     left: 50%;
-    width: 4px;
-    margin-left: -2px;
+    width: var(--indicator-w);
+    margin-left: calc(var(--indicator-w) / -2);
     background: var(--ci-crop-ruler-ink, var(--ci-crop-text));
     border-radius: 2px;
     pointer-events: none;
@@ -109,7 +148,7 @@ export const sfxCropRotateStyles = css`
   }
 
   .ci-crop-rotate-value {
-    font-size: 14px;
+    font-size: calc(11px + var(--ruler-t) * 3px);
     font-weight: 400;
     color: var(--ci-crop-ruler-ink, var(--ci-crop-text));
     text-align: center;
@@ -121,47 +160,16 @@ export const sfxCropRotateStyles = css`
       0 1px 2px var(--ci-crop-ruler-halo, oklch(0 0 0 / 0.85));
   }
 
-  @media (max-width: 768px) {
-    .ci-crop-rotate-ruler { width: 220px; height: 22px; }
-    .ci-crop-rotate-tick { height: 6px; margin-top: -3px; }
-    .ci-crop-rotate-tick--major { height: 9px; margin-top: -4.5px; }
-    .ci-crop-rotate-indicator {
-      top: calc(50% + 3px);
-      height: 12px;
-      width: 3px;
-      margin-left: -1.5px;
+  /* A genuinely short box (a very wide/thin crop held on a phone, e.g. a
+     6:1 ratio in landscape) doesn't have room for BOTH the top toolbar row
+     and this popover's ruler + degree label without the two overlapping.
+     Dropping the label — the ruler ticks + drag gesture still work fine
+     without it — is the cheapest way to reclaim enough height to stop that
+     overlap, without touching the toolbar's own layout or hiding the
+     ruler entirely (rotate-left still only does coarse 90° steps). */
+  @container sfxcrop (max-height: 140px) {
+    .ci-crop-rotate-value {
+      display: none;
     }
-    .ci-crop-rotate-value { font-size: 12px; }
-    .ci-crop-rotate-popover {
-      transform: translateX(-50%) translateY(24px);
-    }
-  }
-  @media (max-width: 480px) {
-    .ci-crop-rotate-ruler { width: 180px; height: 20px; }
-    .ci-crop-rotate-tick { height: 5px; margin-top: -2.5px; }
-    .ci-crop-rotate-tick--major { height: 8px; margin-top: -4px; }
-    .ci-crop-rotate-indicator {
-      top: calc(50% + 2px);
-      height: 10px;
-    }
-    .ci-crop-rotate-value { font-size: 11px; }
-    .ci-crop-rotate-popover {
-      transform: translateX(-50%) translateY(30px);
-    }
-  }
-
-  /* Narrow editor — make the ruler more compact when the toolbar
-     collapses into the vertical left rail. */
-  @container sfxcrop (max-width: 760px) {
-    .ci-crop-rotate-ruler { width: 140px; height: 18px; }
-    .ci-crop-rotate-tick { height: 5px; margin-top: -2.5px; }
-    .ci-crop-rotate-tick--major { height: 8px; margin-top: -4px; }
-    .ci-crop-rotate-indicator {
-      top: calc(50% + 2px);
-      height: 10px;
-      width: 3px;
-      margin-left: -1.5px;
-    }
-    .ci-crop-rotate-value { font-size: 11px; }
   }
 `;

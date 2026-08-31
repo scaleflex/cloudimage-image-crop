@@ -56,13 +56,13 @@ describe('parseAvailableShapes', () => {
   });
 
   it('DEFAULT_SHAPES is the canonical ratio set', () => {
-    // Free + square + five landscape/portrait pairs (16:9, 4:3, 3:2,
-    // 5:4, 2:1). Circle and rounded-rect are valid `CropShapeName`s
-    // but must be opted into explicitly via availableShapes. Any other
-    // `"W:H"` string — `"21:9"`, `"2.35:1"`, ... — is parsed on the fly.
+    // Free + square + the JoliPage aspect-ratio picker's landscape run
+    // (6:1 .. 5:4) + the portrait pairs. Circle and rounded-rect are valid
+    // `CropShapeName`s but must be opted into explicitly via availableShapes.
+    // Any other `"W:H"` string — `"2.35:1"`, ... — is parsed on the fly.
     expect(DEFAULT_SHAPES).toEqual([
       'free', 'square',
-      '16:9', '4:3', '3:2', '5:4', '2:1',
+      '6:1', '5:1', '4:1', '3:1', '16:6', '21:9', '2:1', '16:9', '3:2', '7:5', '4:3', '5:4',
       '9:16', '3:4', '2:3', '4:5', '1:2',
     ]);
   });

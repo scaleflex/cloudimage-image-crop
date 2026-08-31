@@ -63,7 +63,10 @@ export const sfxCropZoomStyles = css`
   /* Popover — transparent, floats above the trigger. */
   .ci-crop-zoom-popover {
     position: fixed;
-    top: var(--ci-crop-popover-top, 50%);
+    /* Bottom-anchored — see popover-anchor.ts / cloudimage-crop-rotate.styles.ts's
+       matching comment: keeps the block pinned to the canvas edge regardless
+       of its own content height, instead of drifting as content resizes. */
+    bottom: var(--ci-crop-popover-bottom, 16px);
     left: var(--ci-crop-popover-left, 50%);
     transform: translateX(-50%) translateY(6px) scale(0.98);
     display: flex;
@@ -168,9 +171,6 @@ export const sfxCropZoomStyles = css`
       margin-left: -1.5px;
     }
     .ci-crop-zoom-value { font-size: 12px; }
-    :host([open]) .ci-crop-zoom-popover {
-      transform: translateX(-50%) translateY(24px) scale(1);
-    }
   }
   @media (max-width: 480px) {
     .ci-crop-zoom-ruler { width: 180px; height: 20px; }
@@ -181,13 +181,10 @@ export const sfxCropZoomStyles = css`
       height: 10px;
     }
     .ci-crop-zoom-value { font-size: 11px; }
-    :host([open]) .ci-crop-zoom-popover {
-      transform: translateX(-50%) translateY(30px) scale(1);
-    }
   }
 
   /* Narrow editor — match the compact 30×30 trigger sizing of the
-     rest of the vertical left-rail toolbar. Container query so a
+     rest of the toolbar's icon buttons. Container query so a
      narrow editor on a wide desktop also collapses. */
   @container sfxcrop (max-width: 600px) {
     .ci-crop-zoom-trigger {

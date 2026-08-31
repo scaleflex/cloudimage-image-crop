@@ -1,5 +1,5 @@
 import { html, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, state, query } from 'lit/decorators.js';
 import { CloudimageCropBaseElement } from './base';
 import { clamp } from '../utils/math';
 import type { CropIconOverrides } from '../core/types';
@@ -12,8 +12,15 @@ import { createPopoverAnchor, type PopoverAnchor } from './popover-anchor';
  * Bigger value ⇒ finger drag covers fewer degrees ⇒ finer control.
  */
 const PX_PER_DEG = 6;
-/** Visible width of the ruler viewport; shows ~±RULER_WIDTH/2/PX_PER_DEG degrees around the current value. */
-const RULER_WIDTH = 260;
+/**
+ * Fallback ruler viewport width, used only until the first real measurement
+ * lands (see `rulerWidthPx` / the ResizeObserver in `firstUpdated`). The
+ * actual width is CSS-fluid now (`clamp(140px, 34cqi, 260px)` in
+ * cloudimage-crop-rotate.styles.ts, tracking the editor box's own size as
+ * ResizableFrame resizes it) — ticks/offset math below reads the live
+ * rendered width so it stays correct at every size, not just this default.
+ */
+const RULER_WIDTH_FALLBACK = 260;
 /** Tick step in degrees — dots are placed every 1°; every 5° gets a major dot. */
 const TICK_STEP = 1;
 const MAJOR_EVERY = 5;
@@ -37,6 +44,12 @@ export class CloudimageCropRotateElement extends CloudimageCropBaseElement {
   @property({ attribute: false }) icons: CropIconOverrides = {};
 
   @state() private dragging = false;
+  /** Live-measured width (px) of `.ci-crop-rotate-ruler` — see the field doc
+   * on `RULER_WIDTH_FALLBACK` above for why this replaced a constant. */
+  @state() private rulerWidthPx = RULER_WIDTH_FALLBACK;
+
+  @query('.ci-crop-rotate-ruler') private rulerEl?: HTMLElement;
+  private rulerResizeObserver: ResizeObserver | null = null;
 
   private activePointer: number | null = null;
   private pointerStartX = 0;
@@ -49,9 +62,21 @@ export class CloudimageCropRotateElement extends CloudimageCropBaseElement {
     this.popoverAnchor.start();
   }
 
+  firstUpdated(): void {
+    if (this.rulerEl) {
+      this.rulerResizeObserver = new ResizeObserver((entries) => {
+        const w = entries[0]?.contentRect.width;
+        if (w && w > 0) this.rulerWidthPx = w;
+      });
+      this.rulerResizeObserver.observe(this.rulerEl);
+    }
+  }
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.popoverAnchor.stop();
+    this.rulerResizeObserver?.disconnect();
+    this.rulerResizeObserver = null;
   }
 
   updated(changed: PropertyValues): void {
@@ -65,11 +90,11 @@ export class CloudimageCropRotateElement extends CloudimageCropBaseElement {
     // Translate the tick strip so the current value sits under the fixed
     // center indicator. With drag-physical behaviour, dragging the ruler
     // right shifts ticks right and the value under the marker goes down.
-    const offset = RULER_WIDTH / 2 - (this.value - this.min) * PX_PER_DEG;
+    const offset = this.rulerWidthPx / 2 - (this.value - this.min) * PX_PER_DEG;
 
     // Render only the ticks visible in the current viewport window plus
     // a few on each side so the strip looks continuous while scrolling.
-    const visibleSpan = RULER_WIDTH / PX_PER_DEG;
+    const visibleSpan = this.rulerWidthPx / PX_PER_DEG;
     const padding = 4;
     const fromDeg = Math.max(this.min, Math.floor(this.value - visibleSpan / 2 - padding));
     const toDeg = Math.min(this.max, Math.ceil(this.value + visibleSpan / 2 + padding));
@@ -90,7 +115,6 @@ export class CloudimageCropRotateElement extends CloudimageCropBaseElement {
             aria-valuenow=${String(this.value)}
             aria-valuetext=${formatted}
             tabindex="0"
-            style=${`--ruler-w: ${RULER_WIDTH}px`}
             @pointerdown=${this.onPointerDown}
             @pointermove=${this.onPointerMove}
             @pointerup=${this.onPointerUp}

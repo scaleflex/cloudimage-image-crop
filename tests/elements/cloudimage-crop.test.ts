@@ -69,6 +69,19 @@ describe('<cloudimage-crop>', () => {
     expect(typeof el.cancel).toBe('function');
     expect(typeof el.toBlob).toBe('function');
     expect(typeof el.toDataURL).toBe('function');
+    expect(typeof el.restoreState).toBe('function');
+  });
+
+  it('throws a helpful error when restoreState runs before connect', () => {
+    el = document.createElement('cloudimage-crop') as CloudimageCropElement;
+    expect(() => el.restoreState({
+      state: { quarterTurns: 0, rotation: 0, flipH: false, flipV: false, scale: 1, panX: 0, panY: 0, cropRect: { x: 0, y: 0, width: 1, height: 1 } },
+      imageWidth: 100,
+      imageHeight: 100,
+      containerWidth: 100,
+      containerHeight: 100,
+      variant: 'classic',
+    })).toThrow(/not connected/);
   });
 
   it('dispatches `cloudimage-crop-cancel` with bubbles + composed', async () => {

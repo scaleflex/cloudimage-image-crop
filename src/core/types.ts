@@ -91,6 +91,10 @@ export type CropIconOverrides = Partial<{
   chevronDown: string;
   /** "Reset" button in the toolbar. */
   reset: string;
+  /** Icon-only "Cancel" button — used on narrow mobile-portrait screens. */
+  close: string;
+  /** Icon-only "Done" button — used on narrow mobile-portrait screens. */
+  check: string;
 }>;
 
 /** @deprecated Use CropShapeName instead */

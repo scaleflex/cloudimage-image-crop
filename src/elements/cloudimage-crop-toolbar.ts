@@ -23,7 +23,8 @@ export type CloudimageCropToolbarCommand =
   | { type: 'rotation'; value: number }
   | { type: 'scale'; value: number }
   | { type: 'shape'; value: CropShapeName }
-  | { type: 'save' };
+  | { type: 'save' }
+  | { type: 'cancel' };
 
 /**
  * `<cloudimage-crop-toolbar>` — composes rotate/flip buttons + the always-visible
@@ -39,11 +40,29 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
   @property({ type: Boolean, attribute: 'show-flip-button' }) showFlipButton = true;
   @property({ type: Boolean, attribute: 'show-rotate-slider' }) showRotateSlider = true;
   @property({ type: Boolean, attribute: 'show-shape-selector' }) showShapeSelector = true;
+  /**
+   * Show a "Cancel" button pinned to the top-left corner of the box —
+   * mirrors "Done" (top-right). Off by default: most consumers render their
+   * own dismiss affordance outside the editor. Turn it on when yours lives
+   * INSIDE a box whose size the user controls (e.g. ResizableFrame's
+   * `variant:'fixed', cropShape:'free'` drag) — an external button can't
+   * track that without duplicating the box's own resize logic, whereas a
+   * toolbar button is already part of the box and moves/resizes with it for
+   * free. Emits `{type:'cancel'}`, which `<cloudimage-crop>` routes to its
+   * own `cancel()` (dispatches `cloudimage-crop-cancel`).
+   */
+  @property({ type: Boolean, attribute: 'show-cancel-button' }) showCancelButton = false;
   @property({ type: String, attribute: 'toolbar-position', reflect: true })
   toolbarPosition: 'top' | 'bottom' = 'top';
 
   /** Reflected so the stylesheet can center the bar over the fixed frame. */
   @property({ type: String, reflect: true }) variant: 'classic' | 'fixed' = 'classic';
+
+  /** True while the user is actively dragging/resizing/panning the crop
+   *  frame (see `<cloudimage-crop>`'s `isInteracting`) — fades every button
+   *  in the toolbar, including the rotate ruler, so the controls don't
+   *  compete with the photo for attention mid-gesture. */
+  @property({ type: Boolean, reflect: true }) interacting = false;
 
   /** JSON-serialized or CSV string on the attribute; `CropShapeName[]` via property. */
   @property({ attribute: 'available-shapes' })
@@ -57,27 +76,36 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
 
   render(): unknown {
     const hasLeftButtons = this.showRotateButton || this.showFlipButton;
-    const shapes = parseAvailableShapes(this.availableShapes) ?? [...DEFAULT_SHAPES];
+    const parsedShapes = parseAvailableShapes(this.availableShapes) ?? [...DEFAULT_SHAPES];
+    // "Custom" (free-form) doesn't apply to the fixed variant — there the
+    // box itself IS the crop frame, so there's no separate free-form crop
+    // region to pick inside it. Filter it out of the picker regardless of
+    // what the consumer passed via availableShapes.
+    const shapes = this.variant === 'fixed'
+      ? parsedShapes.filter((s) => s !== 'free')
+      : parsedShapes;
 
     return html`
       <div class="ci-crop-toolbar" @cloudimage-crop-popover-open=${this.onPopoverOpen}>
-        <button
-          type="button"
-          class="ci-crop-reset-btn"
-          aria-label="Reset all changes"
-          @click=${() => this.emit({ type: 'reset' })}
-        >
-          ${unsafeHTML(resolveIcon('reset', this.icons))}
-          <span>Reset</span>
-        </button>
+        <div class="ci-crop-toolbar-group">
+          <button
+            type="button"
+            class="ci-crop-reset-btn"
+            aria-label="Reset all changes"
+            title="Reset all changes"
+            @click=${() => this.emit({ type: 'reset' })}
+          >
+            ${unsafeHTML(resolveIcon('reset', this.icons))}
+          </button>
 
-        ${hasLeftButtons ? html`
-          <div class="ci-crop-toolbar-group">
+          ${hasLeftButtons ? html`
+            <span class="ci-crop-toolbar-divider" aria-hidden="true"></span>
             ${this.showRotateButton ? html`
               <button
                 type="button"
                 class="ci-crop-toolbar-btn"
                 aria-label="Rotate left 90°"
+                title="Rotate left 90°"
                 @click=${() => this.emit({ type: 'rotate-left' })}
               >${unsafeHTML(resolveIcon('rotateLeft', this.icons))}</button>
             ` : null}
@@ -86,11 +114,24 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
                 type="button"
                 class="ci-crop-toolbar-btn"
                 aria-label="Flip horizontal"
+                title="Flip horizontal"
                 @click=${() => this.emit({ type: 'flip-h' })}
               >${unsafeHTML(resolveIcon('flipHorizontal', this.icons))}</button>
             ` : null}
-          </div>
-        ` : null}
+          ` : null}
+
+          ${this.showShapeSelector ? html`
+            <span class="ci-crop-toolbar-divider" aria-hidden="true"></span>
+            <cloudimage-crop-shapes
+              .value=${this.shape}
+              .shapes=${shapes}
+              variant=${this.variant}
+              .icons=${this.icons}
+              @cloudimage-crop-shape-change=${(e: CustomEvent<{ shape: CropShapeName }>) =>
+                this.emit({ type: 'shape', value: e.detail.shape })}
+            ></cloudimage-crop-shapes>
+          ` : null}
+        </div>
 
         ${this.showRotateSlider ? html`
           <cloudimage-crop-rotate
@@ -100,26 +141,33 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
               this.emit({ type: 'rotation', value: e.detail.degrees })}
           ></cloudimage-crop-rotate>
         ` : null}
-
-        ${this.showShapeSelector ? html`
-          <cloudimage-crop-shapes
-            .value=${this.shape}
-            .shapes=${shapes}
-            variant=${this.variant}
-            .icons=${this.icons}
-            @cloudimage-crop-shape-change=${(e: CustomEvent<{ shape: CropShapeName }>) =>
-              this.emit({ type: 'shape', value: e.detail.shape })}
-          ></cloudimage-crop-shapes>
-        ` : null}
       </div>
+
+      ${this.showCancelButton ? html`
+        <button
+          type="button"
+          class="ci-crop-cancel-btn"
+          part="cancel"
+          aria-label="Cancel"
+          title="Cancel"
+          @click=${() => this.emit({ type: 'cancel' })}
+        >
+          <span class="ci-crop-cancel-btn-icon">${unsafeHTML(resolveIcon('close', this.icons))}</span>
+          <span class="ci-crop-cancel-btn-label">Cancel</span>
+        </button>
+      ` : null}
 
       <button
         type="button"
         class="ci-crop-done-btn"
         part="done"
         aria-label="Done"
+        title="Done"
         @click=${() => this.emit({ type: 'save' })}
-      >Done</button>
+      >
+        <span class="ci-crop-done-btn-icon">${unsafeHTML(resolveIcon('check', this.icons))}</span>
+        <span class="ci-crop-done-btn-label">Done</span>
+      </button>
     `;
   }
 

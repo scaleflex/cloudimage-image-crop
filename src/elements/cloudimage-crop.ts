@@ -21,6 +21,20 @@ import { getAspectRatio } from '../transforms/constrain';
 import { designTokens, baseStyles, spinKeyframes } from '../styles/shared.css';
 import { sfxCropStyles } from './cloudimage-crop.styles';
 
+/** Which edge(s) of the box a ResizableFrame handle drags. */
+type ResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
+/** Smallest box side (px) a ResizableFrame drag will shrink the element to. */
+const MIN_RESIZE_PX = 80;
+
+/**
+ * `variant:'fixed', cropShape:'free'` handle positions — 8 points around the
+ * box's own edge/corners. Drags change the HOST ELEMENT's own width/height
+ * directly (see ResizableFrame handlers below); there's no separate crop
+ * rect for this case, the box IS the frame.
+ */
+const RESIZE_EDGES: ResizeEdge[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+
 /**
  * Lit `@property` converter for the tri-state `show-grid` attribute, which
  * accepts `"true" | "false" | "interaction"` (string or empty-shorthand), and
@@ -115,11 +129,28 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
   @property({ type: Boolean, attribute: 'show-shape-selector' }) showShapeSelector = true;
   @property({ type: Boolean, attribute: 'show-rotate-button' }) showRotateButton = true;
   @property({ type: Boolean, attribute: 'show-flip-button' }) showFlipButton = true;
+  /**
+   * Show a "Cancel" button in the toolbar (top-left, mirrors "Done"). Off by
+   * default. Turn on for a host whose SIZE the user controls interactively
+   * (ResizableFrame's `variant:'fixed', cropShape:'free'` drag) — an
+   * external cancel button placed by the consumer can't track that resize
+   * without reimplementing the toolbar's own positioning; this one already
+   * lives inside the box. Emits `cloudimage-crop-cancel` via `cancel()`.
+   */
+  @property({ type: Boolean, attribute: 'show-cancel-button' }) showCancelButton = false;
   @property({ type: Boolean, attribute: 'show-bleed-margin' }) showBleedMargin = false;
   @property({ type: Boolean, attribute: 'enable-animations' }) enableAnimations = true;
   @property({ type: Boolean }) keyboard = true;
   @property({ type: Boolean, attribute: 'pinch-zoom' }) pinchZoom = true;
   @property({ type: Boolean, attribute: 'wheel-zoom' }) wheelZoom = true;
+  /**
+   * Fade the toolbar (buttons + rotate ruler) to near-invisible while the
+   * user is actively dragging/resizing/panning the crop frame, so the
+   * controls don't compete with the photo for attention mid-gesture. Off
+   * by default — opt in for editors where the toolbar visually crowds the
+   * photo during a drag; most embeds are fine with it staying put.
+   */
+  @property({ type: Boolean, attribute: 'dim-toolbar-on-drag' }) dimToolbarOnDrag = false;
 
   @property({ attribute: 'available-shapes' })
   availableShapes: CropShapeName[] | string = [...DEFAULT_SHAPES];
@@ -138,6 +169,11 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
   // === Internal reactive state ===
   @state() private loading = false;
   @state() private errorMessage: string | null = null;
+  /** True while the user is actively dragging/resizing/panning the crop
+   *  frame. Tracked unconditionally (cheap), but only forwarded as the
+   *  `interacting` prop on `<cloudimage-crop-toolbar>` below when
+   *  {@link dimToolbarOnDrag} is on — that's the actual opt-in switch. */
+  @state() private isInteracting = false;
 
   // === Queries ===
   @query('cloudimage-crop-canvas') private canvasHost!: CloudimageCropCanvasElement;
@@ -148,6 +184,17 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
   private controller: CropController | null = null;
   private currentImage: HTMLImageElement | null = null;
   private parentResizeObserver: ResizeObserver | null = null;
+
+  /**
+   * User-set size for `variant:'fixed', cropShape:'free'` — set once a
+   * ResizableFrame drag ends, cleared on shape/variant change or reset().
+   * When present, fitHostToImage() honors it (clamped to the available box)
+   * instead of computing an automatic size — the WHOLE editor box is the
+   * crop frame in fixed variant, so resizing it directly (drag the box's own
+   * edge, like a window) *is* how you resize the crop, no separate rect.
+   */
+  private _manualSize: { w: number; h: number } | null = null;
+  private _resizeDrag: { edge: ResizeEdge; startX: number; startY: number; startW: number; startH: number } | null = null;
 
   // === Lifecycle ===
 
@@ -209,6 +256,9 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
           this.loading = loading;
           this.errorMessage = error;
         },
+        onInteractingChange: (interacting) => {
+          this.isInteracting = interacting;
+        },
       },
     });
 
@@ -240,6 +290,12 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
     // variant (box = frame aspect), so re-fit when either changes. Cheap no-op
     // in classic, where the box always tracks the photo aspect.
     if (changed.has('variant') || changed.has('cropShape')) {
+      // Leaving the one combination ResizableFrame applies to (fixed + free)
+      // drops any manual size — re-entering it later starts from a fresh
+      // auto-fit, not a stale drag result from a different shape/variant.
+      if (!(this.variant === 'fixed' && this.cropShape === 'free')) {
+        this._manualSize = null;
+      }
       this.fitHostToImage();
     }
   }
@@ -248,6 +304,9 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
     super.disconnectedCallback();
     this.parentResizeObserver?.disconnect();
     this.parentResizeObserver = null;
+    window.removeEventListener('pointermove', this.onResizeHandlePointerMove);
+    window.removeEventListener('pointerup', this.onResizeHandlePointerUp);
+    this._resizeDrag = null;
     this.controller?.destroy();
     this.controller = null;
   }
@@ -264,8 +323,10 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
             ?show-flip-button=${this.showFlipButton}
             ?show-rotate-slider=${this.showRotateSlider}
             ?show-shape-selector=${this.showShapeSelector}
+            ?show-cancel-button=${this.showCancelButton}
             toolbar-position=${this.toolbarPosition}
             variant=${this.variant}
+            ?interacting=${this.dimToolbarOnDrag && this.isInteracting}
             .availableShapes=${this.availableShapes}
             .icons=${this.icons}
             @cloudimage-crop-toolbar-command=${this.onToolbarCommand}
@@ -279,6 +340,27 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
           ${this.errorMessage ?? 'Failed to load image'}
         </div>
       </div>
+      ${this.variant === 'fixed' && this.cropShape === 'free' ? this.renderResizeHandles() : null}
+    `;
+  }
+
+  /**
+   * Drag-the-box-edge handles for `variant:'fixed', cropShape:'free'` — a
+   * sibling of `.ci-crop-container`, not a child. That container is
+   * `overflow: clip` (it masks the photo to the frame shape); handles half
+   * outside the box's own edge would just get clipped away in there. `:host`
+   * itself has no overflow rule, so this is the outermost box they can sit
+   * on and still be visible/hittable at the true element edge.
+   */
+  private renderResizeHandles(): unknown {
+    return html`
+      ${RESIZE_EDGES.map((edge) => html`
+        <div
+          class="ci-crop-resize-handle ci-crop-resize-handle--${edge}"
+          part="resize-handle"
+          @pointerdown=${(e: PointerEvent) => this.onResizeHandlePointerDown(e, edge)}
+        ></div>
+      `)}
     `;
   }
 
@@ -288,7 +370,13 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
     if (!this.controller) return;
     const detail = (e as CustomEvent<CloudimageCropToolbarCommand>).detail;
     switch (detail.type) {
-      case 'reset': this.controller.reset(); break;
+      case 'reset':
+        // Clear any ResizableFrame drag result too — reset means back to
+        // the auto-fit box, not "keep my last manual size".
+        this._manualSize = null;
+        this.controller.reset();
+        this.fitHostToImage();
+        break;
       case 'rotate-left': this.controller.rotateLeft(); break;
       case 'flip-h': this.controller.flipHorizontal(); break;
       case 'rotation': this.controller.setRotation(detail.value); break;
@@ -300,6 +388,9 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
       case 'save':
         // Builds blob + dataURL + params and dispatches `cloudimage-crop-save`.
         void this.save();
+        break;
+      case 'cancel':
+        this.cancel();
         break;
     }
   };
@@ -318,7 +409,18 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
   flipHorizontal(): void { this.ensure().flipHorizontal(); }
   setRotation(deg: number): void { this.ensure().setRotation(deg); }
   setScale(scale: number): void { this.ensure().setScale(scale); }
-  reset(): void { this.ensure().reset(); }
+  /**
+   * Restore a previously-saved {@link CropDescriptor} (from `toCropDescriptor()`
+   * / a `cloudimage-crop-save` event) — full parity including 90°/tilt
+   * rotation, flip, and pan, not just the crop rectangle. Call once the image
+   * has loaded, e.g. from a `cloudimage-crop-image-load` listener.
+   */
+  restoreState(descriptor: CropDescriptor): void { this.ensure().restoreState(descriptor); }
+  reset(): void {
+    this._manualSize = null;
+    this.ensure().reset();
+    this.fitHostToImage();
+  }
   toCanvas(): HTMLCanvasElement { return this.ensure().toCanvas(); }
   toBlob(type?: string, quality?: number): Promise<Blob> { return this.ensure().toBlob(type, quality); }
   toDataURL(type?: string, quality?: number): string { return this.ensure().toDataURL(type, quality); }
@@ -471,12 +573,24 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
 
     let displayW: number;
     let displayH: number;
-    if (this.variant === 'fixed') {
+    if (this.variant === 'fixed' && this.cropShape === 'free' && this._manualSize) {
+      // ResizableFrame override: the user dragged the box's own edge to a
+      // specific size — honor it (clamped to what's actually available, e.g.
+      // after the window/parent shrank) instead of the auto-fit below.
+      displayW = Math.floor(Math.min(this._manualSize.w, availW));
+      displayH = Math.floor(Math.min(this._manualSize.h, availH));
+    } else if (this.variant === 'fixed') {
       // Fixed variant: the editor box IS the crop frame — size it to the
       // frame's aspect (maximal, centered within the available area). The
       // photo cover-fills it, so upscaling the box past the photo's natural
       // size is fine (unlike classic, which caps at fit ≤ 1).
-      const boxAspect = this.fixedFrameAspect(availW / availH);
+      // `free`'s fallback is the PHOTO's own aspect, not the available-area
+      // aspect: opening (or switching back to) Custom should show the whole
+      // photo uncropped first — sized to match it exactly — rather than
+      // starting from an arbitrary modal-shaped box that immediately
+      // cover-fit-crops into a portrait/square photo before the user has
+      // touched anything. ResizableFrame takes over from there once resized.
+      const boxAspect = this.fixedFrameAspect(effW / effH);
       let dW = availW;
       let dH = availW / boxAspect;
       if (dH > availH) {
@@ -507,9 +621,114 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
 
 
   /**
+   * The `max-width` / `max-height` budget fitHostToImage() would compute —
+   * factored out so a live ResizableFrame drag can clamp to the same bound
+   * (can't drag the box past what the consumer's CSS / parent actually
+   * allows) without re-running the full clear-before-measure dance that
+   * method needs (that dance guards against reading back this element's OWN
+   * inline size through a fit-content parent — irrelevant here since a drag
+   * only reads static `max-width`/`max-height` and the parent's clientWidth,
+   * neither of which this element's own width feeds back into).
+   */
+  private measureAvailableBox(): { availW: number; availH: number } {
+    const parseMax = (raw: string): number => {
+      if (!raw || raw === 'none') return Number.POSITIVE_INFINITY;
+      const v = parsePx(raw);
+      return Number.isFinite(v) && v > 0 ? v : Number.POSITIVE_INFINITY;
+    };
+    const hostStyle = getComputedStyle(this);
+    let maxW = parseMax(hostStyle.maxWidth);
+    let maxH = parseMax(hostStyle.maxHeight);
+
+    const parent = this.parentElement;
+    const parentStyle = parent ? getComputedStyle(parent) : null;
+    if (parent && parentStyle) {
+      const raw = parent.clientWidth;
+      const parentW = Math.max(0, raw - (parsePx(parentStyle.paddingLeft) || 0) - (parsePx(parentStyle.paddingRight) || 0));
+      if (parentW > 0) maxW = Math.min(maxW, parentW);
+      else if (!Number.isFinite(maxW)) maxW = window.innerWidth;
+    } else if (!Number.isFinite(maxW)) {
+      maxW = window.innerWidth;
+    }
+    if (!Number.isFinite(maxH)) maxH = window.innerHeight;
+
+    return { availW: maxW, availH: maxH };
+  }
+
+  // === ResizableFrame — drag the box's own edge in variant:'fixed',
+  // cropShape:'free' (the whole box IS the crop frame there; resizing it
+  // directly *is* how you resize the crop). Handles live in render() below,
+  // shown only for that combination. ===
+
+  private onResizeHandlePointerDown = (e: PointerEvent, edge: ResizeEdge): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = this.getBoundingClientRect();
+    this._resizeDrag = { edge, startX: e.clientX, startY: e.clientY, startW: rect.width, startH: rect.height };
+    this.isInteracting = true;
+    window.addEventListener('pointermove', this.onResizeHandlePointerMove);
+    window.addEventListener('pointerup', this.onResizeHandlePointerUp);
+  };
+
+  private onResizeHandlePointerMove = (e: PointerEvent): void => {
+    const drag = this._resizeDrag;
+    if (!drag) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    const { availW, availH } = this.measureAvailableBox();
+
+    let w = drag.startW;
+    let h = drag.startH;
+    if (drag.edge.includes('e')) w = drag.startW + dx;
+    if (drag.edge.includes('w')) w = drag.startW - dx;
+    if (drag.edge.includes('s')) h = drag.startH + dy;
+    if (drag.edge.includes('n')) h = drag.startH - dy;
+    w = Math.max(MIN_RESIZE_PX, Math.min(w, availW));
+    h = Math.max(MIN_RESIZE_PX, Math.min(h, availH));
+    w = Math.round(w);
+    h = Math.round(h);
+
+    this.style.width = `${w}px`;
+    this.style.height = `${h}px`;
+    // Commit on every move tick, not just pointerup: a height change here
+    // resizes an auto-height parent (e.g. this library's own demo wrap),
+    // which fires `parentResizeObserver` mid-drag and calls fitHostToImage()
+    // — with `_manualSize` still null at that point it would fall through to
+    // the auto-fit branch and immediately snap the box back, undoing the
+    // drag in real time. Keeping `_manualSize` in lockstep makes that
+    // mid-drag fitHostToImage() call idempotent instead (reapplies the same
+    // size). Width-only drags don't trigger this (a fixed-width parent's
+    // clientWidth doesn't depend on the child), which is why only s/n/corner
+    // edges were affected.
+    this._manualSize = { w, h };
+    // Resize the canvas in lockstep with the box, right now — the
+    // controller's own ResizeObserver debounces by 16ms to coalesce
+    // external reflows, which is the wrong tradeoff for a drag WE are
+    // already driving tick by tick: a fast drag keeps resetting that
+    // timer and the canvas visibly lags the box (empty container
+    // background showing in the gap) until the drag slows or stops.
+    this.controller?.forceResize();
+  };
+
+  private onResizeHandlePointerUp = (): void => {
+    if (!this._resizeDrag) return;
+    this._resizeDrag = null;
+    this.isInteracting = false;
+    window.removeEventListener('pointermove', this.onResizeHandlePointerMove);
+    window.removeEventListener('pointerup', this.onResizeHandlePointerUp);
+    // Commit the DOM's actual rendered size (not the last computed w/h) so a
+    // subsequent fitHostToImage() (parent resize, etc.) clamps from the same
+    // number the browser actually painted.
+    const rect = this.getBoundingClientRect();
+    this._manualSize = { w: rect.width, h: rect.height };
+  };
+
+  /**
    * Aspect ratio (W/H) of the fixed-variant editor box for the current shape.
-   * `free` fills the host (uses the available-area aspect); `square` / `circle`
-   * / `rounded-rect` are square; ratio shapes use their parsed ratio.
+   * `free` uses whatever `fallback` the caller passes (the photo's own
+   * aspect, so opening/reselecting Custom shows the whole photo first);
+   * `square` / `circle` / `rounded-rect` are square; ratio shapes use their
+   * parsed ratio.
    */
   private fixedFrameAspect(fallback: number): number {
     const shape = this.cropShape;

@@ -296,10 +296,16 @@ kbd {
   color: #fff;
 }
 
-/* Text toggles (variant, grid, bleed) — sit just left of the theme toggle. */
+/* Text toggles (variant, grid, bleed, cancel-button, toolbar-theme) — sit just left of the
+   theme toggle. New toggle buttons MUST be added to this selector list (and
+   the :hover/:focus-visible/[aria-pressed] groups below) — there's no shared
+   class, so a button left out silently falls back to unstyled browser
+   button chrome instead of erroring. */
 .demo-variant-toggle,
 .demo-grid-toggle,
-.demo-bleed-toggle {
+.demo-bleed-toggle,
+.demo-cancel-toggle,
+.demo-dim-toggle {
   display: inline-flex;
   align-items: center;
   height: 34px;
@@ -317,19 +323,25 @@ kbd {
 }
 .demo-variant-toggle:hover,
 .demo-grid-toggle:hover,
-.demo-bleed-toggle:hover {
+.demo-bleed-toggle:hover,
+.demo-cancel-toggle:hover,
+.demo-dim-toggle:hover {
   color: var(--sf-text, #1e293b);
   transform: translateY(-1px);
 }
 .demo-variant-toggle:focus-visible,
 .demo-grid-toggle:focus-visible,
-.demo-bleed-toggle:focus-visible {
+.demo-bleed-toggle:focus-visible,
+.demo-cancel-toggle:focus-visible,
+.demo-dim-toggle:focus-visible {
   outline: 2px solid var(--sf-primary, #155bcd);
   outline-offset: 2px;
 }
 /* Active state — toggle on. */
 .demo-grid-toggle[aria-pressed="true"],
-.demo-bleed-toggle[aria-pressed="true"] {
+.demo-bleed-toggle[aria-pressed="true"],
+.demo-cancel-toggle[aria-pressed="true"],
+.demo-dim-toggle[aria-pressed="true"] {
   color: #fff;
   background: var(--sf-primary, #155bcd);
   border-color: var(--sf-primary, #155bcd);
