@@ -202,17 +202,26 @@ export class CloudimageCropShapesElement extends CloudimageCropBaseElement {
    * 'down' whenever the crop host can't be found — 'down' already degrades
    * gracefully via its own scroll, so it's the safe default either way.
    *
-   * Compares against the dropdown's OWN natural content height
-   * (`scrollHeight`), not a guessed fixed threshold — it's already in the
-   * layout (position:absolute, just opacity/pointer-events hidden while
-   * closed per cloudimage-crop-shapes.styles.ts), so its real height is
-   * available to measure directly. A fixed px threshold either flips too
-   * eagerly on a short list or, as happened with the 11-ratio default
-   * list, not eagerly enough on a genuinely short box like a 5:1 crop.
+   * Compares against the dropdown's true natural content height, NOT
+   * `.ci-crop-shape-dropdown`'s own `scrollHeight`: that element only sets
+   * `max-height` + `overflow: visible` (it's a plain flex container, not a
+   * scroll container), so per spec its `scrollHeight` just reports its own
+   * clamped rendered height back — never the full, pre-clamp content size.
+   * The actual scrollable region is the nested `.ci-crop-shape-list`
+   * (`overflow-y: auto`), whose `scrollHeight` genuinely reflects all of
+   * its rows regardless of how short the visible box is currently clamped
+   * to — so total natural height = that list height + the orientation
+   * toggle's own box (height + margin-bottom) + the dropdown's padding.
+   * (Previously comparing the clamped height against `spaceBelow` always
+   * came out "fits", so a short/wide box like a 6:1 crop never flipped to
+   * 'right' and instead rendered a near-zero-height, unusably squeezed
+   * list — one visible row with the scrollbar's native step arrows.)
    */
   private computeOpenSide(): 'down' | 'right' {
     const trigger = this.shadowRoot?.querySelector('.ci-crop-shape-trigger');
-    const dropdown = this.shadowRoot?.querySelector('.ci-crop-shape-dropdown');
+    const dropdown = this.shadowRoot?.querySelector('.ci-crop-shape-dropdown') as HTMLElement | null;
+    const list = this.shadowRoot?.querySelector('.ci-crop-shape-list') as HTMLElement | null;
+    const orient = this.shadowRoot?.querySelector('.ci-crop-shape-orient') as HTMLElement | null;
     const crop = findCropHost(this);
     if (!trigger || !dropdown || !crop) return 'down';
 
@@ -220,7 +229,18 @@ export class CloudimageCropShapesElement extends CloudimageCropBaseElement {
     const cropRect = crop.getBoundingClientRect();
     const spaceBelow = cropRect.bottom - triggerRect.bottom - DOWN_MARGIN;
     const spaceRight = cropRect.right - triggerRect.right;
-    const neededHeight = (dropdown as HTMLElement).scrollHeight;
+
+    let neededHeight = dropdown.scrollHeight;
+    if (list) {
+      const dropdownStyle = getComputedStyle(dropdown);
+      const dropdownPadding =
+        parseFloat(dropdownStyle.paddingTop || '0') + parseFloat(dropdownStyle.paddingBottom || '0');
+      let orientBlock = 0;
+      if (orient) {
+        orientBlock = orient.offsetHeight + parseFloat(getComputedStyle(orient).marginBottom || '0');
+      }
+      neededHeight = list.scrollHeight + orientBlock + dropdownPadding;
+    }
 
     return neededHeight > spaceBelow && spaceRight >= MIN_SPACE_RIGHT ? 'right' : 'down';
   }

@@ -154,6 +154,16 @@ export const sfxCropShapesStyles = css`
     background: var(--ci-crop-border);
     border-radius: 2px;
   }
+  /* Chromium renders its default up/down step-arrow buttons on a custom
+     ::-webkit-scrollbar unless explicitly hidden — otherwise a squeezed,
+     genuinely-scrolling list (e.g. computeOpenSide() correctly staying
+     'down' because there's truly no room to flip 'right' either) shows
+     ugly native arrows that clash with this thin/borderless scrollbar. */
+  .ci-crop-shape-list::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
 
   :host([open]) .ci-crop-shape-dropdown {
     opacity: 1;
