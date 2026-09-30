@@ -229,6 +229,8 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `show-rotate-slider` / `showRotateSlider`    | `boolean`                  | `true` | Fine tilt slider (±45°). |
 | `show-zoom-slider` / `showZoomSlider`        | `boolean`                  | `true` | Zoom slider. |
 | `show-shape-selector` / `showShapeSelector`  | `boolean`                  | `true` | Shape dropdown. |
+| `show-done-button` / `showDoneButton`        | `boolean`                  | `true` | Primary "Done" button (calls `save()`). Turn off when the host commits the crop through its own action. |
+| `show-cancel-button` / `showCancelButton`    | `boolean`                  | `false` | "Cancel" button mirroring Done (calls `cancel()`). |
 | `show-grid` / `showGrid`                     | `boolean \| 'interaction'` | `'interaction'` | Rule-of-thirds overlay; `'interaction'` shows it only while dragging. |
 
 #### Output
@@ -277,7 +279,7 @@ In **both** variants the photo is constrained to always fully cover the crop fra
 
 ### Built-in "Done" button
 
-The toolbar renders a primary **Done** button pinned to the right edge. It calls [`save()`](#public-methods) — building `blob` + `dataURL` + `params` and dispatching `cloudimage-crop-save` — so a host app can commit the crop without wiring its own button. Handle `cloudimage-crop-save` to upload / persist / close. (Hide the whole toolbar with `show-toolbar="false"` if you prefer to drive everything imperatively.)
+The toolbar renders a primary **Done** button pinned to the right edge. It calls [`save()`](#public-methods) — building `blob` + `dataURL` + `params` and dispatching `cloudimage-crop-save` — so a host app can commit the crop without wiring its own button. Handle `cloudimage-crop-save` to upload / persist / close. Set `showDoneButton = false` to drop just this button and commit through your own action (read `toCropDescriptor()` / `toCloudimageURL()`), or hide the whole toolbar with `show-toolbar="false"` to drive everything imperatively.
 
 ## Server-side crop (Cloudimage)
 

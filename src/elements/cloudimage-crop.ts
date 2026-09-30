@@ -138,6 +138,13 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
    * lives inside the box. Emits `cloudimage-crop-cancel` via `cancel()`.
    */
   @property({ type: Boolean, attribute: 'show-cancel-button' }) showCancelButton = false;
+  /**
+   * Show the toolbar's primary "Done" button (top-right, calls `save()`). On by
+   * default. Turn off when the host commits the crop through its own action —
+   * e.g. an embedding dialog's "Apply" reading `toCropDescriptor()` /
+   * `toCloudimageURL()` — so there aren't two competing confirm buttons.
+   */
+  @property({ type: Boolean, attribute: 'show-done-button' }) showDoneButton = true;
   @property({ type: Boolean, attribute: 'show-bleed-margin' }) showBleedMargin = false;
   @property({ type: Boolean, attribute: 'enable-animations' }) enableAnimations = true;
   @property({ type: Boolean }) keyboard = true;
@@ -324,6 +331,7 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
             ?show-rotate-slider=${this.showRotateSlider}
             ?show-shape-selector=${this.showShapeSelector}
             ?show-cancel-button=${this.showCancelButton}
+            .showDoneButton=${this.showDoneButton}
             toolbar-position=${this.toolbarPosition}
             variant=${this.variant}
             ?interacting=${this.dimToolbarOnDrag && this.isInteracting}

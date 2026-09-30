@@ -33,6 +33,35 @@ describe('<cloudimage-crop>', () => {
     expect(el).toBeInstanceOf(CloudimageCropElement);
   });
 
+  it('forwards showDoneButton to the toolbar (Done shown by default, hidden when false)', async () => {
+    el = document.createElement('cloudimage-crop') as CloudimageCropElement;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const toolbar = () =>
+      el.shadowRoot!.querySelector('cloudimage-crop-toolbar') as CloudimageCropToolbarElement;
+    await toolbar().updateComplete;
+    expect(toolbar().shadowRoot!.querySelector('button[aria-label="Done"]')).not.toBeNull();
+
+    el.showDoneButton = false;
+    await el.updateComplete;
+    await toolbar().updateComplete;
+    expect(toolbar().showDoneButton).toBe(false);
+    expect(toolbar().shadowRoot!.querySelector('button[aria-label="Done"]')).toBeNull();
+  });
+
+  it('hides Done when showDoneButton is false before the first render', async () => {
+    // A boolean-attribute binding would leave the toolbar on its `true` default here: `false`
+    // on first render never creates the attribute, so no attributeChanged ever reaches it.
+    el = document.createElement('cloudimage-crop') as CloudimageCropElement;
+    el.showDoneButton = false;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const toolbar = el.shadowRoot!.querySelector('cloudimage-crop-toolbar') as CloudimageCropToolbarElement;
+    await toolbar.updateComplete;
+    expect(toolbar.showDoneButton).toBe(false);
+    expect(toolbar.shadowRoot!.querySelector('button[aria-label="Done"]')).toBeNull();
+  });
+
   it('reflects `crop-shape` attribute to the `cropShape` property', async () => {
     el = document.createElement('cloudimage-crop') as CloudimageCropElement;
     el.setAttribute('crop-shape', '16:9');

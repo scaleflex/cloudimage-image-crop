@@ -91,6 +91,23 @@ describe('<cloudimage-crop-toolbar>', () => {
     ).toBeNull();
   });
 
+  it('renders the Done button by default and emits save on click', async () => {
+    await mount();
+    const waitForEvent = captureCommand(document);
+    const btn = el.shadowRoot!.querySelector<HTMLButtonElement>('button[aria-label="Done"]')!;
+    expect(btn).not.toBeNull();
+    btn.click();
+    await expect(waitForEvent).resolves.toEqual({ type: 'save' });
+  });
+
+  it('respects show-done-button=false by omitting the Done button', async () => {
+    el = document.createElement('cloudimage-crop-toolbar') as CloudimageCropToolbarElement;
+    el.showDoneButton = false;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('button[aria-label="Done"]')).toBeNull();
+  });
+
   it('setRotationValue syncs the slider without firing a command', async () => {
     await mount();
     let fired = false;

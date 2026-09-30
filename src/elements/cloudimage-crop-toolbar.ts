@@ -52,6 +52,13 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
    * own `cancel()` (dispatches `cloudimage-crop-cancel`).
    */
   @property({ type: Boolean, attribute: 'show-cancel-button' }) showCancelButton = false;
+  /**
+   * Show the primary "Done" button (top-right). On by default. Turn off when the
+   * host commits the crop through its own action instead (e.g. an embedding
+   * dialog's "Apply" button reading `toCropDescriptor()` / `toCloudimageURL()`),
+   * so the editor doesn't offer a second, competing confirm action.
+   */
+  @property({ type: Boolean, attribute: 'show-done-button' }) showDoneButton = true;
   @property({ type: String, attribute: 'toolbar-position', reflect: true })
   toolbarPosition: 'top' | 'bottom' = 'top';
 
@@ -157,17 +164,19 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
         </button>
       ` : null}
 
-      <button
-        type="button"
-        class="ci-crop-done-btn"
-        part="done"
-        aria-label="Done"
-        title="Done"
-        @click=${() => this.emit({ type: 'save' })}
-      >
-        <span class="ci-crop-done-btn-icon">${unsafeHTML(resolveIcon('check', this.icons))}</span>
-        <span class="ci-crop-done-btn-label">Done</span>
-      </button>
+      ${this.showDoneButton ? html`
+        <button
+          type="button"
+          class="ci-crop-done-btn"
+          part="done"
+          aria-label="Done"
+          title="Done"
+          @click=${() => this.emit({ type: 'save' })}
+        >
+          <span class="ci-crop-done-btn-icon">${unsafeHTML(resolveIcon('check', this.icons))}</span>
+          <span class="ci-crop-done-btn-label">Done</span>
+        </button>
+      ` : null}
     `;
   }
 
