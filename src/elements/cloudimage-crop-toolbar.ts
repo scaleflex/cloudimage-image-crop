@@ -92,8 +92,13 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
       ? parsedShapes.filter((s) => s !== 'free')
       : parsedShapes;
 
+    // Narrow editor: reserve the corner gutters only for the corner buttons
+    // actually shown — otherwise the tool group loses 120px for nothing.
+    const gutterL = this.showCancelButton ? ' ci-crop-toolbar--gutter-l' : '';
+    const gutterR = this.showDoneButton ? ' ci-crop-toolbar--gutter-r' : '';
+
     return html`
-      <div class="ci-crop-toolbar" @cloudimage-crop-popover-open=${this.onPopoverOpen}>
+      <div class="ci-crop-toolbar${gutterL}${gutterR}" @cloudimage-crop-popover-open=${this.onPopoverOpen}>
         <div class="ci-crop-toolbar-group">
           <button
             type="button"

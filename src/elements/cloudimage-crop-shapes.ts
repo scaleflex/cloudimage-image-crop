@@ -19,6 +19,8 @@ import { findCropHost } from './popover-anchor';
  *  plus a little breathing room, so "just barely fits" doesn't count as
  *  fitting. */
 const DOWN_MARGIN = 16;
+/** Gap (px) kept between a right-opened dropdown and the crop box bottom. */
+const RIGHT_MARGIN = 8;
 /** Minimum room (px) to the right of the trigger for an open-right flip to
  *  actually help — without this, flipping sideways would just trade a
  *  clipped/scrolling list for a clipped one in the other direction. */
@@ -229,6 +231,13 @@ export class CloudimageCropShapesElement extends CloudimageCropBaseElement {
     const cropRect = crop.getBoundingClientRect();
     const spaceBelow = cropRect.bottom - triggerRect.bottom - DOWN_MARGIN;
     const spaceRight = cropRect.right - triggerRect.right;
+    // Exact room under the trigger for the 'down' max-height. The CSS fallback
+    // (100cqh − 90px) assumes the trigger sits in the toolbar's first row; in a
+    // narrow box the tools wrap and the trigger can land on a lower row.
+    this.style.setProperty('--ci-crop-dropdown-room', `${Math.max(0, Math.floor(spaceBelow))}px`);
+    // Opened to the right, the panel is top-aligned with the trigger.
+    const roomRight = cropRect.bottom - triggerRect.top - RIGHT_MARGIN;
+    this.style.setProperty('--ci-crop-dropdown-room-right', `${Math.max(0, Math.floor(roomRight))}px`);
 
     let neededHeight = dropdown.scrollHeight;
     if (list) {

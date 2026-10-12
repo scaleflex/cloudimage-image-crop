@@ -37,6 +37,26 @@ describe('<cloudimage-crop-toolbar>', () => {
     });
   }
 
+  it('reserves narrow-box corner gutters only for the Cancel / Done buttons actually shown', async () => {
+    await mount();
+    const row = (): DOMTokenList => el.shadowRoot!.querySelector('.ci-crop-toolbar')!.classList;
+
+    el.showCancelButton = false;
+    el.showDoneButton = false;
+    await el.updateComplete;
+    expect(row().contains('ci-crop-toolbar--gutter-l')).toBe(false);
+    expect(row().contains('ci-crop-toolbar--gutter-r')).toBe(false);
+
+    el.showDoneButton = true;
+    await el.updateComplete;
+    expect(row().contains('ci-crop-toolbar--gutter-l')).toBe(false);
+    expect(row().contains('ci-crop-toolbar--gutter-r')).toBe(true);
+
+    el.showCancelButton = true;
+    await el.updateComplete;
+    expect(row().contains('ci-crop-toolbar--gutter-l')).toBe(true);
+  });
+
   it('emits rotate-left on the rotate button click', async () => {
     await mount();
     const waitForEvent = captureCommand(document);

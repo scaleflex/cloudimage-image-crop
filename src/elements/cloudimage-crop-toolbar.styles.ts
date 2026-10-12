@@ -361,10 +361,26 @@ export const sfxCropToolbarStyles = css`
 
     .ci-crop-toolbar {
       width: 100%;
-      padding-left: 60px;
-      padding-right: 60px;
+      box-sizing: border-box;
       flex-wrap: wrap;
       justify-content: center;
+    }
+    /* Gutters only on the sides where Cancel / Done actually sit. */
+    .ci-crop-toolbar--gutter-l { padding-left: 60px; }
+    .ci-crop-toolbar--gutter-r { padding-right: 60px; }
+
+    /* The tools live in ONE group, so wrapping the outer row alone never
+       helps — the group itself must wrap. A tall, narrow box (e.g. a
+       landscape photo turned to portrait on a phone) then shows the tools
+       on two centred lines instead of cutting Reset / the ratio button off
+       at the box edges. */
+    .ci-crop-toolbar-group {
+      flex-wrap: wrap;
+      justify-content: center;
+      height: auto;
+      min-height: 36px;
+      row-gap: 8px;
+      max-width: 100%;
     }
 
     .ci-crop-reset-btn,
@@ -377,6 +393,18 @@ export const sfxCropToolbarStyles = css`
     .ci-crop-toolbar-btn svg {
       width: 18px;
       height: 18px;
+    }
+  }
+
+  /* Very narrow box (e.g. a landscape photo turned to portrait on a phone):
+     the tool group no longer fits one row (~216px with dividers + the
+     toolbar's own padding and insets ≈ 240px) and wraps. CSS can't tell
+     which divider ends up at a line break, so drop them here — otherwise one
+     dangles at the end of the first row. The pills' own gaps still separate
+     the segments. */
+  @container sfxcrop (max-width: 260px) {
+    .ci-crop-toolbar-divider {
+      display: none;
     }
   }
 `;

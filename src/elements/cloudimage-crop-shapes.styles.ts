@@ -71,11 +71,18 @@ export const sfxCropShapesStyles = css`
        box's bottom edge, where .ci-crop-container's overflow:clip cut it
        off. The 90px subtracted is the trigger's own top offset + height +
        gap + a small bottom margin — an approximation, not exact, but
-       erring smaller only means slightly earlier scrolling, never clipping. */
+       erring smaller only means slightly earlier scrolling, never clipping.
+       --ci-crop-dropdown-room is the exact room under the trigger, measured
+       on open (computeOpenSide). When set it REPLACES the 90px approximation
+       (only a fallback now): exact room is right for a trigger wrapped onto
+       a lower toolbar row, and doesn't waste height in a short box. */
+    /* border-box: max-height must bound the WHOLE panel (padding + border
+       included), or the measured room below is overshot by the padding. */
+    box-sizing: border-box;
     width: max-content;
     min-width: 88px;
     max-width: min(92vw, 200px);
-    max-height: min(55vh, 360px, calc(100cqh - 90px));
+    max-height: min(55vh, 360px, var(--ci-crop-dropdown-room, calc(100cqh - 90px)));
     padding: 4px;
     /* Barely-there grey tint with translucency so the panel picks up
        whatever sits behind it (image, dark overlay, etc.) without reading
@@ -183,7 +190,9 @@ export const sfxCropShapesStyles = css`
     top: 0;
     right: auto;
     left: calc(100% + 8px);
-    max-height: min(80vh, 420px, calc(100cqh - 24px));
+    /* --ci-crop-dropdown-room-right: measured from the trigger's TOP to the
+       box bottom on open — 100cqh − 24px ignores where the trigger sits. */
+    max-height: min(80vh, 420px, var(--ci-crop-dropdown-room-right, calc(100cqh - 24px)));
     transform: translateX(-6px) scale(0.96);
   }
   :host([open-side="right"][open]) .ci-crop-shape-dropdown {
