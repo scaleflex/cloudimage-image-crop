@@ -7,6 +7,8 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [3.1.0] — 2026-10-12
+
 ### Added
 
 - **Per-image free-tilt calibration (`calibrateCloudimage()` / `serverFraming`).**
