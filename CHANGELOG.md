@@ -9,6 +9,93 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- **Per-image free-tilt calibration (`calibrateCloudimage()` / `serverFraming`).**
+  Cloudimage frames a rotated image's nested crop differently **per image** — it
+  measures the outer crop either from the centred original frame or from the
+  rotated-bbox corner. This is a CDN-side property that can NOT be derived from
+  the crop geometry (verified against the live CDN: independent of aspect, format,
+  EXIF, dimensions and rotation angle), so a free-tilt URL could otherwise land on
+  the wrong region for some images. The editor now **auto-detects** the correct
+  framing per image (one background CDN probe, then cached) and bakes it into the
+  emitted `url`/`descriptor` for exact free-tilt parity. `save()` does this
+  automatically for `cloudimage` output; `calibrateCloudimage()` (element /
+  controller / React hooks) pre-warms it; `CropDescriptor.serverFraming`
+  (`'centered' | 'inset'`) carries it for Node reproduction. New exports:
+  `calibrateServerFraming(image, descriptor, target)`, the `ServerFraming` type,
+  and a `framing` argument on `resolveServerCrop`. Non-tilt crops (0/90/180/270°)
+  are exact for every image and need no calibration.
+- `show-done-button` / `showDoneButton` (default `true`) — hide the toolbar's
+  built-in Done button when the host commits the crop through its own action.
+- `dim-toolbar-on-drag` — fade the toolbar while the user drags / resizes / pans.
+- React: `<CloudimageCrop>` forwards `showDoneButton`, `showCancelButton` and
+  `dimToolbarOnDrag` (they were element-only); `restoreState(descriptor)` on the
+  `useCloudimageCrop` and `useCloudimageCropController` hooks.
+- `TransformState.turnedBox` (classic) — records whether the editor box took
+  the turned photo's aspect; serialized in descriptors so exports reproduce the
+  layout. Always written by this version; **absent = a 3.0.0 state** (see
+  *Fixed → 3.0.0 descriptors*).
+- Headless controller callback `onBoxAspectChange(turned)` — fires whenever the
+  classic box must change aspect (toolbar, keyboard `R`, `restoreState`, shape /
+  variant switch). `<cloudimage-crop>` wires it to re-fit itself. Opt-in for
+  headless use: without it the box is treated as fixed (see *Changed*).
+
+### Changed
+
+- **Classic 90° turn: the box follows the photo.** With the free shape a quarter
+  turn now turns the editor box to the photo's new aspect and turns the frame
+  with the photo (a full-photo frame stays the full photo; no letterbox margins).
+  With a picked ratio the box and frame stay exactly as they are (16:9 stays
+  16:9) and the turned photo is cover-fit behind them. Headless controllers that
+  don't wire `onBoxAspectChange` get the ratio behaviour for every shape, so the
+  photo is never drawn stretched into a box that didn't turn.
+- **Classic free tilt keeps the frame filled.** While tilted, the photo is zoomed
+  (about the frame centre) just enough to cover the frame and pan stays within
+  cover, so the export has no empty corners. The zoom change is reported through
+  `onScaleSync`. This auto-zoom is derived from the user's own zoom/pan, never
+  accumulated: moving the frame back from the edge, or untilting, gives it back.
+- Picking a ratio from the toolbar gives the largest frame of that ratio the box
+  allows (instead of the 80% starting inset).
+- `reset()` returns to the **configured** shape (`crop-shape` attribute / prop /
+  `update({ cropShape })`), not to a shape the user picked in the toolbar
+  (or via `setCropShape()`), which it now undoes.
+- Classic frame corner dots are rendered in the DOM so they can overhang the
+  photo edge (no longer three-quarters clipped on a full-photo frame); a press on
+  one is forwarded to the canvas, with a relay fallback where an engine refuses
+  pointer capture for the forwarded press.
+- Narrow editor toolbar: the tools wrap onto a second centred row instead of
+  being cut off (e.g. a landscape photo turned to portrait on a phone); corner
+  gutters are reserved only for a shown Cancel / Done; dividers are dropped
+  below a 260px box. The shape dropdown sizes itself to the measured room below
+  (or beside) its trigger, so it no longer runs past the box edge.
+- `toCloudimageURL()` logs a one-time console warning when it builds a
+  free-tilt URL before `calibrateCloudimage()` (the uncalibrated framing can pick
+  the wrong region on some images; `save()` calibrates on its own).
+
+### Fixed
+
+- **3.0.0 descriptors keep producing the same crop.** A state without
+  `turnedBox` is rendered exactly as 3.0.0 did — an odd turn letterboxes the
+  photo and flip mirrors about the crop centre — in the canvas, `toCanvas()`,
+  `resolveServerCrop()` and `buildCloudimageUrlFromDescriptor()`; restoring one
+  doesn't auto-zoom a tilt. Its first quarter turn in the editor moves it to the
+  current layout. (Exception: a turned **and** tilted 3.0.0 crop gets the corrected
+  nested-crop placement below — its 3.0.0 URL selected the wrong region.)
+- `toTransformParams().crop` (and `params` in `cloudimage-crop-save`) is the
+  region of the original photo under the frame again after a 90° turn and under a
+  flip — it was the frame's box-normalized rect scaled by the image size, which
+  mixed axes once the box turned. Zoom, pan and tilt remain ignored, as
+  documented.
+- Keyboard `R` in `<cloudimage-crop>` re-fits the box like the toolbar button
+  (it previously left the box un-turned and drew the photo stretched).
+- A photo turning 90° no longer jumps in size halfway through the animation —
+  its draw size follows the target turn.
+- Nested-crop inset for a near-quarter-turn tilted landscape (negative-inset
+  regime) no longer pushes the outer crop past the rotated canvas.
+
+## [3.0.0] — 2026-06-17
+
+### Added
+
 - **Configurable crop output — Blob or Cloudimage URL.** New `output-mode` /
   `outputMode` config (`'blob'` default, or `'cloudimage'`) selects whether
   `save()` rasterizes the crop to a `Blob`/`dataURL` (client-side, upload it
@@ -28,21 +115,6 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     the **`fixed` variant for guaranteed parity** (it cover-fits → crop always
     inside the photo), or keep the `classic` crop within the photo.
     `resolveServerCrop(...).clamped` flags it.
-- **Per-image free-tilt calibration (`calibrateCloudimage()` / `serverFraming`).**
-  Cloudimage frames a rotated image's nested crop differently **per image** — it
-  measures the outer crop either from the centred original frame or from the
-  rotated-bbox corner. This is a CDN-side property that can NOT be derived from
-  the crop geometry (verified against the live CDN: independent of aspect, format,
-  EXIF, dimensions and rotation angle), so a free-tilt URL could otherwise land on
-  the wrong region for some images. The editor now **auto-detects** the correct
-  framing per image (one background CDN probe, then cached) and bakes it into the
-  emitted `url`/`descriptor` for exact free-tilt parity. `save()` does this
-  automatically for `cloudimage` output; `calibrateCloudimage()` (element /
-  controller / React hooks) pre-warms it; `CropDescriptor.serverFraming`
-  (`'centered' | 'inset'`) carries it for Node reproduction. New exports:
-  `calibrateServerFraming(image, descriptor, target)`, the `ServerFraming` type,
-  and a `framing` argument on `resolveServerCrop`. Non-tilt crops (0/90/180/270°)
-  are exact for every image and need no calibration.
 - `toCloudimageURL(options?)` and `toCropDescriptor()` on the `<cloudimage-crop>`
   element, the headless controller, and the React `useCloudimageCrop` /
   `useCloudimageCropController` hooks.

@@ -231,6 +231,7 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `show-shape-selector` / `showShapeSelector`  | `boolean`                  | `true` | Shape dropdown. |
 | `show-done-button` / `showDoneButton`        | `boolean`                  | `true` | Primary "Done" button (calls `save()`). Turn off when the host commits the crop through its own action. |
 | `show-cancel-button` / `showCancelButton`    | `boolean`                  | `false` | "Cancel" button mirroring Done (calls `cancel()`). |
+| `dim-toolbar-on-drag` / `dimToolbarOnDrag`   | `boolean`                  | `false` | Fade the toolbar while the user drags / resizes / pans, so it doesn't compete with the photo mid-gesture. |
 | `show-grid` / `showGrid`                     | `boolean \| 'interaction'` | `'interaction'` | Rule-of-thirds overlay; `'interaction'` shows it only while dragging. |
 
 #### Output
@@ -263,7 +264,9 @@ The `variant` attribute switches how the crop is presented. Both share the same 
 
 ### `classic` (default)
 
-The photo fills the editor at its own aspect ratio and a **movable / resizable crop frame** floats over it (resize handles + a move-handle), with the area outside the frame dimmed by `overlay-color`. Drag inside the frame to pan the photo, drag the handles to resize.
+The photo fills the editor at its own aspect ratio and a **movable / resizable crop frame** floats over it (corner handles + a move-handle), with the area outside the frame dimmed by `overlay-color`. Drag the photo (inside or around the frame) to pan it, drag the corners to resize, and the move-handle to move the frame. Frame and photo are independent layers: the photo can be zoomed out smaller than the frame.
+
+**90° turns.** With the free shape the editor box takes the turned photo's aspect and the frame turns with the photo — a full-photo frame stays the full photo. With a picked ratio (e.g. `16:9`) the box and frame stay exactly as they are and the turned photo is cover-fit behind them. Picking a ratio from the toolbar gives the largest frame of that ratio the box allows.
 
 ### `fixed`
 
@@ -275,7 +278,8 @@ The **editor box itself is the crop frame**, sized to the `crop-shape` aspect an
 
 ### Cover guarantee
 
-In **both** variants the photo is constrained to always fully cover the crop frame — zoom and pan are clamped (and the minimum zoom is raised) so the exported image never contains transparent gaps. The one exception is a 90°/270° turn in `classic`, which intentionally letterboxes the rotated photo to fit the frame.
+- **`fixed`** — the photo always fully covers the frame: zoom and pan are clamped (and the minimum zoom is raised), so the export never contains transparent gaps.
+- **`classic`** — the photo is a free layer and may be zoomed / panned off the frame (that area exports as background). The exception is a **free tilt**: while tilted, the photo is zoomed about the frame centre just enough to cover the frame, so the tilt never opens empty corners. This auto-zoom is derived from your own zoom and pan, never accumulated — move the frame back from the edge, or untilt, and your zoom returns; dragging the photo off the frame hits a wall instead of zooming in, and wheel / pinch zoom-out stop at the cover floor.
 
 ### Built-in "Done" button
 
@@ -431,9 +435,9 @@ Editor state maps to Cloudimage v7 ops in pipeline order
 > **The one limit — empty margins can't be reproduced.** If the crop frame extends
 > *beyond the photo* into empty/background margins, a Cloudimage URL cannot match
 > the canvas there: a CDN **clamps a crop to the image** (it can't pad a crop), so
-> those margins are dropped. This happens in `classic` after a **90°/270° turn**,
-> which letterboxes the photo smaller than the frame, when the crop frame reaches
-> into the margin. **For guaranteed server-side parity use the `fixed` variant**
+> those margins are dropped. In `classic` this happens only when the photo is
+> zoomed / panned off the frame (a 90° turn no longer opens margins), or for a
+> 3.0.0 descriptor restored with its letterboxed turn. **For guaranteed server-side parity use the `fixed` variant**
 > (it cover-fits, so the crop is always inside the photo — every combination
 > matches), or in `classic` keep the crop within the photo. The geometry of the
 > in-photo region stays exact; `resolveServerCrop(...).clamped` flags when a crop
@@ -447,20 +451,22 @@ All methods live on the `<cloudimage-crop>` element instance. They throw if invo
 |---|---|---|
 | `loadImage(src)`                    | `Promise<void>`         | Load (or re-load) an image URL. |
 | `getTransformState()`               | `TransformState`        | Snapshot of rotation, flip, scale, pan, crop. |
-| `getCropRect()`                     | `CropRect`              | Current crop in normalised `[0,1]` coords. |
-| `setCropRect(rect)`                 | `void`                  | Programmatic crop update. |
-| `setCropShape(shape)`               | `void`                  | Built-in preset or `"W:H"` ratio. |
-| `rotateLeft()`                      | `void`                  | 90° counter-clockwise. |
+| `getCropRect()`                     | `CropRect`              | Current crop in **pixels** of the editor box's image space (the turned photo after a free-shape 90° turn). |
+| `setCropRect(rect)`                 | `void`                  | Programmatic crop update, in **normalised `[0,1]`** box coords (note: not the pixels `getCropRect()` returns). |
+| `setCropShape(shape)`               | `void`                  | Built-in preset or `"W:H"` ratio — a user-style pick that `reset()` undoes. |
+| `rotateLeft()`                      | `void`                  | 90° counter-clockwise (see [90° turns](#classic-default)). Same as the toolbar button and the `R` key. |
 | `flipHorizontal()`                  | `void`                  | Mirror around vertical axis. |
 | `setRotation(deg)`                  | `void`                  | Fine tilt -45…+45. |
 | `setScale(scale)`                   | `void`                  | Zoom level (clamped to `min`/`max-scale`). |
-| `reset()`                           | `void`                  | Restore initial state. |
+| `reset()`                           | `void`                  | Restore the initial state, with the **configured** shape (`crop-shape` attribute / prop) — a shape picked in the toolbar or via `setCropShape()` is undone. |
+| `restoreState(descriptor)`          | `void`                  | Restore a saved `CropDescriptor` (from `toCropDescriptor()` / the save event): turns, tilt, flip, zoom, pan and frame. Call after `cloudimage-crop-image-load`. 3.0.0 descriptors render exactly as they did in 3.0.0. |
 | `toCanvas()`                        | `HTMLCanvasElement`     | Render the current crop into a fresh canvas. |
 | `toBlob(type?, quality?)`           | `Promise<Blob>`         | Like `HTMLCanvasElement.toBlob` for the cropped output. |
 | `toDataURL(type?, quality?)`        | `string`                | Like `HTMLCanvasElement.toDataURL`. |
-| `toTransformParams()`               | `TransformParams`       | Serialisable description of the transform — pass to a server-side resizer. |
-| `toCloudimageURL(options?)`         | `string`                | Build a Cloudimage URL reproducing the full transform (crop/flip/90°/tilt/zoom/pan) server-side. See [Server-side crop](#server-side-crop-cloudimage). |
+| `toTransformParams()`               | `TransformParams`       | Serialisable description of the transform — pass to a server-side resizer. `crop` is the region of the original photo under the frame (correct after 90° turns and flips); zoom, pan and tilt are not folded in (`scale` / `rotation` report them). |
+| `toCloudimageURL(options?)`         | `string`                | Build a Cloudimage URL reproducing the full transform (crop/flip/90°/tilt/zoom/pan) server-side. For a tilted crop, `await calibrateCloudimage()` first (a console warning flags it otherwise). See [Server-side crop](#server-side-crop-cloudimage). |
 | `toCropDescriptor()`                | `CropDescriptor`        | Serializable snapshot (state + dims + variant) to rebuild the Cloudimage URL later/server-side. |
+| `calibrateCloudimage()`             | `Promise<'centered' \| 'inset' \| null>` | Probe the CDN once per image for the free-tilt framing; cached and baked into later URLs / descriptors. `save()` does it automatically. |
 | `save(type?, quality?)`             | `Promise<void>`         | Convenience: builds the result for the current `output-mode` (blob + dataURL + params, or a Cloudimage `url`) and dispatches `cloudimage-crop-save`. |
 | `cancel()`                          | `void`                  | Dispatches `cloudimage-crop-cancel`. |
 
@@ -493,6 +499,8 @@ import { CloudimageCrop } from '@cloudimage/image-crop/react';
   theme="dark"
   showBleedMargin
   availableShapes={['free', 'square', 'circle', '16:9']}
+  showDoneButton={false}
+  dimToolbarOnDrag
   onReady={({ element }) => {}}
   onImageLoad={({ image }) => {}}
   onChange={(state) => {}}
@@ -522,6 +530,8 @@ return <cloudimage-crop ref={ref} src="..." />;
 ### `useCloudimageCropController()` hook (headless)
 
 Drives the same controller against a consumer-owned `<canvas>`. Use this when the built-in toolbar isn't a fit and you need to render every UI affordance yourself. See `CropControllerState`, `CropControllerActions`, and `CropControllerApi` in `src/react/use-cloudimage-crop-controller.ts`.
+
+**90° turns in headless mode.** The container is yours, so the controller can't re-size it. By default it treats the box as fixed: a quarter turn keeps box and frame and cover-fits the turned photo (the picked-ratio behaviour, for every shape). To get the element's behaviour — the box follows the turned photo — use `createCropController` directly and pass the `onBoxAspectChange(turned)` callback, re-sizing your container to the photo's aspect turned by 90° when `turned` is true.
 
 ## Theming
 
@@ -574,16 +584,16 @@ cloudimage-crop::part(container) { /* ... */ }
 All types live in `src/core/types.ts` and are re-exported from both `@cloudimage/image-crop` and `@cloudimage/image-crop/react`.
 
 - `CropShapeName` — `'free' | 'square' | 'circle' | 'rounded-rect' | '16:9' | …` plus any `"W:H"` string.
-- `CropRect` — `{ x, y, width, height }` in normalised `[0,1]` image coordinates.
-- `TransformState` — full runtime state (`quarterTurns`, `rotation`, `flipH`, `flipV`, `scale`, `panX/Y`, `cropRect`, `rotationPivot?`).
+- `CropRect` — `{ x, y, width, height }`: normalised `[0,1]` box coordinates in `setCropRect()` / `TransformState.cropRect`, pixels in `getCropRect()` / `cloudimage-crop-crop-change`.
+- `TransformState` — full runtime state (`quarterTurns`, `rotation`, `flipH`, `flipV`, `scale`, `panX/Y`, `cropRect`, `rotationPivot?`, `turnedBox?`). `turnedBox` (classic) records whether the box took the turned photo's aspect; it is always written by this version, and its **absence** marks a 3.0.0 state, rendered exactly as 3.0.0 did.
 - `TransformParams` — serialisable export shape (`rotation`, `flipH`, `flipV`, `scale`, `crop` in original-image pixels, `outputWidth`, `outputHeight`).
 - `CropIconOverrides` — per-slot SVG-string overrides for toolbar icons.
 - `CloudimageCropConfig` — the internal config shape consumed by `createCropController`. Element attributes mirror this 1:1.
 - `CloudimageTarget` (alias `CloudimageUrlOptions`) — the Cloudimage delivery target for `toCloudimageURL` / `buildCloudimageUrlFromDescriptor` (`src`, `token`, `domain`, `bgColor`, `format`, `quality`, `maxWidth`, `maxHeight`).
-- `CropDescriptor` — serializable parity snapshot (`state`, `imageWidth/Height`, `containerWidth/Height`, `variant`) returned by `toCropDescriptor()`; pass to `buildCloudimageUrlFromDescriptor` to reproduce the crop server-side.
+- `CropDescriptor` — serializable parity snapshot (`state`, `imageWidth/Height`, `containerWidth/Height`, `variant`, optional `serverFraming`) returned by `toCropDescriptor()`; pass to `buildCloudimageUrlFromDescriptor` to reproduce the crop server-side, or to `restoreState()` to reopen it in the editor.
 - `ServerCrop` — the lower-level crop plan returned by the exported `resolveServerCrop(state, iw, ih, containerW, containerH, variant)`; carries `cropPx`, `rotateCCW`, `flip*`, `tilted`, and **`clamped`** (true when the crop reaches outside the photo, so a CDN URL can't reproduce its background margins).
 
-The package also exports these **functions**: `buildCloudimageUrlFromDescriptor`, `buildCloudimageUrl` (lossy shim), and `resolveServerCrop` — all from both `@cloudimage/image-crop` and `@cloudimage/image-crop/react`.
+The package also exports these **functions**: `buildCloudimageUrlFromDescriptor`, `buildCloudimageUrl` (lossy shim), `resolveServerCrop` and `calibrateServerFraming` — all from both `@cloudimage/image-crop` and `@cloudimage/image-crop/react`.
 
 ## Browser Support
 

@@ -593,6 +593,7 @@ Every configuration value has a kebab-case attribute on `<cloudimage-crop>`. Not
 | Attribute | Type | Default |
 |---|---|---|
 | `src` | URL string | `""` |
+| `variant` | `classic \| fixed` | `classic` |
 | `crop-shape` | built-in (`free`, `square`, `circle`, `rounded-rect`, `16:9`, `4:3`, `3:2`, `5:4`, `2:1`, `9:16`, `3:4`, `2:3`, `4:5`, `1:2`) or any `"W:H"` string | `16:9` |
 | `theme` | `light \| dark` | `light` |
 | `show-grid` | `true \| false \| interaction` | `interaction` |
@@ -604,11 +605,15 @@ Every configuration value has a kebab-case attribute on `<cloudimage-crop>`. Not
 | `initial-rotation`, `initial-scale` | number | `0`, `1` |
 | `show-toolbar`, `show-rotate-button`, `show-flip-button`, `show-rotate-slider`, `show-shape-selector`, `show-zoom-slider` | boolean | `true` |
 | `toolbar-position` | `top \| bottom` | `top` |
+| `show-done-button` | boolean | `true` |
+| `show-cancel-button`, `dim-toolbar-on-drag` | boolean | `false` |
 | `border-radius` | px | `20` |
 | `overlay-color`, `handle-color`, `bleed-margin-color` | CSS color | `rgba(0,0,0,0.55)`, `#ffffff`, `rgba(255,0,0,0.5)` |
 | `show-bleed-margin`, `bleed-margin-size` | boolean, px | `false`, `10` |
 | `output-type`, `output-quality` | string (MIME), number 0-1 | `image/png`, `0.92` |
 | `max-output-width`, `max-output-height` | px (`0` = original) | `0`, `0` |
+| `output-mode` | `blob \| cloudimage` | `blob` |
+| `cloudimage-token`, `cloudimage-domain`, `cloudimage-bg-color` | string | `""` |
 | `enable-animations`, `animation-speed` | boolean, number | `true`, `1.0` |
 | `keyboard`, `pinch-zoom`, `wheel-zoom` | boolean | `true` |
 | `icons` (property only) | `CropIconOverrides` (per-slot SVG strings) | `{}` |
@@ -635,8 +640,10 @@ interface CloudimageCropElement extends HTMLElement {
   toTransformParams(): TransformParams;
   toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string;
   toCropDescriptor(): CropDescriptor;
+  calibrateCloudimage(): Promise<'centered' | 'inset' | null>; // free-tilt CDN framing, cached per image
+  restoreState(descriptor: CropDescriptor): void;              // reopen a saved descriptor (3.0.0 ones render as in 3.0.0)
 
-  reset(): void;
+  reset(): void;                      // back to the CONFIGURED shape; undoes toolbar / setCropShape picks
   save(type?: string, quality?: number): Promise<void>;  // fires cloudimage-crop-save
   cancel(): void;                                        // fires cloudimage-crop-cancel
 }
@@ -1169,10 +1176,11 @@ variants — mean per-channel diff 3–9 / 255.
 **within the photo**. If the window extends past the image into empty/background
 margins, the URL cannot match: a CDN **clamps a crop to the image bounds** (it
 does not pad a crop — verified: out-of-bounds `tl_px`/`br_px`, with or without
-`bg_color`, return the same clamped pixels). This is reachable in `classic` after
-a **90°/270° turn**, which letterboxes the photo smaller than the frame, so a
-crop frame reaching into the letterbox margin is clamped (the canvas shows those
-margins; the CDN can't). `resolveServerCrop(...).clamped` reports it. The **`fixed`
+`bg_color`, return the same clamped pixels). In `classic` this is reachable only
+when the photo is zoomed / panned off the frame — a 90°/270° turn no longer opens
+margins (the box follows the turned photo, or a kept ratio box cover-fits it) — or
+for a 3.0.0 descriptor, whose turn is still rendered letterboxed (the canvas shows
+those margins; the CDN can't). `resolveServerCrop(...).clamped` reports it. The **`fixed`
 variant always cover-fits** (crop ⊆ photo) → every combination matches; in
 `classic`, keep the crop within the photo for guaranteed parity.
 

@@ -813,12 +813,15 @@ function renderDocConfiguration(): string {
       rows: [
         ['theme',                'light | dark',                                 'light',   'Color variant — swaps the token bundle.'],
         ['toolbar-position',     'top | bottom',                                 'top',     'Anchor for the floating toolbar pill.'],
-        ['show-toolbar',         'boolean',                                      'true',    'Toggle the entire toolbar row. The toolbar includes a primary <strong>Done</strong> button (right edge) that calls <code>save()</code> → dispatches <code>cloudimage-crop-save</code>. Hide the toolbar to drive everything imperatively.'],
+        ['show-toolbar',         'boolean',                                      'true',    'Toggle the entire toolbar row. The toolbar includes a primary <strong>Done</strong> button (right edge) that calls <code>save()</code> → dispatches <code>cloudimage-crop-save</code> (hide just it with <code>show-done-button="false"</code>). Hide the toolbar to drive everything imperatively.'],
         ['show-rotate-button',   'boolean',                                      'true',    'Show the 90° rotate-left button.'],
         ['show-flip-button',     'boolean',                                      'true',    'Show the flip-horizontal button.'],
         ['show-rotate-slider',   'boolean',                                      'true',    'Show the fine-rotation (±45°) trigger.'],
         ['show-zoom-slider',     'boolean',                                      'true',    'Show the zoom trigger.'],
         ['show-shape-selector',  'boolean',                                      'true',    'Show the shape-selector dropdown.'],
+        ['show-done-button',     'boolean',                                      'true',    'Primary <strong>Done</strong> button (calls <code>save()</code>). Turn off when the host commits the crop through its own action.'],
+        ['show-cancel-button',   'boolean',                                      'false',   '<strong>Cancel</strong> button mirroring Done (calls <code>cancel()</code>).'],
+        ['dim-toolbar-on-drag',  'boolean',                                      'false',   'Fade the toolbar while the user drags / resizes / pans.'],
         ['show-grid',            'true | false | interaction',                   'interaction', 'Rule-of-thirds grid: always on, always off, or only while dragging.'],
       ],
     },
@@ -908,13 +911,11 @@ el.initialCrop = { x: 0.1, y: 0.1, width: 0.8, height: 0.6 };`, 'typescript')}
           <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
           <tbody>
             <tr><td><code>icons</code></td><td><code>CropIconOverrides</code></td><td>Per-slot SVG strings — swap any built-in icon (<code>rotateLeft</code>, <code>flipHorizontal</code>, <code>tilt</code>, <code>loupe</code>, <code>zoomIn</code>, <code>zoomOut</code>, <code>cropAspect</code>, <code>cropCustom</code>, <code>cropCircle</code>, <code>cropRoundedRect</code>, <code>orientLandscape</code>, <code>orientPortrait</code>, <code>chevronDown</code>, <code>reset</code>).</td></tr>
-            <tr><td><code>customAspectRatios</code></td><td><code>{ name: string; ratio: number }[]</code></td><td>Consumer-defined ratios surfaced in the shape selector.</td></tr>
           </tbody>
         </table>
       </div>
       ${codeBlock(`const el = document.querySelector('cloudimage-crop');
-el.icons = { rotateLeft: '<svg viewBox="0 0 24 24">…</svg>' };
-el.customAspectRatios = [{ name: 'Cinema', ratio: 2.35 }];`, 'typescript')}
+el.icons = { rotateLeft: '<svg viewBox="0 0 24 24">…</svg>' };`, 'typescript')}
     `,
   );
 }
@@ -922,21 +923,23 @@ el.customAspectRatios = [{ name: 'Cinema', ratio: 2.35 }];`, 'typescript')}
 function renderDocApi(): string {
   const methods: [string, string, string][] = [
     ['loadImage',        '(src: string): Promise&lt;void&gt;',             'Load a new image. Cancels any in-flight decode from a previous call.'],
-    ['rotateLeft',       '(): void',                                       '90° counter-clockwise turn.'],
+    ['rotateLeft',       '(): void',                                       '90° counter-clockwise turn (same as the toolbar button and the <kbd>R</kbd> key). Free shape: the box takes the turned photo’s aspect and the frame turns with it; a picked ratio keeps box and frame and cover-fits the turned photo.'],
     ['flipHorizontal',   '(): void',                                       'Mirror across the vertical axis.'],
     ['setRotation',      '(deg: number): void',                            'Fine rotation in degrees, clamped to −45 … +45.'],
     ['setScale',         '(scale: number): void',                          'Zoom level, clamped to <code>minScale</code> … <code>maxScale</code>.'],
-    ['setCropShape',     '(shape: CropShapeName): void',                   'Switch preset. Re-fits the crop rect to the new aspect.'],
-    ['setCropRect',      '(rect: CropRect): void',                         'Place the crop rectangle in image-pixel space.'],
+    ['setCropShape',     '(shape: CropShapeName): void',                   'Switch preset. Re-fits the crop rect to the new aspect (a user-style pick that <code>reset()</code> undoes).'],
+    ['setCropRect',      '(rect: CropRect): void',                         'Place the crop rectangle in <strong>normalised [0,1]</strong> box coordinates (not the pixels <code>getCropRect()</code> returns).'],
     ['getCropRect',      '(): CropRect',                                   'Current crop rectangle in image-pixel coordinates.'],
     ['getTransformState','(): TransformState',                             'Full snapshot (rotation, flips, scale, pan, crop rect normalized).'],
     ['toCanvas',         '(): HTMLCanvasElement',                          'Render the current crop to a fresh off-screen canvas.'],
     ['toBlob',           '(type?: string, quality?: number): Promise&lt;Blob&gt;', 'Export the crop as a <code>Blob</code>. Defaults come from the <code>output-*</code> attributes.'],
     ['toDataURL',        '(type?: string, quality?: number): string',      'Export as a data URL (base64).'],
-    ['toTransformParams','(): TransformParams',                            'Summary suitable for server-side rendering (image CDNs).'],
+    ['toTransformParams','(): TransformParams',                            'Summary for server-side rendering (image CDNs). <code>crop</code> is the original-photo region under the frame; zoom, pan and tilt are reported separately, not folded in.'],
     ['toCloudimageURL',  '(options?): string',                             'Build a Cloudimage URL that crops / rotates / flips / tilts / zooms / pans server-side.'],
+    ['calibrateCloudimage', '(): Promise&lt;\'centered\' | \'inset\' | null&gt;', 'Probe the CDN once per image for the free-tilt framing (cached). Await it before <code>toCloudimageURL()</code> on a tilted crop; <code>save()</code> does it itself.'],
     ['toCropDescriptor', '(): CropDescriptor',                             'Serializable snapshot (state + image/container dims + variant) to rebuild the Cloudimage URL later via <code>buildCloudimageUrlFromDescriptor</code>.'],
-    ['reset',            '(): void',                                       'Restore rotation, scale, pan, and crop rect to initial values.'],
+    ['restoreState',     '(descriptor: CropDescriptor): void',             'Reopen a saved descriptor (turns, tilt, flip, zoom, pan, frame). Call after <code>cloudimage-crop-image-load</code>. 3.0.0 descriptors render exactly as in 3.0.0.'],
+    ['reset',            '(): void',                                       'Restore rotation, scale, pan and crop rect to initial values, with the <strong>configured</strong> shape (a toolbar pick is undone).'],
     ['save',             '(type?: string, quality?: number): Promise&lt;void&gt;', 'Export and dispatch <code>cloudimage-crop-save</code> with the result.'],
     ['cancel',           '(): void',                                       'Dispatch <code>cloudimage-crop-cancel</code> — the consumer decides what that means.'],
   ];
@@ -1572,7 +1575,7 @@ fetch('/api/transform', { method: 'POST', body: JSON.stringify(params) });`, 'ty
 function renderExampleCloudimage(): string {
   return examplePage(
     'Cloudimage URL (server-side)',
-    'Instead of a Blob, emit a <a href="https://www.cloudimage.io/" target="_blank" rel="noopener">Cloudimage</a> URL that performs the transform on the CDN — with <strong>full parity</strong> to the canvas: crop, flip, rotate, free tilt, zoom and pan all match (tilt via a two-pass nested URL). Set <code>output-mode="cloudimage"</code> plus a token, transform, then <strong>Crop &amp; compare</strong> — the right image is served straight from Cloudimage, no upload. <em>Parity holds for any crop within the photo; the <a href="#/examples/fixed">fixed</a> variant guarantees it (cover-fit). In classic, a 90° turn letterboxes the photo, so a crop frame reaching into the empty margin can’t be reproduced — a CDN clamps crops to the image.</em>',
+    'Instead of a Blob, emit a <a href="https://www.cloudimage.io/" target="_blank" rel="noopener">Cloudimage</a> URL that performs the transform on the CDN — with <strong>full parity</strong> to the canvas: crop, flip, rotate, free tilt, zoom and pan all match (tilt via a two-pass nested URL). Set <code>output-mode="cloudimage"</code> plus a token, transform, then <strong>Crop &amp; compare</strong> — the right image is served straight from Cloudimage, no upload. <em>Parity holds for any crop within the photo; the <a href="#/examples/fixed">fixed</a> variant guarantees it (cover-fit). In classic, a frame reaching past the photo (zoomed / panned off it) can’t be reproduced there — a CDN clamps crops to the image.</em>',
     `
       <div class="demo-example-controls" style="margin-bottom:12px">
         <input id="ex-ci-src" type="text" placeholder="Paste a Filerobot / Cloudimage image URL…" style="flex:1;min-width:280px;padding:9px 12px;border-radius:8px;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;font:inherit" />

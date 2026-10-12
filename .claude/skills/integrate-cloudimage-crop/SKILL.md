@@ -85,6 +85,8 @@ For SSR frameworks (Next.js App Router, Remix), the `@cloudimage/image-crop/reac
 | Fixed "window" crop (avatar / phone)    | `variant="fixed"` — editor box is the frame, photo cover-fit + panned underneath, no resize handles. Combine with any `crop-shape`. Default is `variant="classic"` (movable/resizable frame). |
 | Restrict the toolbar shape palette      | `availableShapes={['free','square','circle','16:9']}` |
 | Pre-fill a saved crop                   | `initial-crop='{"x":0.1,"y":0.1,"width":0.8,"height":0.8}'` |
+| Reopen a saved crop exactly             | `el.restoreState(descriptor)` after `cloudimage-crop-image-load` (descriptor from `toCropDescriptor()` / the save event) |
+| Host commits with its own button        | `show-done-button="false"` (`showDoneButton={false}`), then read `toCropDescriptor()` / `toCloudimageURL()` — `await calibrateCloudimage()` first if the crop is tilted |
 | Hide the toolbar                        | `show-toolbar="false"` (drive via `ref` instead) |
 | Print bleed guides                      | `show-bleed-margin` + `bleed-margin-size="20"` |
 | Disable mouse wheel zoom                | `wheel-zoom="false"` |
