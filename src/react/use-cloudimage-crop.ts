@@ -30,6 +30,8 @@ export interface UseCloudimageCropReturn {
   toTransformParams(): TransformParams | null;
   toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string | null;
   toCropDescriptor(): CropDescriptor | null;
+  /** Restore a saved `CropDescriptor` (call after the image has loaded). */
+  restoreState(descriptor: CropDescriptor): void;
   /** Calibrate the per-image Cloudimage framing for exact free-tilt URLs (async; cached per image). */
   calibrateCloudimage(): Promise<'centered' | 'inset' | null>;
   save(type?: string, quality?: number): Promise<void>;
@@ -80,6 +82,7 @@ export function useCloudimageCrop(): UseCloudimageCropReturn {
     ref.current?.toCloudimageURL(options) ?? null, []);
   const toCropDescriptor = useCallback((): CropDescriptor | null =>
     ref.current?.toCropDescriptor() ?? null, []);
+  const restoreState = useCallback((descriptor: CropDescriptor) => ref.current?.restoreState(descriptor), []);
   const calibrateCloudimage = useCallback((): Promise<'centered' | 'inset' | null> =>
     ref.current ? ref.current.calibrateCloudimage() : Promise.resolve(null), []);
   const save = useCallback((type?: string, quality?: number): Promise<void> =>
@@ -105,6 +108,7 @@ export function useCloudimageCrop(): UseCloudimageCropReturn {
     toTransformParams,
     toCloudimageURL,
     toCropDescriptor,
+    restoreState,
     calibrateCloudimage,
     save,
     cancel,

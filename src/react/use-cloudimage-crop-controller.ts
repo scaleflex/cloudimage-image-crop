@@ -44,6 +44,8 @@ export interface CropControllerActions {
   setScale(scale: number): void;
   setCropShape(shape: CropShapeName): void;
   setCropRect(rect: CropRect): void;
+  /** Restore a saved `CropDescriptor` (after the image has loaded). */
+  restoreState(descriptor: CropDescriptor): void;
   reset(): void;
 }
 
@@ -203,6 +205,7 @@ export function useCloudimageCropController(
     setScale: (scale) => controllerRef.current?.setScale(scale),
     setCropShape: (shape) => controllerRef.current?.setCropShape(shape),
     setCropRect: (rect) => controllerRef.current?.setCropRect(rect),
+    restoreState: (descriptor) => controllerRef.current?.restoreState(descriptor),
     reset: () => controllerRef.current?.reset(),
   }), []);
 

@@ -35,6 +35,15 @@ describe('<CloudimageCrop> React wrapper', () => {
     expect(el.theme).toBe('light');
   });
 
+  it('forwards the toolbar props showDoneButton / showCancelButton / dimToolbarOnDrag', async () => {
+    const { container } = render(<CloudimageCrop showDoneButton={false} showCancelButton dimToolbarOnDrag />);
+    const el = container.querySelector('cloudimage-crop') as CloudimageCropElement;
+    await el.updateComplete;
+    expect(el.showDoneButton).toBe(false);
+    expect(el.showCancelButton).toBe(true);
+    expect(el.dimToolbarOnDrag).toBe(true);
+  });
+
   it('bridges CustomEvents to prop callbacks', async () => {
     const onChange = vi.fn();
     const onCropChange = vi.fn();

@@ -81,6 +81,12 @@ export interface CloudimageCropProps {
   showRotateButton?: boolean;
   showFlipButton?: boolean;
   toolbarPosition?: 'top' | 'bottom';
+  /** Toolbar's primary Done button (calls `save()`). Default `true`. */
+  showDoneButton?: boolean;
+  /** Toolbar's Cancel button (calls `cancel()`). Default `false`. */
+  showCancelButton?: boolean;
+  /** Fade the toolbar while the user drags / resizes / pans. Default `false`. */
+  dimToolbarOnDrag?: boolean;
   showBleedMargin?: boolean;
   bleedMarginSize?: number;
   bleedMarginColor?: string;
@@ -147,6 +153,7 @@ const FORWARDED_PROPS: readonly (keyof CloudimageCropProps)[] = [
   'maxOutputHeight', 'outputMode', 'cloudimageToken', 'cloudimageDomain', 'cloudimageBgColor', 'showGrid',
   'showToolbar', 'showRotateSlider', 'showZoomSlider', 'showShapeSelector',
   'showRotateButton', 'showFlipButton', 'toolbarPosition',
+  'showDoneButton', 'showCancelButton', 'dimToolbarOnDrag',
   'showBleedMargin', 'bleedMarginSize', 'bleedMarginColor', 'enableAnimations',
   'animationSpeed', 'keyboard', 'pinchZoom', 'wheelZoom',
   'icons',
