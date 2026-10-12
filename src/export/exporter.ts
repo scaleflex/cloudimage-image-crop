@@ -1,6 +1,6 @@
 import type { TransformState, TransformParams } from '../core/types';
 import { degreesToRadians, clamp } from '../utils/math';
-import { computeCoverDraw } from '../canvas/image-layer';
+import { classicDrawSize, computeCoverDraw, flipPivot } from '../canvas/image-layer';
 import {
   type Matrix2D,
   identityMatrix,
@@ -18,30 +18,50 @@ function get2DContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
   return ctx;
 }
 
-/** Calculate transform params in original image pixel coordinates. */
+/**
+ * Calculate transform params in original image pixel coordinates.
+ *
+ * `crop` is the region of the ORIGINAL (un-turned, un-mirrored) photo under the
+ * frame — zoom, pan and the free tilt are ignored (documented contract; they
+ * are reported separately as `scale` / `rotation`). Classic: derived through
+ * {@link resolveServerCrop} with those three neutralised, so it stays correct
+ * after a 90° turn (turned box, or a ratio frame on a cover-fit photo) and
+ * under a flip — `cropRect` alone is normalized to the editor box, not the
+ * photo. Fixed: `cropRect` is the whole box, so this is the whole image (see
+ * the note on `toTransformParams`).
+ */
 export function getTransformParams(
   state: TransformState,
   imageWidth: number,
   imageHeight: number,
+  variant: 'classic' | 'fixed' = 'classic',
 ): TransformParams {
   const totalRotation = state.quarterTurns + state.rotation;
-  const cropW = Math.round(state.cropRect.width * imageWidth);
-  const cropH = Math.round(state.cropRect.height * imageHeight);
   const is90 = Math.round(state.quarterTurns / 90) % 2 !== 0;
+
+  let crop: { x: number; y: number; width: number; height: number };
+  if (variant === 'fixed') {
+    crop = {
+      x: Math.round(state.cropRect.x * imageWidth),
+      y: Math.round(state.cropRect.y * imageHeight),
+      width: Math.round(state.cropRect.width * imageWidth),
+      height: Math.round(state.cropRect.height * imageHeight),
+    };
+  } else {
+    const neutral: TransformState = { ...state, scale: 1, panX: 0, panY: 0, rotation: 0, rotationPivot: undefined };
+    // Classic display space is image-pixel space, so no container size is needed
+    // (it only rescales pan, which is zeroed here).
+    crop = resolveServerCrop(neutral, imageWidth, imageHeight, 0, 0, 'classic').cropPx;
+  }
 
   return {
     rotation: totalRotation,
     flipH: state.flipH,
     flipV: state.flipV,
     scale: state.scale,
-    crop: {
-      x: Math.round(state.cropRect.x * imageWidth),
-      y: Math.round(state.cropRect.y * imageHeight),
-      width: cropW,
-      height: cropH,
-    },
-    outputWidth: is90 ? cropH : cropW,
-    outputHeight: is90 ? cropW : cropH,
+    crop,
+    outputWidth: is90 ? crop.height : crop.width,
+    outputHeight: is90 ? crop.width : crop.height,
   };
 }
 
@@ -72,9 +92,9 @@ export interface ResolvedDisplay {
  * Single source of truth shared by {@link renderToCanvas} (slices it onto a
  * canvas) and {@link resolveServerCrop} (inverts it to derive CDN crop coords).
  *
- * Classic: the editor box has the photo aspect, so display space IS image-pixel
- * space (DW=iw, DH=ih) and the photo fills it; a 90°/270° turn just rotates the
- * photo in place (no shorter-axis fit — its footprint may overflow). Fixed: the
+ * Classic: the editor box has the (turned) photo aspect, so display space IS the
+ * turned image-pixel space (iw×ih, or ih×iw after a 90°/270° turn) and the photo
+ * fills it. Fixed: the
  * box has the FRAME aspect, the photo is cover-fit, and display space is the box
  * scaled up toward native resolution.
  */
@@ -103,13 +123,15 @@ export function resolveDisplay(
     drawW = coverOut.drawW;
     drawH = coverOut.drawH;
   } else {
-    DW = iw;
-    DH = ih;
-    // Classic: no shorter-axis fit on a 90°/270° turn — the photo keeps its size
-    // and just rotates (mirrors image-layer.ts's free-layer draw). Display space
-    // IS image-pixel space (DW=iw, DH=ih) at every quarter-turn.
-    drawW = DW;
-    drawH = DH;
+    // Classic: display space is image-pixel space of the editor box — iw×ih, or
+    // ih×iw when the box is turned. The photo is drawn by the same rule as the
+    // canvas (image-layer.ts → classicDrawSize): filling the box when its turned
+    // orientation matches, cover-fit when a picked ratio kept the box through a turn.
+    DW = state.turnedBox ? ih : iw;
+    DH = state.turnedBox ? iw : ih;
+    const d = classicDrawSize(DW, DH, iw, ih, state.quarterTurns, state.turnedBox);
+    drawW = d.drawW;
+    drawH = d.drawH;
   }
 
   const cropX = state.cropRect.x * DW;
@@ -135,12 +157,15 @@ export function resolveDisplay(
   }
   if (state.flipH || state.flipV) {
     // Flip pivots about the IMAGE centre (DW/2, DH/2), NOT the crop centre, so a
-    // mirrored photo doesn't slide when the frame is moved/resized. Mirrors
-    // image-layer.ts. Only the pivot (a translation) changes — the reflection is
-    // unchanged, so the flip×rotation `geomDeg` in resolveServerCrop still holds.
-    m = multiplyMatrices(m, translateMatrix(DW / 2, DH / 2));
+    // mirrored photo doesn't slide when the frame is moved/resized — except for a
+    // legacy (≤ 3.0.0) state, which mirrored about the crop centre (flipPivot).
+    // Mirrors image-layer.ts. Only the pivot (a translation) changes — the
+    // reflection is unchanged, so the flip×rotation `geomDeg` in resolveServerCrop
+    // still holds.
+    const fp = flipPivot(state);
+    m = multiplyMatrices(m, translateMatrix(fp.x * DW, fp.y * DH));
     m = multiplyMatrices(m, scaleMatrix(state.flipH ? -1 : 1, state.flipV ? -1 : 1));
-    m = multiplyMatrices(m, translateMatrix(-DW / 2, -DH / 2));
+    m = multiplyMatrices(m, translateMatrix(-fp.x * DW, -fp.y * DH));
   }
   m = multiplyMatrices(m, translateMatrix(DW / 2, DH / 2));
   m = multiplyMatrices(m, scaleMatrix(state.scale, state.scale));

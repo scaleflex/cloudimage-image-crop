@@ -33,6 +33,13 @@ export interface RendererHandle {
   setBleedConfig(config: BleedConfig): void;
   /** Toggle the `'fixed'` variant: cover-fit photo, no resize/move handles. */
   setFixedFrame(fixed: boolean): void;
+  /**
+   * Hand the corner handles to the host: the canvas stops painting them and
+   * `listener` receives the frame rect (canvas CSS px) every drawn frame, so
+   * the host can place DOM handles that may overhang the canvas edge (the
+   * canvas itself clips at the photo). `null` restores canvas-drawn handles.
+   */
+  setFrameListener(listener: ((rect: { x: number; y: number; width: number; height: number }) => void) | null): void;
   resize(): void;
   destroy(): void;
 }
@@ -77,6 +84,7 @@ export function createRenderer(
   }
 
   let dirty = true;
+  let frameListener: ((rect: { x: number; y: number; width: number; height: number }) => void) | null = null;
   let animationId: number | null = null;
   let destroyed = false;
   let loopRunning = false;
@@ -374,7 +382,7 @@ export function createRenderer(
     const imgRect = getImageDisplayRect();
 
     // 3. Image layer — cover-fit in the fixed variant.
-    drawImageLayer(ctx, image, imgRect, displayState, fixedFrame);
+    drawImageLayer(ctx, image, imgRect, displayState, fixedFrame, targetState.quarterTurns);
 
     // 4. Overlay mask + 5. crop frame — both pull theme-aware colors from
     // CSS variables each frame so light/dark themes swap instantly.
@@ -401,8 +409,10 @@ export function createRenderer(
         frameShadow: cssVar('--ci-crop-frame-shadow', 'rgba(0, 0, 0, 0.3)'),
         handleFill: cssVar('--ci-crop-handle-fill', '#ffffff'),
         handleStroke: cssVar('--ci-crop-handle-stroke', 'rgba(0, 0, 0, 0.25)'),
-      }, !fixedFrame);
+      }, !fixedFrame, { width: cw, height: ch }, !frameListener);
     }
+    // DOM handles (host-owned, may overhang the canvas edge) follow this frame.
+    if (frameListener && !fixedFrame) frameListener(cropCanvas);
 
     // 5.5. Bleed margins
     if (bleedConfig.show) {
@@ -437,11 +447,18 @@ export function createRenderer(
       }
     },
 
+    setFrameListener(listener) {
+      frameListener = listener;
+      dirty = true;
+    },
+
     setDisplayState(state: DisplayState) {
       Object.assign(targetState, state);
       // rotationPivot isn't animated — snap it so the draw layer sees the
       // latest pivot immediately (captured on tilt entry, cleared on 0°).
       displayState.rotationPivot = state.rotationPivot;
+      // Box/photo layout switch — snap, it isn't something to tween.
+      displayState.turnedBox = state.turnedBox;
       dirty = true;
     },
 

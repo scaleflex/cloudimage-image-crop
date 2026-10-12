@@ -152,6 +152,18 @@ export interface TransformState {
    * the frame does not drag the tilted photo along. Cleared on reset to 0°.
    */
   rotationPivot?: { x: number; y: number };
+  /**
+   * Classic only: the editor box has the photo's aspect turned by 90° (ih×iw
+   * instead of iw×ih). A quarter turn with the free shape flips it — the box and
+   * frame follow the photo; with a picked ratio it stays — the frame keeps its
+   * size and place, and a photo whose orientation no longer matches the box is
+   * cover-fit into it. Serialized so exports reproduce the same layout.
+   *
+   * Always written by this version. **Absent** = a state saved by 3.0.0 or
+   * earlier, rendered exactly as 3.0.0 did (odd turns letterboxed, flip about
+   * the crop centre) so old descriptors keep producing the same crop.
+   */
+  turnedBox?: boolean;
 }
 
 // === Display State (animated) ===
@@ -166,6 +178,8 @@ export interface DisplayState {
   panY: number;
   cropRect: NormalizedRect;
   rotationPivot?: { x: number; y: number };
+  /** See {@link TransformState.turnedBox} — not animated. */
+  turnedBox?: boolean;
   gridOpacity: number;
   /**
    * True while the user is actively dragging/resizing/panning. The renderer

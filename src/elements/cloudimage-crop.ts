@@ -18,6 +18,8 @@ import type { CloudimageCropToolbarElement, CloudimageCropToolbarCommand } from 
 import { CloudimageCropBaseElement } from './base';
 import { parseAvailableShapes, DEFAULT_SHAPES } from './parse-shapes';
 import { getAspectRatio } from '../transforms/constrain';
+import { MOVE_HANDLE_OFFSET } from '../canvas/crop-frame';
+import { FORWARDED_HANDLE } from '../interactions/pointer-tracker';
 import { designTokens, baseStyles, spinKeyframes } from '../styles/shared.css';
 import { sfxCropStyles } from './cloudimage-crop.styles';
 
@@ -34,6 +36,8 @@ const MIN_RESIZE_PX = 80;
  * rect for this case, the box IS the frame.
  */
 const RESIZE_EDGES: ResizeEdge[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+/** Classic frame corner dots, rendered in the DOM so they can overhang the photo edge. */
+const CORNERS = ['nw', 'ne', 'se', 'sw'] as const;
 
 /**
  * Lit `@property` converter for the tri-state `show-grid` attribute, which
@@ -201,6 +205,8 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
    * edge, like a window) *is* how you resize the crop, no separate rect.
    */
   private _manualSize: { w: number; h: number } | null = null;
+  /** The pending `cropShape` change came from a toolbar pick (see onToolbarCommand). */
+  private _shapePicked = false;
   private _resizeDrag: { edge: ResizeEdge; startX: number; startY: number; startW: number; startH: number } | null = null;
 
   // === Lifecycle ===
@@ -266,6 +272,10 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
         onInteractingChange: (interacting) => {
           this.isInteracting = interacting;
         },
+        onFrameLayout: (rect) => this.placeCornerHandles(rect),
+        // Classic box follows the turned photo — from every path (toolbar,
+        // keyboard R, restoreState, shape/variant switch).
+        onBoxAspectChange: () => this.fitHostToImage(),
       },
     });
 
@@ -286,11 +296,14 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
     const delta: Partial<CloudimageCropConfig> = {};
     let has = false;
     for (const key of LIVE_CONFIG_KEYS) {
+      // A toolbar pick already reached the controller via setCropShape().
+      if (key === 'cropShape' && this._shapePicked) continue;
       if (changed.has(key)) {
         (delta as Record<string, unknown>)[key] = this[key];
         has = true;
       }
     }
+    this._shapePicked = false;
     if (has) this.controller.update(delta);
 
     // The editor box aspect depends on `variant` + `cropShape` in the fixed
@@ -349,7 +362,99 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
         </div>
       </div>
       ${this.variant === 'fixed' && this.cropShape === 'free' ? this.renderResizeHandles() : null}
+      ${this.variant !== 'fixed'
+        ? html`
+            ${CORNERS.map((c) => html`<div
+              class="ci-crop-corner ci-crop-corner--${c}"
+              data-corner=${c}
+              part="corner-handle"
+              hidden
+              @pointerdown=${this.forwardHandlePointerDown}
+            ></div>`)}
+            <div
+              class="ci-crop-move"
+              data-corner="move"
+              part="move-handle"
+              hidden
+              @pointerdown=${this.forwardHandlePointerDown}
+            ></div>
+          `
+        : null}
     `;
+  }
+
+  /**
+   * A DOM handle can sit (partly) outside the canvas, where the canvas never
+   * sees the pointer. Re-dispatch the press on the canvas at the same client
+   * coordinates: the pointer tracker measures relative to the canvas (negative
+   * offsets included) and its hit zones reach past the frame edge, so it picks
+   * the corner / move-handle and captures the pointer for the rest of the drag.
+   */
+  private forwardHandlePointerDown = (e: PointerEvent): void => {
+    const canvas = this.canvasHost?.canvasEl;
+    if (!canvas) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const dot = e.currentTarget as HTMLElement;
+    const press = new PointerEvent('pointerdown', e);
+    // Name the grabbed handle so the controller doesn't have to hit-test an
+    // off-canvas point (the NW corner's overhang lies in the move-handle zone).
+    (press as unknown as Record<string, unknown>)[FORWARDED_HANDLE] = dot.dataset.corner;
+    canvas.dispatchEvent(press);
+    // Normally the tracker's setPointerCapture() on the canvas routes the rest
+    // of the drag there. Where an engine refuses capture for a synthetic press
+    // (the tracker swallows that error), the moves would land on this dot and
+    // the drag would die — so capture on the dot instead and relay them.
+    if (canvas.hasPointerCapture?.(e.pointerId)) return;
+    try {
+      dot.setPointerCapture(e.pointerId);
+    } catch {
+      // Pointer already gone — nothing to relay.
+      return;
+    }
+    const relay = (ev: PointerEvent): void => {
+      if (ev.pointerId !== e.pointerId) return;
+      canvas.dispatchEvent(new PointerEvent(ev.type, ev));
+      if (ev.type === 'pointerup' || ev.type === 'pointercancel') {
+        dot.removeEventListener('pointermove', relay);
+        dot.removeEventListener('pointerup', relay);
+        dot.removeEventListener('pointercancel', relay);
+      }
+    };
+    dot.addEventListener('pointermove', relay);
+    dot.addEventListener('pointerup', relay);
+    dot.addEventListener('pointercancel', relay);
+  };
+
+  /**
+   * Classic: place the frame's corner dots. They are DOM siblings of the
+   * clipping `.ci-crop-container` (like the fixed variant's resize handles), so
+   * a frame flush with the photo edge shows each dot centred on its corner,
+   * overhanging the edge, instead of three quarters clipped by the canvas.
+   * Called by the renderer on every drawn frame (follows the animation). A press
+   * on a dot is forwarded to the canvas (forwardHandlePointerDown), which
+   * hit-tests and runs the drag.
+   */
+  private placeCornerHandles(rect: { x: number; y: number; width: number; height: number }): void {
+    const dots = this.renderRoot.querySelectorAll<HTMLElement>('.ci-crop-corner, .ci-crop-move');
+    if (!dots.length || !this.canvasHost) return;
+    // Canvas CSS px → :host px (the canvas host sits inside the container).
+    const container = this.canvasHost.parentElement as HTMLElement | null;
+    const ox = this.canvasHost.offsetLeft + (container?.offsetLeft ?? 0);
+    const oy = this.canvasHost.offsetTop + (container?.offsetTop ?? 0);
+    const at: Record<string, [number, number]> = {
+      nw: [rect.x, rect.y],
+      ne: [rect.x + rect.width, rect.y],
+      se: [rect.x + rect.width, rect.y + rect.height],
+      sw: [rect.x, rect.y + rect.height],
+      // Same diagonal offset the canvas used for its own move-handle dot.
+      move: [rect.x - MOVE_HANDLE_OFFSET, rect.y - MOVE_HANDLE_OFFSET],
+    };
+    for (const dot of dots) {
+      const [x, y] = at[dot.dataset.corner ?? 'nw'];
+      dot.style.transform = `translate(${ox + x}px, ${oy + y}px) translate(-50%, -50%)`;
+      dot.hidden = false;
+    }
   }
 
   /**
@@ -385,12 +490,17 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
         this.controller.reset();
         this.fitHostToImage();
         break;
-      case 'rotate-left': this.controller.rotateLeft(); break;
+      case 'rotate-left': this.rotateLeft(); break;
       case 'flip-h': this.controller.flipHorizontal(); break;
       case 'rotation': this.controller.setRotation(detail.value); break;
       case 'scale': this.controller.setScale(detail.value); break;
       case 'shape':
-        // Property assignment only — `updated()` forwards to controller.
+        // A USER pick, not a config change: apply it directly so Reset can undo
+        // it (update({ cropShape }) would make it the new starting shape). The
+        // controller's onShapeSync reflects it to `cropShape`; `updated()` skips
+        // forwarding that one change back as config.
+        this._shapePicked = true;
+        this.controller.setCropShape(detail.value);
         this.cropShape = detail.value;
         break;
       case 'save':
@@ -433,7 +543,12 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
   toBlob(type?: string, quality?: number): Promise<Blob> { return this.ensure().toBlob(type, quality); }
   toDataURL(type?: string, quality?: number): string { return this.ensure().toDataURL(type, quality); }
   toTransformParams(): TransformParams { return this.ensure().toTransformParams(); }
-  /** Build a Cloudimage URL reproducing the current crop/transform server-side. */
+  /**
+   * Build a Cloudimage URL reproducing the current crop/transform server-side.
+   * For a free-TILTED crop, `await calibrateCloudimage()` once per image first
+   * (save() does this itself) — uncalibrated, the CDN framing is a heuristic
+   * that can select the wrong region on some images; a console warning flags it.
+   */
   toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string { return this.ensure().toCloudimageURL(options); }
   /** Serializable snapshot to reproduce the crop as a Cloudimage URL server-side. */
   toCropDescriptor(): CropDescriptor { return this.ensure().toCropDescriptor(); }
@@ -506,11 +621,13 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
   private fitHostToImage(): void {
     if (!this.currentImage || !this.isConnected || !this.canvasHost) return;
 
-    // Frame dimensions follow the photo's natural aspect and stay fixed
-    // across 90° rotations — only the image pixels inside the canvas
-    // spin in place.
-    const effW = this.currentImage.naturalWidth;
-    const effH = this.currentImage.naturalHeight;
+    // Box dimensions follow the photo's aspect. Classic: the box may be turned
+    // (`turnedBox` — a free-shape quarter turn makes the box follow the photo; a
+    // picked ratio keeps it). Fixed keeps the natural aspect: its box is the
+    // frame, and only the photo spins inside it.
+    const turned = this.variant !== 'fixed' && !!this.controller?.getTransformState().turnedBox;
+    const effW = turned ? this.currentImage.naturalHeight : this.currentImage.naturalWidth;
+    const effH = turned ? this.currentImage.naturalWidth : this.currentImage.naturalHeight;
 
     // Clear inline dims before measuring so we don't read back our own
     // previous output — classic feedback-loop gotcha in auto-sized layouts.

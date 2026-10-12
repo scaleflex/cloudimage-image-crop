@@ -1,7 +1,7 @@
 const CORNER_HANDLE_SIZE = 12;
 const HIT_AREA_PAD = 22; // 44px / 2 for 44×44 hit area
 /** Diagonal offset of the move-handle from the NW corner, in canvas px. */
-const MOVE_HANDLE_OFFSET = 11;
+export const MOVE_HANDLE_OFFSET = 11;
 /** Hit radius for the move-handle, in canvas px. */
 const MOVE_HANDLE_HIT = 9;
 
@@ -30,6 +30,16 @@ export function drawCropFrame(
    * these off — its frame can't be resized or moved, only the photo moves.
    */
   handles: boolean = true,
+  /**
+   * Visible canvas size (CSS px). A frame flush with the canvas edge — the classic variant's
+   * full-photo starting frame — would otherwise centre its corner handles on the canvas corners,
+   * leaving three quarters of each one clipped and the frame looking handle-less. With bounds, a
+   * handle that would be clipped is nudged inward so it stays fully visible; its hit area (44 px
+   * around the true corner, see `getHandleRects`) still covers the nudged dot.
+   */
+  bounds?: { width: number; height: number },
+  /** Paint the corner dots and the move-handle. Off when the host renders them in the DOM. */
+  cornerDots: boolean = true,
 ): void {
   const isCircle = shapeType === 'circle';
   const isRoundedRect = shapeType === 'rounded-rect';
@@ -95,6 +105,11 @@ export function drawCropFrame(
   ctx.lineWidth = 1;
   const hr = Math.min(CORNER_HANDLE_SIZE / 2, width / 6, height / 6);
 
+  // Keep each dot (radius + its 1 px stroke) inside the visible canvas.
+  const inset = hr + 1;
+  const fitX = (v: number): number => (bounds ? Math.min(Math.max(v, inset), bounds.width - inset) : v);
+  const fitY = (v: number): number => (bounds ? Math.min(Math.max(v, inset), bounds.height - inset) : v);
+
   const corners = [
     { cx: x, cy: y },
     { cx: x + width, cy: y },
@@ -102,17 +117,31 @@ export function drawCropFrame(
     { cx: x, cy: y + height },
   ];
 
+  // The host renders the dots (corners + move-handle) in the DOM, where they
+  // can overhang the canvas edge — nothing more to paint here.
+  if (!cornerDots) {
+    ctx.restore();
+    return;
+  }
+
   for (const corner of corners) {
     ctx.beginPath();
-    ctx.arc(corner.cx, corner.cy, hr, 0, Math.PI * 2);
+    ctx.arc(fitX(corner.cx), fitY(corner.cy), hr, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
   }
 
   // Move-handle: a separate circle offset diagonally outward from the NW
-  // corner — dragging it slides the whole frame without resizing.
+  // corner — dragging it slides the whole frame without resizing. When it
+  // falls outside the canvas the frame touches the top-left edges and there is
+  // no room to move it that way anyway — skip the (clipped) dot rather than
+  // drawing it on top of the nudged corner handle.
   const moveCx = x - MOVE_HANDLE_OFFSET;
   const moveCy = y - MOVE_HANDLE_OFFSET;
+  if (bounds && (moveCx - hr < 0 || moveCy - hr < 0)) {
+    ctx.restore();
+    return;
+  }
   ctx.beginPath();
   ctx.arc(moveCx, moveCy, hr, 0, Math.PI * 2);
   ctx.fill();

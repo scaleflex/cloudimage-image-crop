@@ -8,7 +8,20 @@ export interface PointerInfo {
   pointerType: 'mouse' | 'touch' | 'pen';
   shiftKey: boolean;
   altKey: boolean;
+  /**
+   * Set on a press forwarded from a DOM handle (see {@link FORWARDED_HANDLE}):
+   * which handle was grabbed — `'nw' | 'ne' | 'se' | 'sw'` or `'move'`. The
+   * controller uses it instead of hit-testing the (possibly off-canvas) point,
+   * where overlapping zones (the NW corner vs the move-handle) are ambiguous.
+   */
+  handle?: string;
 }
+
+/**
+ * Property a forwarded `pointerdown` carries to name the DOM handle it came
+ * from (set by `<cloudimage-crop>`'s corner dots).
+ */
+export const FORWARDED_HANDLE = '__ciCropHandle';
 
 export interface PinchEvent {
   centerX: number;
@@ -77,6 +90,8 @@ export function createPointerTracker(
       shiftKey: e.shiftKey,
       altKey: e.altKey,
     };
+    const handle = (e as unknown as Record<string, unknown>)[FORWARDED_HANDLE];
+    if (typeof handle === 'string') info.handle = handle;
     activePointers.set(e.pointerId, info);
     callbacks.onPointerDown(info, getPointerList());
   }

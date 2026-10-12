@@ -11,6 +11,7 @@ import { mergeConfig } from './config';
 import {
   createInitialState,
   applyRotateLeft,
+  turnFrameWithPhoto,
   applyFlipH,
   applyRotation,
   applyScale,
@@ -19,8 +20,8 @@ import {
   applyPan,
 } from '../transforms/transform-state';
 import { createRenderer, type RendererHandle, type CropShapeType } from '../canvas/renderer';
-import { computeCoverDraw } from '../canvas/image-layer';
-import { clampCoverPanScale } from '../transforms/constrain';
+import { computeCoverDraw, isLegacyLayout } from '../canvas/image-layer';
+import { clampCoverPanScale, coverTiltedFrame, getAspectRatio, rebaseTiltedPan } from '../transforms/constrain';
 import { hitTest, getCursor } from '../canvas/hit-test';
 import { createPointerTracker, type PointerTrackerHandle } from '../interactions/pointer-tracker';
 import { updateDragCrop, type DragCropState } from '../interactions/drag-crop';
@@ -66,6 +67,23 @@ export interface CropControllerCallbacks {
    * while the user's attention is on the photo, not the controls.
    */
   onInteractingChange?(interacting: boolean): void;
+  /**
+   * Classic variant: when set, the canvas stops painting the frame's corner
+   * dots and this receives the frame rect (canvas CSS px) on every drawn frame,
+   * so the host can render DOM handles that overhang the canvas edge.
+   */
+  onFrameLayout?(rect: { x: number; y: number; width: number; height: number }): void;
+  /**
+   * Classic variant: the editor box must change aspect — `turnedBox` flipped
+   * (free-shape quarter turn, restoreState, shape/variant switch). The host
+   * re-sizes the layout container to the photo's aspect turned by 90° when
+   * `turned` is true, its natural aspect otherwise. Fires after the state
+   * change, from any path (toolbar, keyboard, API).
+   *
+   * Opt-in: without it the box is assumed fixed, and a free-shape quarter turn
+   * keeps box and frame (the turned photo is cover-fit) instead of turning them.
+   */
+  onBoxAspectChange?(turned: boolean): void;
 }
 
 export interface CropControllerOptions {
@@ -153,6 +171,11 @@ export function createCropController(opts: CropControllerOptions): CropControlle
   const { canvas, host, layoutContainer, callbacks = {} } = opts;
   let config = { ...opts.config };
   let cropShape: CropShapeName = config.cropShape;
+  // The shape reset() returns to: the integrator's configured shape. Updated by
+  // update({ cropShape }) — a config change (attribute, React prop) is a new
+  // starting point — but NOT by setCropShape(), which is a user pick (toolbar,
+  // headless action) that Reset is meant to undo.
+  let initialCropShape: CropShapeName = config.cropShape;
   let image: HTMLImageElement | null = null;
   let state: TransformState = createInitialState(config.cropShape);
   let renderer: RendererHandle | null = null;
@@ -198,10 +221,34 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     return { ...state, cropRect: { ...state.cropRect } };
   }
 
+  /**
+   * Pixel size of the space `cropRect` is normalized to. Classic: the editor box
+   * takes the TURNED photo's aspect after a 90°/270° turn, so the frame lives in
+   * the turned photo (ih × iw). Ratio shapes must be fitted against these dims —
+   * against the natural ones a 1:1 frame picked after a turn comes out
+   * rectangular until the next handle drag (which uses the real box size).
+   */
+  function frameSpaceSize(): { w: number; h: number } {
+    const iw = image?.naturalWidth ?? 1;
+    const ih = image?.naturalHeight ?? 1;
+    const turned = config.variant !== 'fixed' && !!state.turnedBox;
+    return turned ? { w: ih, h: iw } : { w: iw, h: ih };
+  }
+
+  /**
+   * Classic box can take the turned photo's aspect only when a host re-sizes it
+   * on `onBoxAspectChange` (the <cloudimage-crop> element does). A headless
+   * consumer that doesn't wire it keeps a fixed box, so a free-shape quarter
+   * turn behaves like a picked ratio there: box and frame stay, the turned photo
+   * is cover-fit — never drawn stretched into a box that didn't turn.
+   */
+  function boxFollowsPhoto(): boolean {
+    return config.variant !== 'fixed' && !!callbacks.onBoxAspectChange;
+  }
+
   function getCropRect(): CropRect {
     if (!image) return { ...state.cropRect };
-    const iw = image.naturalWidth;
-    const ih = image.naturalHeight;
+    const { w: iw, h: ih } = frameSpaceSize();
     return {
       x: Math.round(state.cropRect.x * iw),
       y: Math.round(state.cropRect.y * ih),
@@ -237,7 +284,16 @@ export function createCropController(opts: CropControllerOptions): CropControlle
    * `classic` is a free-layer model: the frame and the photo are independent, the
    * photo may be zoomed/panned freely (including smaller than the frame), so there
    * is no cover floor and no pan-lock — just the plain `minScale/maxScale` bounds.
+   * Exception: while tilted, the photo is kept covering the frame (see below).
    */
+  // Classic tilt cover bookkeeping (see applyCover): the user's own zoom/pan,
+  // and the effective values applyCover last wrote into `state`.
+  type View = { scale: number; panX: number; panY: number };
+  let userView: View | null = null;
+  let lastEffectiveView: View | null = null;
+  // Cover floor applyCover last computed (see zoomFloor).
+  let scaleFloor = 0;
+
   function applyCover(): void {
     if (!image || !renderer) return;
     const { w, h } = layoutSize();
@@ -252,7 +308,63 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     // classic gets no cover floor and no pan-lock: moving the frame never drags
     // the photo and panning the photo never tugs the frame.
     if (config.variant !== 'fixed') {
-      renderer.setScaleBounds(config.minScale, config.maxScale);
+      // The cover zoom below is derived, never accumulated: it is recomputed
+      // each time from the USER's own view (their zoom/pan), so moving the frame
+      // away from the edge — or untilting — gives the zoom back. Any scale/pan
+      // that differs from what this function last produced was set by a direct
+      // view action (zoom, wheel, pinch, pan-drag, reset, restoreState, …) and
+      // becomes the new user view.
+      //
+      // A pan alone (pan-drag) is made at the zoom on screen. While tilted it
+      // first hits a wall — clamped to the cover window at that zoom, so
+      // dragging the photo off the frame never zooms in — and is then folded
+      // back into the user's OWN zoom, keeping the photo point under the frame
+      // centre. The user keeps their zoom (it returns once the frame moves
+      // back) and their pan. At the wall the re-derived view is exactly the
+      // clamped one (the tight axis needs precisely the on-screen zoom), so
+      // nothing drifts; dragging toward cover lets the auto-zoom ease off.
+      const tilted = state.rotation !== 0 && !isLegacyLayout(state);
+      if (
+        !lastEffectiveView ||
+        state.scale !== lastEffectiveView.scale ||
+        state.panX !== lastEffectiveView.panX ||
+        state.panY !== lastEffectiveView.panY
+      ) {
+        const panOnly = !!lastEffectiveView && !!userView && state.scale === lastEffectiveView.scale;
+        if (panOnly && tilted && userView) {
+          const wall = coverTiltedFrame(
+            state, w, h, config.maxScale, image.naturalWidth, image.naturalHeight, { clampPanFirst: true },
+          );
+          const userScale = userView.scale;
+          userView = {
+            scale: userScale,
+            ...rebaseTiltedPan({ ...state, scale: wall.scale, panX: wall.panX, panY: wall.panY }, userScale, w, h),
+          };
+        } else if (panOnly && userView) {
+          userView = { scale: userView.scale, panX: state.panX, panY: state.panY };
+        } else {
+          userView = { scale: state.scale, panX: state.panX, panY: state.panY };
+        }
+      }
+      const view = userView ?? { scale: state.scale, panX: state.panX, panY: state.panY };
+
+      // Exception: a free tilt. Turning the photo inside an unrotated frame
+      // always opens empty corners in it, which the export then reproduces —
+      // never what the user means. While tilted, zoom the photo just enough
+      // (about the frame centre) to fill the frame, and keep pan within cover.
+      // A restored legacy (≤ 3.0.0) state is left as saved — 3.0.0 had no
+      // tilt cover, and zooming it here would change the crop it reproduces.
+      if (tilted) {
+        const r = coverTiltedFrame({ ...state, ...view }, w, h, config.maxScale, image.naturalWidth, image.naturalHeight);
+        state = { ...state, scale: r.scale, panX: r.panX, panY: r.panY };
+        scaleFloor = Math.max(config.minScale, r.minScale);
+        renderer.setScaleBounds(scaleFloor, config.maxScale);
+      } else {
+        state = { ...state, ...view };
+        scaleFloor = config.minScale;
+        renderer.setScaleBounds(scaleFloor, config.maxScale);
+      }
+      lastEffectiveView = { scale: state.scale, panX: state.panX, panY: state.panY };
       return;
     }
 
@@ -260,15 +372,34 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     const cover = computeCoverDraw(w, h, image.naturalWidth, image.naturalHeight, state.quarterTurns);
     const r = clampCoverPanScale(state, w, h, frame, cover.drawW, cover.drawH, config.maxScale);
     state = { ...state, scale: r.scale, panX: r.panX, panY: r.panY };
+    scaleFloor = r.minScale;
     renderer.setScaleBounds(r.minScale, config.maxScale);
   }
+
+  /**
+   * Lowest zoom the current view allows: `minScale`, raised to the cover floor
+   * while the photo must cover the frame (classic tilt, fixed). Wheel and pinch
+   * zoom-out stop here — below it applyCover would only zoom back up about the
+   * frame centre, so their cursor-anchored pan would turn each extra notch
+   * into a pan (and the cover into a zoom-IN).
+   */
+  function zoomFloor(): number {
+    return Math.max(config.minScale, scaleFloor);
+  }
+
+  // Last `turnedBox` reported through onBoxAspectChange.
+  let lastTurnedBox = false;
 
   function syncDisplayState(): void {
     if (!renderer) return;
     // Centralized cover enforcement: every state mutation funnels through here
     // before the display syncs, so pan/zoom/tilt/rotate all stay covered in
     // the fixed variant without sprinkling clamps across each handler.
+    const scaleBefore = state.scale;
     applyCover();
+    // The cover clamp can change the zoom on its own (fixed variant, classic
+    // tilt auto-cover) — keep a host's zoom slider in step.
+    if (state.scale !== scaleBefore) callbacks.onScaleSync?.(state.scale);
     const ds: DisplayState = {
       quarterTurns: state.quarterTurns,
       rotation: state.rotation,
@@ -279,10 +410,15 @@ export function createCropController(opts: CropControllerOptions): CropControlle
       panY: state.panY,
       cropRect: { ...state.cropRect },
       rotationPivot: state.rotationPivot,
+      turnedBox: state.turnedBox,
       gridOpacity: isInteracting ? 1 : (config.showGrid === true ? 1 : 0),
       interactive: isInteracting,
     };
     renderer.setDisplayState(ds);
+    if (!!state.turnedBox !== lastTurnedBox) {
+      lastTurnedBox = !!state.turnedBox;
+      callbacks.onBoxAspectChange?.(lastTurnedBox);
+    }
   }
 
   function emitChange(): void {
@@ -345,6 +481,8 @@ export function createCropController(opts: CropControllerOptions): CropControlle
 
       image = img;
       calibratedFraming = null; // new image → re-calibrate its CDN framing on demand
+      userView = null; // new image → its own view
+      lastEffectiveView = null;
       callbacks.onLoadingChange?.(false, null);
       callbacks.onImageLoad?.(img);
       initEditor();
@@ -393,6 +531,8 @@ export function createCropController(opts: CropControllerOptions): CropControlle
 
     renderer.setScaleBounds(config.minScale, config.maxScale);
     renderer.setFixedFrame(config.variant === 'fixed');
+    const onFrameLayout = callbacks.onFrameLayout;
+    if (onFrameLayout) renderer.setFrameListener((rect) => onFrameLayout(rect));
     renderer.setBleedConfig({
       show: config.showBleedMargin,
       size: config.bleedMarginSize,
@@ -449,7 +589,14 @@ export function createCropController(opts: CropControllerOptions): CropControlle
         }
 
         const cropRect = renderer!.getCanvasCropRect();
-        let target: HitTarget = hitTest(pointer.x, pointer.y, cropRect);
+        // A press forwarded from a DOM corner dot names its handle: trust that
+        // over hit-testing the point, which can sit off-canvas where the NW
+        // corner and the move-handle zones overlap.
+        let target: HitTarget = pointer.handle === 'move'
+          ? { type: 'move-handle' }
+          : pointer.handle === 'nw' || pointer.handle === 'ne' || pointer.handle === 'se' || pointer.handle === 'sw'
+            ? { type: 'handle', position: pointer.handle }
+            : hitTest(pointer.x, pointer.y, cropRect);
         // Fixed variant: the frame can't be resized or moved — every grab on
         // it pans the photo. Coerce handle / move-handle hits to a plain
         // crop-area drag so they fall into the pan branch below. (Resizing
@@ -603,7 +750,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
         const newScale = state.scale * (e.distance / pinchState.initialDistance);
         const panDeltaX = e.centerX - pinchState.initialCenterX;
         const panDeltaY = e.centerY - pinchState.initialCenterY;
-        state = applyScale(state, newScale, config.minScale, config.maxScale);
+        state = applyScale(state, newScale, zoomFloor(), config.maxScale);
         state = applyPan(state, panDeltaX, panDeltaY);
         callbacks.onScaleSync?.(state.scale);
         syncDisplayState();
@@ -620,12 +767,12 @@ export function createCropController(opts: CropControllerOptions): CropControlle
         const centerY = rect.height / 2;
 
         const result = handleWheelZoom(e.deltaY, state.scale, {
-          minScale: config.minScale,
+          minScale: zoomFloor(),
           maxScale: config.maxScale,
           sensitivity: 1,
         }, cursorX, cursorY, centerX, centerY);
 
-        state = applyScale(state, result.scale, config.minScale, config.maxScale);
+        state = applyScale(state, result.scale, zoomFloor(), config.maxScale);
         state = applyPan(state, result.panDeltaX, result.panDeltaY);
         callbacks.onScaleSync?.(state.scale);
         callbacks.onWheelZoomActivity?.();
@@ -654,13 +801,27 @@ export function createCropController(opts: CropControllerOptions): CropControlle
       // Frame stays the whole box; only its aspect (driven by the element's
       // box resize) changes. cropRect remains full; applyCover re-covers.
       state = { ...state, cropRect: { ...FIXED_CROP_RECT } };
+    } else if (getAspectRatio(shape) === null) {
+      // Free shape: the box must follow the photo again. If a ratio kept the box
+      // through a turn (photo cover-fit), re-align it and frame the whole photo.
+      const odd = Math.round(state.quarterTurns / 90) % 2 !== 0;
+      if (boxFollowsPhoto() && odd !== !!state.turnedBox) {
+        // The tilt pivot is normalized to the old box — drop it so a tilt pivots
+        // about the new (full-photo) frame centre.
+        state = {
+          ...state,
+          turnedBox: odd,
+          scale: 1,
+          panX: 0,
+          panY: 0,
+          cropRect: { x: 0, y: 0, width: 1, height: 1 },
+          rotationPivot: undefined,
+        };
+      }
     } else {
-      state = applyShapeChange(
-        state,
-        shape,
-        image?.naturalWidth ?? 1,
-        image?.naturalHeight ?? 1,
-      );
+      // Picking a ratio gives the largest frame of it the box allows.
+      const { w: fw, h: fh } = frameSpaceSize();
+      state = applyShapeChange(state, shape, fw, fh, 'max');
     }
     callbacks.onShapeSync?.(shape);
     syncDisplayState();
@@ -678,7 +839,33 @@ export function createCropController(opts: CropControllerOptions): CropControlle
 
   function rotateLeft(): void {
     if (destroyed) return;
-    state = applyRotateLeft(state);
+    // A legacy (≤ 3.0.0) restored state moves to the current layout on its first
+    // turn. Its box always kept the photo's natural aspect — i.e. not turned.
+    const wasTurned = !!state.turnedBox;
+    state = { ...applyRotateLeft(state), turnedBox: wasTurned };
+    if (config.variant !== 'fixed') {
+      // Classic: the box re-fits to the turned photo (see the element's
+      // fitHostToImage), so turn the frame (and the tilt pivot) with the photo —
+      // it keeps covering the same part of the picture, and a full-photo frame
+      // stays the full (now turned) photo.
+      if (getAspectRatio(cropShape) !== null || !boxFollowsPhoto()) {
+        // A picked ratio is the OUTPUT the user wants: the box and the frame stay
+        // exactly as they are (size, place, 16:9 stays 16:9) and the turned photo
+        // is cover-fit behind them — it zooms in rather than the frame shrinking.
+        // Same when no host re-sizes the box (headless without
+        // onBoxAspectChange): a box that can't turn must not be told it did.
+      } else {
+        // Free shape: the box follows the photo's orientation, and the frame
+        // turns with it whenever the box actually turns — a full-photo frame
+        // stays the full (now turned) photo. (Coming from a legacy odd-turn
+        // state the box was never turned, so this turn brings it back upright
+        // without moving the frame.)
+        const turned = Math.round(state.quarterTurns / 90) % 2 !== 0;
+        state = turned !== wasTurned
+          ? { ...turnFrameWithPhoto(state), turnedBox: turned }
+          : { ...state, turnedBox: turned };
+      }
+    }
     syncDisplayState();
     announceState(host, state, cropShape);
     emitChange();
@@ -729,6 +916,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
       panY: s.panY * panFactor,
       cropRect: { ...s.cropRect },
       rotationPivot: s.rotationPivot ? { ...s.rotationPivot } : undefined,
+      turnedBox: s.turnedBox,
     };
     callbacks.onRotationSync?.(state.rotation);
     callbacks.onScaleSync?.(state.scale);
@@ -740,9 +928,10 @@ export function createCropController(opts: CropControllerOptions): CropControlle
 
   function reset(): void {
     if (destroyed) return;
-    cropShape = config.cropShape;
+    cropShape = initialCropShape;
+    config = { ...config, cropShape: initialCropShape };
     state = createInitialState(
-      config.cropShape,
+      initialCropShape,
       image?.naturalWidth ?? 1,
       image?.naturalHeight ?? 1,
     );
@@ -758,7 +947,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
       state = applyScale(state, config.initialScale, config.minScale, config.maxScale);
     }
     callbacks.onRotationSync?.(state.rotation);
-    callbacks.onShapeSync?.(config.cropShape);
+    callbacks.onShapeSync?.(initialCropShape);
     callbacks.onScaleSync?.(state.scale);
     syncDisplayState();
     announceState(host, state, cropShape);
@@ -811,7 +1000,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     // — the rasterized exports (toCanvas/toBlob/toDataURL) are the source of
     // truth for that variant. Server-side replication of fixed-mode framing
     // from these params is not yet supported.
-    return getTransformParams(state, image.naturalWidth, image.naturalHeight);
+    return getTransformParams(state, image.naturalWidth, image.naturalHeight, config.variant);
   }
 
   /**
@@ -862,7 +1051,21 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     };
   }
 
+  // Warned once per controller (see toCloudimageURL).
+  let warnedUncalibratedTilt = false;
+
   function toCloudimageURL(options?: Partial<CloudimageUrlOptions>): string {
+    // A free-tilt URL needs the per-image CDN framing (calibrateCloudimage());
+    // without it the 'auto' heuristic can pick the wrong region for some images
+    // (seen on a turned + tilted crop: 650×423 delivered instead of 828×829).
+    // save() calibrates on its own; a direct caller must await it first.
+    if (state.rotation !== 0 && !calibratedFraming && !warnedUncalibratedTilt) {
+      warnedUncalibratedTilt = true;
+      console.warn(
+        '[cloudimage-crop] toCloudimageURL(): tilted crop without calibration — the URL may frame the wrong ' +
+        'region on some images. `await calibrateCloudimage()` once per image before building tilt URLs.',
+      );
+    }
     return buildCloudimageUrlFromDescriptor(toCropDescriptor(), {
       src: config.src,
       token: config.cloudimageToken || undefined,
@@ -881,7 +1084,10 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     const oldSrc = config.src;
     const oldVariant = config.variant;
     config = mergeConfig({ ...config, ...partial });
-    if (partial.cropShape !== undefined) setCropShape(partial.cropShape);
+    if (partial.cropShape !== undefined) {
+      initialCropShape = partial.cropShape;
+      setCropShape(partial.cropShape);
+    }
     if (partial.variant !== undefined && partial.variant !== oldVariant) {
       renderer?.setFixedFrame(config.variant === 'fixed');
       if (config.variant === 'fixed') {
@@ -896,7 +1102,10 @@ export function createCropController(opts: CropControllerOptions): CropControlle
         // the pan accumulated in fixed mode carry over, leaving the photo
         // zoomed-in / offset under the freshly centered classic frame.
         renderer?.setScaleBounds(config.minScale, config.maxScale);
-        state = applyShapeChange(state, cropShape, image?.naturalWidth ?? 1, image?.naturalHeight ?? 1);
+        // The classic box follows the photo's current turn (no cover-fit leftover).
+        state = { ...state, turnedBox: boxFollowsPhoto() && Math.round(state.quarterTurns / 90) % 2 !== 0 };
+        const { w: fw, h: fh } = frameSpaceSize();
+        state = applyShapeChange(state, cropShape, fw, fh);
         state = applyScale({ ...state, panX: 0, panY: 0 }, config.initialScale ?? 1, config.minScale, config.maxScale);
       }
       syncDisplayState();

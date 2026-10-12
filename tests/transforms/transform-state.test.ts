@@ -7,6 +7,7 @@ import {
   applyScale,
   applyShapeChange,
   applyCropResize,
+  turnFrameWithPhoto,
 } from '../../src/transforms/transform-state';
 import { enforceAspectRatio } from '../../src/transforms/constrain';
 
@@ -134,6 +135,77 @@ describe('applyShapeChange', () => {
     const shaped = applyShapeChange(state, '9:16');
     const ratio = shaped.cropRect.width / shaped.cropRect.height;
     expect(ratio).toBeCloseTo(9 / 16, 1);
+  });
+
+  describe("size 'max' (a ratio picked by the user)", () => {
+    // Square 1600×1600 photo: 16:9 at full width is 1600×900 → height 900/1600.
+    it('takes the largest frame of the ratio the photo allows', () => {
+      const shaped = applyShapeChange(createInitialState(), '16:9', 1600, 1600, 'max');
+      expect(shaped.cropRect.width).toBeCloseTo(1, 5);
+      expect(shaped.cropRect.height).toBeCloseTo(900 / 1600, 5);
+    });
+
+    it('does not inherit the previous frame hugging an edge — it is clamped back inside', () => {
+      // A user crop pinned to the left edge (as left after dragging the SE handle in).
+      const leftCrop = { ...createInitialState(), cropRect: { x: 0, y: 0, width: 0.78, height: 0.8 } };
+      const shaped = applyShapeChange(leftCrop, '16:9', 1600, 1600, 'max');
+      expect(shaped.cropRect.x).toBeCloseTo(0, 5); // full width → nothing to hug
+      expect(shaped.cropRect.x + shaped.cropRect.width).toBeCloseTo(1, 5);
+      // Vertically it stays around the previous centre, inside the photo.
+      expect(shaped.cropRect.y).toBeGreaterThanOrEqual(0);
+      expect(shaped.cropRect.y + shaped.cropRect.height).toBeLessThanOrEqual(1 + 1e-9);
+    });
+
+    it('fills the height for a portrait ratio on a landscape photo', () => {
+      const shaped = applyShapeChange(createInitialState(), '9:16', 2000, 1000, 'max');
+      expect(shaped.cropRect.height).toBeCloseTo(1, 5);
+      // On screen: (w·2000)/(h·1000) = 9/16.
+      expect((shaped.cropRect.width * 2000) / (shaped.cropRect.height * 1000)).toBeCloseTo(9 / 16, 5);
+      expect(shaped.cropRect.x).toBeCloseTo((1 - shaped.cropRect.width) / 2, 5);
+    });
+
+    it("'default' keeps the inset starting frame", () => {
+      const shaped = applyShapeChange(createInitialState(), '16:9', 1600, 1600);
+      expect(shaped.cropRect.width).toBeCloseTo(0.8, 5);
+    });
+  });
+});
+
+describe('turnFrameWithPhoto (classic quarter turn)', () => {
+  const rect = { x: 0.1, y: 0.2, width: 0.3, height: 0.4 };
+  const base = { ...createInitialState(), cropRect: rect };
+  const near = (a: { x: number; y: number; width: number; height: number }, b: typeof a) => {
+    for (const k of ['x', 'y', 'width', 'height'] as const) expect(a[k]).toBeCloseTo(b[k], 10);
+  };
+
+  it('turns the frame counter-clockwise with the photo', () => {
+    // Old top-left (0.1, 0.2) → new (y, 1 − x − w) for the rect.
+    near(turnFrameWithPhoto(base).cropRect, { x: 0.2, y: 0.6, width: 0.4, height: 0.3 });
+  });
+
+  it('keeps a full-photo frame the full photo', () => {
+    const full = { ...base, cropRect: { x: 0, y: 0, width: 1, height: 1 } };
+    expect(turnFrameWithPhoto(full).cropRect).toEqual({ x: 0, y: 0, width: 1, height: 1 });
+  });
+
+  it('turns clockwise under a single-axis mirror (the flip reverses the visible turn)', () => {
+    near(turnFrameWithPhoto({ ...base, flipH: true }).cropRect, { x: 0.4, y: 0.1, width: 0.4, height: 0.3 });
+    // Both axes mirrored = a 180° turn → counter-clockwise again.
+    expect(turnFrameWithPhoto({ ...base, flipH: true, flipV: true }).cropRect).toEqual(turnFrameWithPhoto(base).cropRect);
+  });
+
+  it('four turns bring the frame back', () => {
+    let s = base;
+    for (let i = 0; i < 4; i++) s = turnFrameWithPhoto(s);
+    expect(s.cropRect.x).toBeCloseTo(rect.x, 10);
+    expect(s.cropRect.y).toBeCloseTo(rect.y, 10);
+    expect(s.cropRect.width).toBeCloseTo(rect.width, 10);
+    expect(s.cropRect.height).toBeCloseTo(rect.height, 10);
+  });
+
+  it('turns the tilt pivot the same way', () => {
+    const s = turnFrameWithPhoto({ ...base, rotationPivot: { x: 0.25, y: 0.4 } });
+    expect(s.rotationPivot).toEqual({ x: 0.4, y: 0.75 });
   });
 });
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildCloudimageUrl, buildCloudimageUrlFromDescriptor } from '../../src/export/cloudimage-url';
 import { getTransformParams, resolveServerCrop } from '../../src/export/exporter';
-import { createInitialState, applyRotateLeft, applyScale, applyRotation } from '../../src/transforms/transform-state';
+import { createInitialState, applyRotateLeft, applyScale, applyRotation, turnFrameWithPhoto } from '../../src/transforms/transform-state';
 import type { TransformParams } from '../../src/core/types';
 
 /** TransformParams with sane defaults (400×300 crop at 100,50). */
@@ -126,7 +126,9 @@ describe('buildCloudimageUrl — crop & flip', () => {
 
 describe('buildCloudimageUrl — rotation (crop → rotate)', () => {
   it('negates the editor rotation into Cloudimage CCW degrees (one rotate-left → r=90)', () => {
-    const state = applyRotateLeft(createInitialState()); // rotation = -90
+    // Free-shape turn as the controller does it: the box and the frame turn with
+    // the photo, so the centred 80% frame still covers the same photo region.
+    const state = { ...turnFrameWithPhoto(applyRotateLeft(createInitialState())), turnedBox: true }; // rotation = -90
     const params = getTransformParams(state, 1920, 1080);
     const qp = query(buildCloudimageUrl(params, { src: RAW_SRC, token: 'demo' }));
     expect(qp.get('r')).toBe('90');

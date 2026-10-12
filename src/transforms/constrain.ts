@@ -1,5 +1,6 @@
 import type { CropRect, CropShapeName, TransformState } from '../core/types';
 import { clamp } from '../utils/math';
+import { classicDrawSize } from '../canvas/image-layer';
 
 /**
  * Parse a free-form aspect-ratio string like `"16:9"`, `"7:2"`, or `"11:8"`
@@ -237,6 +238,142 @@ export function clampCoverPanScale(
     panY: clamp(state.panY, (-slackY - offsetY) / scale, (slackY - offsetY) / scale),
     minScale,
   };
+}
+
+/**
+ * Classic variant, free tilt: keep the photo covering the crop frame so a tilt
+ * never leaves empty corners inside it (they would also reach the export — the
+ * server fills them with the background colour / transparency).
+ *
+ * Mirrors the classic draw (`image-layer.ts`) exactly, in container CSS px with
+ * the photo box `w × h` at scale 1: tilt rotates about `rotationPivot` (or the
+ * frame centre), flip mirrors about the container centre, then the photo is
+ * centred at `C + flip·scale·pan` and a quarter turn swaps its extents. Undoing
+ * the tilt about the pivot turns the frame into a rotated rect whose bounding box
+ * must sit inside the untilted photo.
+ *
+ * When the photo doesn't cover, it is zoomed **about the frame centre** — the
+ * photo point under the frame centre stays put, so the subject doesn't slide —
+ * to the smallest scale that covers. Pan is then clamped to the remaining cover
+ * window (so panning while tilted can't open a gap either). `maxScale` caps the
+ * zoom; past it a residual gap is unavoidable.
+ */
+/** Frame centre in the photo's untilted space (undo the tilt about its pivot), container px. */
+function untiltedFrameCentre(state: TransformState, w: number, h: number): { ux: number; uy: number } {
+  const crop = state.cropRect;
+  const fcx = (crop.x + crop.width / 2) * w;
+  const fcy = (crop.y + crop.height / 2) * h;
+  const pivot = state.rotationPivot ?? { x: crop.x + crop.width / 2, y: crop.y + crop.height / 2 };
+  const px = pivot.x * w;
+  const py = pivot.y * h;
+  const rad = (state.rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  return {
+    ux: px + cos * (fcx - px) + sin * (fcy - py),
+    uy: py - sin * (fcx - px) + cos * (fcy - py),
+  };
+}
+
+/**
+ * Re-express a view (`state.scale`/`panX`/`panY`) at another scale, keeping the
+ * photo point under the frame centre where it is — the inverse of the
+ * zoom-about-frame-centre that {@link coverTiltedFrame} applies. Used to fold a
+ * pan made at the on-screen (auto-zoomed) scale back into the user's own zoom.
+ */
+export function rebaseTiltedPan(
+  state: TransformState,
+  toScale: number,
+  w: number,
+  h: number,
+): { panX: number; panY: number } {
+  const { ux, uy } = untiltedFrameCentre(state, w, h);
+  const cx = w / 2;
+  const cy = h / 2;
+  const fX = state.flipH ? -1 : 1;
+  const fY = state.flipV ? -1 : 1;
+  const k = toScale / state.scale;
+  // Photo centre that keeps the same photo point under the frame centre.
+  const ocx = ux - k * (ux - (cx + fX * state.scale * state.panX));
+  const ocy = uy - k * (uy - (cy + fY * state.scale * state.panY));
+  return { panX: (ocx - cx) / (fX * toScale), panY: (ocy - cy) / (fY * toScale) };
+}
+
+export function coverTiltedFrame(
+  state: TransformState,
+  w: number,
+  h: number,
+  maxScale: number,
+  /** Natural photo size — only needed for an odd turn in a box that kept its aspect. */
+  imageW: number = w,
+  imageH: number = h,
+  /**
+   * `clampPanFirst`: when the current scale CAN cover the frame (≥ the pan-free
+   * floor), restore cover by clamping pan only — no zoom. For a pan-drag, so
+   * dragging the photo off the frame hits a wall instead of zooming in.
+   */
+  opts: { clampPanFirst?: boolean } = {},
+): { scale: number; panX: number; panY: number; minScale: number } {
+  const crop = state.cropRect;
+  const fw = crop.width * w;
+  const fh = crop.height * h;
+  const rad = (state.rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const { ux, uy } = untiltedFrameCentre(state, w, h);
+  // Half extents of the frame's bounding box in that space.
+  const hw = (fw * Math.abs(cos) + fh * Math.abs(sin)) / 2;
+  const hh = (fw * Math.abs(sin) + fh * Math.abs(cos)) / 2;
+
+  // Photo half extents at scale 1, after its quarter turn — same draw rule as
+  // the canvas (classicDrawSize): the box itself, unless an odd turn kept the
+  // box's aspect, where the turned photo is cover-fit and overflows one axis.
+  const odd = Math.round(state.quarterTurns / 90) % 2 !== 0;
+  const draw = classicDrawSize(w, h, imageW, imageH, state.quarterTurns, state.turnedBox);
+  const halfW = (odd ? draw.drawH : draw.drawW) / 2;
+  const halfH = (odd ? draw.drawW : draw.drawH) / 2;
+  const cx = w / 2;
+  const cy = h / 2;
+  const fX = state.flipH ? -1 : 1;
+  const fY = state.flipV ? -1 : 1;
+
+  // Pan-free floor: below it no pan can cover the frame.
+  const minScale = Math.min(Math.max(hw / halfW, hh / halfH), maxScale);
+
+  // Photo centre now, and the photo-local point under the frame centre.
+  let scale = state.scale;
+  const ocx = cx + fX * scale * state.panX;
+  const ocy = cy + fY * scale * state.panY;
+  const lx = (ux - ocx) / scale;
+  const ly = (uy - ocy) / scale;
+
+  const covered = Math.abs(ux - ocx) + hw <= scale * halfW + 1e-6 && Math.abs(uy - ocy) + hh <= scale * halfH + 1e-6;
+  let panX = state.panX;
+  let panY = state.panY;
+  if (!covered && !(opts.clampPanFirst && scale >= minScale - 1e-9)) {
+    // Smallest scale that covers while zooming about the frame centre:
+    // |s·l| + half ≤ s·halfPhoto  ⇔  s ≥ half / (halfPhoto − |l|).
+    const need = (half: number, l: number, halfPhoto: number): number =>
+      Math.abs(l) < halfPhoto ? half / (halfPhoto - Math.abs(l)) : Number.POSITIVE_INFINITY;
+    const zoomed = Math.max(scale, need(hw, lx, halfW), need(hh, ly, halfH));
+    scale = Math.min(Number.isFinite(zoomed) ? zoomed : Math.max(scale, minScale), maxScale);
+    // Re-place the photo so the same point stays under the frame centre.
+    panX = fX * (ux - scale * lx - cx) / scale;
+    panY = fY * (uy - scale * ly - cy) / scale;
+  }
+  scale = Math.max(scale, minScale);
+
+  // Clamp pan to the cover window at the final scale.
+  const slackX = Math.max(0, scale * halfW - hw);
+  const slackY = Math.max(0, scale * halfH - hh);
+  const panWindow = (d: number, slack: number, f: number): [number, number] => {
+    const a = (d - slack) / (f * scale);
+    const b = (d + slack) / (f * scale);
+    return a < b ? [a, b] : [b, a];
+  };
+  const [x0, x1] = panWindow(ux - cx, slackX, fX);
+  const [y0, y1] = panWindow(uy - cy, slackY, fY);
+  return { scale, panX: clamp(panX, x0, x1), panY: clamp(panY, y0, y1), minScale };
 }
 
 /** Snap rotation near 0 within threshold. */

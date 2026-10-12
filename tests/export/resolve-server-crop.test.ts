@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolveServerCrop, getTransformParams } from '../../src/export/exporter';
 import { createInitialState, applyRotateLeft, applyScale, applyPan, applyRotation } from '../../src/transforms/transform-state';
+import { coverTiltedFrame } from '../../src/transforms/constrain';
 
 const W = 1920;
 const H = 1080;
@@ -31,21 +32,43 @@ describe('resolveServerCrop — single pass (no tilt)', () => {
   });
 
   it('90° turn → rotateCCW=90, axis-aligned crop within bounds', () => {
-    const sc = resolveServerCrop(applyRotateLeft(createInitialState()), W, H, W, H, 'classic');
+    // Free shape: the box takes the turned photo's aspect (H×W), so the default
+    // 80% frame sits on photo pixels — nothing to clamp.
+    const s = { ...applyRotateLeft(createInitialState()), turnedBox: true };
+    const sc = resolveServerCrop(s, W, H, H, W, 'classic');
     expect(sc.tilted).toBe(false);
     expect(sc.rotateCCW).toBe(90);
     expect(sc.cropPx.x).toBeGreaterThanOrEqual(0);
     expect(sc.cropPx.x + sc.cropPx.width).toBeLessThanOrEqual(W);
     expect(sc.cropPx.y + sc.cropPx.height).toBeLessThanOrEqual(H);
-    // classic letterboxes the photo on a 90° turn, so the default 80% crop frame
-    // reaches into the empty margin → the crop is clamped to the image and the
-    // canvas's margins can't be reproduced server-side.
-    expect(sc.clamped).toBe(true);
+    expect(sc.clamped).toBe(false);
   });
 
-  it('90° turn with a crop kept INSIDE the letterboxed photo → not clamped', () => {
-    const s = { ...applyRotateLeft(createInitialState()), cropRect: { x: 0.4, y: 0.4, width: 0.2, height: 0.2 } };
+  it('90° turn of a full-photo frame (free shape, turned box) → the whole photo, nothing lost to the turn', () => {
+    const s = { ...applyRotateLeft(createInitialState()), turnedBox: true, cropRect: { x: 0, y: 0, width: 1, height: 1 } };
+    const sc = resolveServerCrop(s, W, H, H, W, 'classic');
+    expect(sc.clamped).toBe(false);
+    expect(sc.cropPx).toEqual({ x: 0, y: 0, width: W, height: H });
+  });
+
+  it('90° turn keeping the box (picked ratio) → the frame keeps its shape on the cover-fit photo', () => {
+    // Landscape W×H photo turned to portrait inside the kept W×H box: the photo is
+    // cover-fit (width = box width, height overflows), so a full-box W:H frame takes
+    // the middle band of the turned photo — still exactly W:H, no clamping.
+    const s = { ...applyRotateLeft(createInitialState()), turnedBox: false, cropRect: { x: 0, y: 0, width: 1, height: 1 } };
     const sc = resolveServerCrop(s, W, H, W, H, 'classic');
+    expect(sc.clamped).toBe(false);
+    expect(sc.rotateCCW).toBe(90);
+    // Pre-rotation crop in original px: the band is H×(H²/W) → turned it reads (H²/W)×H… i.e. W:H after the turn.
+    const outW = sc.cropPx.height; // turned
+    const outH = sc.cropPx.width;
+    expect(outW / outH).toBeCloseTo(W / H, 2);
+    expect(sc.cropPx.height).toBe(H);
+  });
+
+  it('90° turn with a crop kept inside the photo → not clamped', () => {
+    const s = { ...applyRotateLeft(createInitialState()), turnedBox: true, cropRect: { x: 0.4, y: 0.4, width: 0.2, height: 0.2 } };
+    const sc = resolveServerCrop(s, W, H, H, W, 'classic');
     expect(sc.tilted).toBe(false);
     expect(sc.clamped).toBe(false);
   });
@@ -123,14 +146,17 @@ describe('resolveServerCrop — nested (free tilt)', () => {
     expect(o.y + insetY + o.height).toBeLessThanOrEqual(innerH + 1);
   });
 
-  it('90° turn + free tilt with default crop → nested AND clamped (letterbox margin)', () => {
-    // quarterTurns ±90 letterboxes the photo (classic); the default 80% crop then
-    // spills into the margin, so even the nested plan must clamp — the canvas's
-    // empty margins are not reproducible via a Cloudimage crop.
-    const s = applyRotation(applyRotateLeft(createInitialState()), 13.56);
-    const sc = resolveServerCrop(s, W, H, W, H, 'classic');
-    expect(sc.tilted).toBe(true);
-    expect(sc.clamped).toBe(true);
+  it('90° turn + free tilt, as the controller leaves it (cover zoom applied) → nested, nothing to clamp', () => {
+    // A turned photo never leaves letterbox margins any more — it fills a turned
+    // box or is cover-fit into a kept one — and the tilt auto-zoom fills the frame.
+    for (const turnedBox of [true, false]) {
+      const raw = { ...applyRotation(applyRotateLeft(createInitialState()), 13.56), turnedBox };
+      const [bw, bh] = turnedBox ? [H, W] : [W, H];
+      const s = { ...raw, ...coverTiltedFrame(raw, bw, bh, 5, W, H) };
+      const sc = resolveServerCrop(s, W, H, bw, bh, 'classic');
+      expect(sc.tilted).toBe(true);
+      expect(sc.clamped).toBe(false);
+    }
   });
 
   it('landscape image turned 90° + slight tilt (bbox narrower than original) → no inset, crop stays inside the rotated canvas', () => {

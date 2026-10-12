@@ -72,6 +72,8 @@ export function createInitialState(
     panX: 0,
     panY: 0,
     cropRect,
+    // Always explicit: an ABSENT turnedBox marks a legacy (≤ 3.0.0) state.
+    turnedBox: false,
   };
 }
 
@@ -90,6 +92,30 @@ export function applyRotateLeft(state: TransformState): TransformState {
     quarterTurns: newRotation,
     panX: 0,
     panY: 0,
+  };
+}
+
+/**
+ * Classic variant, after a quarter turn: move the crop frame (and the tilt pivot)
+ * along with the photo. The editor box takes the turned photo's aspect, so both
+ * are re-expressed in the new box's normalized space by the same 90° turn the
+ * photo made on screen — the frame keeps covering the same part of the picture.
+ *
+ * On screen the photo turns counter-clockwise (rotate-left), except under a
+ * single-axis mirror: the flip is applied outside the quarter turn, which
+ * reverses its visible direction.
+ */
+export function turnFrameWithPhoto(state: TransformState): TransformState {
+  const clockwise = state.flipH !== state.flipV;
+  const turnPoint = (p: { x: number; y: number }) => (clockwise ? { x: 1 - p.y, y: p.x } : { x: p.y, y: 1 - p.x });
+  const r = state.cropRect;
+  const cropRect: CropRect = clockwise
+    ? { x: 1 - r.y - r.height, y: r.x, width: r.height, height: r.width }
+    : { x: r.y, y: 1 - r.x - r.width, width: r.height, height: r.width };
+  return {
+    ...state,
+    cropRect,
+    rotationPivot: state.rotationPivot ? turnPoint(state.rotationPivot) : undefined,
   };
 }
 
@@ -143,6 +169,13 @@ export function applyShapeChange(
   shape: CropShapeName,
   imageWidth: number = 1,
   imageHeight: number = 1,
+  /**
+   * `'default'` fits the ratio inside the DEFAULT_CROP_SIZE box (the starting
+   * frame). `'max'` takes the largest frame of that ratio the photo allows —
+   * what a user picking a ratio from the toolbar expects, instead of a frame
+   * that inherits an arbitrary inset and hugs the previous frame's edge.
+   */
+  size: 'default' | 'max' = 'default',
 ): TransformState {
   const screenRatio = getAspectRatio(shape);
   let newCrop: CropRect;
@@ -151,26 +184,27 @@ export function applyShapeChange(
     newCrop = { ...state.cropRect };
   } else {
     const ratio = toNormalizedRatio(screenRatio, imageWidth, imageHeight);
-    // Fit new ratio inside a fixed DEFAULT_CROP_SIZE box so repeated ratio
-    // switches don't progressively shrink the frame. Centered on the
-    // current crop's center.
+    // Fit new ratio inside a fixed box (not the current frame) so repeated
+    // ratio switches don't progressively shrink the frame. Centered on the
+    // current crop's center, clamped to the photo.
     const { cropRect } = state;
     const cx = cropRect.x + cropRect.width / 2;
     const cy = cropRect.y + cropRect.height / 2;
+    const box = size === 'max' ? 1 : DEFAULT_CROP_SIZE;
 
     let w: number, h: number;
     if (ratio >= 1) {
-      w = DEFAULT_CROP_SIZE;
+      w = box;
       h = w / ratio;
-      if (h > DEFAULT_CROP_SIZE) {
-        h = DEFAULT_CROP_SIZE;
+      if (h > box) {
+        h = box;
         w = h * ratio;
       }
     } else {
-      h = DEFAULT_CROP_SIZE;
+      h = box;
       w = h * ratio;
-      if (w > DEFAULT_CROP_SIZE) {
-        w = DEFAULT_CROP_SIZE;
+      if (w > box) {
+        w = box;
         h = w / ratio;
       }
     }

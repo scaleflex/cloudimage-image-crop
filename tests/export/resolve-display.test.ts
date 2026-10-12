@@ -28,21 +28,48 @@ describe('resolveDisplay', () => {
     expect(p.y).toBeCloseTo(H / 2);
   });
 
-  it('one rotate-left turns CCW (−90°) about centre', () => {
-    const d = resolveDisplay(applyRotateLeft(createInitialState()), W, H, W, H, 'classic');
+  it('one rotate-left turns CCW (−90°) about the centre of the turned display', () => {
+    // Free shape: the box (and display space) takes the turned photo's aspect: H×W.
+    const d = resolveDisplay({ ...applyRotateLeft(createInitialState()), turnedBox: true }, W, H, H, W, 'classic');
     const p = transformPoint(d.imgToDisp, 100, 0);
-    expect(p.x).toBeCloseTo(W / 2);
-    expect(p.y).toBeCloseTo(H / 2 - 100);
+    expect(p.x).toBeCloseTo(H / 2);
+    expect(p.y).toBeCloseTo(W / 2 - 100);
   });
 
-  it('classic 90° turn does NOT shrink the photo (no shorter-axis fit) — size preserved', () => {
-    // Free-layer model: a quarter-turn rotates the photo in place at its current
-    // scale; it is NOT letterboxed down to the canvas's short axis. The draw size
-    // stays the full image px (the footprint may overflow the canvas, which is OK
-    // — pan/zoom to reframe). Mirrors image-layer.ts so canvas ↔ server stay synced.
-    const d = resolveDisplay(applyRotateLeft(createInitialState()), W, H, W, H, 'classic');
+  it('classic 90° turn: display space is the turned photo, drawn at its own size — it fills it exactly', () => {
+    // The photo keeps its full image px (no shrink) and, turned, covers the
+    // H×W display edge to edge — no letterbox margins and no overflow. Mirrors
+    // image-layer.ts so canvas ↔ server stay in sync.
+    const d = resolveDisplay({ ...applyRotateLeft(createInitialState()), turnedBox: true }, W, H, H, W, 'classic');
     expect(d.drawW).toBe(W);
     expect(d.drawH).toBe(H);
+    expect(d.DW).toBe(H);
+    expect(d.DH).toBe(W);
+    // The four photo corners land on the four display corners.
+    const corners = [
+      transformPoint(d.imgToDisp, -W / 2, -H / 2),
+      transformPoint(d.imgToDisp, W / 2, -H / 2),
+      transformPoint(d.imgToDisp, W / 2, H / 2),
+      transformPoint(d.imgToDisp, -W / 2, H / 2),
+    ].map((p) => [Math.round(p.x), Math.round(p.y)].join(','));
+    expect(new Set(corners)).toEqual(new Set(['0,0', `${H},0`, `${H},${W}`, `0,${W}`]));
+  });
+
+  it('classic 90° turn keeping the box (picked ratio): the turned photo is cover-fit — box filled, one axis overflows', () => {
+    const d = resolveDisplay({ ...applyRotateLeft(createInitialState()), turnedBox: false }, W, H, W, H, 'classic');
+    expect(d.DW).toBe(W);
+    expect(d.DH).toBe(H);
+    const pts = [
+      transformPoint(d.imgToDisp, -d.drawW / 2, -d.drawH / 2),
+      transformPoint(d.imgToDisp, d.drawW / 2, d.drawH / 2),
+    ];
+    const xs = pts.map((p) => p.x).sort((a, b) => a - b);
+    const ys = pts.map((p) => p.y).sort((a, b) => a - b);
+    // Turned portrait footprint: exactly the box width, taller than the box.
+    expect(xs[0]).toBeCloseTo(0, 5);
+    expect(xs[1]).toBeCloseTo(W, 5);
+    expect(ys[0]).toBeLessThan(0);
+    expect(ys[1]).toBeGreaterThan(H);
   });
 
   it('flip pivots about the image centre, not the crop → moving the frame does not move the photo', () => {

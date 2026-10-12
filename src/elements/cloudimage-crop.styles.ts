@@ -169,6 +169,48 @@ export const sfxCropStyles = css`
     border: 1px solid var(--ci-crop-handle-stroke);
     box-shadow: 0 1px 2px oklch(0 0 0 / 0.2);
   }
+  /* ====== Classic frame corner dots ======
+   * Same look as the canvas used to paint (and as the fixed handles above), but
+   * in the DOM, outside .ci-crop-container's clip: a frame flush with the photo
+   * edge shows each dot centred on its corner, overhanging the edge. Placed
+   * per frame by placeCornerHandles(); a press is forwarded to the canvas,
+   * which hit-tests and runs the drag. */
+  .ci-crop-corner,
+  .ci-crop-move {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 6;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ci-crop-handle-fill, #fff);
+    border: 1px solid var(--ci-crop-handle-stroke, rgba(0, 0, 0, 0.25));
+    box-sizing: border-box;
+    /* Grabbable even where they overhang the canvas: the press is forwarded
+       to the canvas, which hit-tests and runs the drag. */
+    touch-action: none;
+    will-change: transform;
+  }
+  .ci-crop-corner--nw,
+  .ci-crop-corner--se { cursor: nwse-resize; }
+  .ci-crop-corner--ne,
+  .ci-crop-corner--sw { cursor: nesw-resize; }
+  .ci-crop-move { cursor: move; }
+  /* The move-handle's inner dot tells it apart from the resize corners. */
+  .ci-crop-move::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--ci-crop-handle-stroke, rgba(0, 0, 0, 0.25));
+  }
+  .ci-crop-corner[hidden],
+  .ci-crop-move[hidden] { display: none; }
+
   .ci-crop-resize-handle--ne { top: -6px; right: -6px; cursor: nesw-resize; }
   .ci-crop-resize-handle--nw { top: -6px; left: -6px; cursor: nwse-resize; }
   .ci-crop-resize-handle--se { bottom: -6px; right: -6px; cursor: nwse-resize; }
