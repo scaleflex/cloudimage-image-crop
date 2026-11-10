@@ -254,3 +254,44 @@ describe('buildCloudimageUrlFromDescriptor — full parity', () => {
     expect(query(url).get('tl_px')).toBeTruthy();
   });
 });
+
+describe('buildCloudimageUrlFromDescriptor — format', () => {
+  const descriptor = (state: ReturnType<typeof createInitialState>) => ({
+    state,
+    imageWidth: 1920,
+    imageHeight: 1080,
+    containerWidth: 1920,
+    containerHeight: 1080,
+    variant: 'classic' as const,
+  });
+  const SRC = 'https://demo.cloudimg.io/p.jpg';
+  const singlePass = descriptor(applyScale(createInitialState(), 2, 0.5, 5));
+  const nested = descriptor(applyRotation(createInitialState(), 22));
+
+  it('single pass without a format forces no format and no quality', () => {
+    const qp = query(buildCloudimageUrlFromDescriptor(singlePass, { src: SRC, quality: 0.8 }));
+    expect(qp.get('tl_px')).toBeTruthy();
+    expect(qp.has('force_format')).toBe(false);
+    expect(qp.has('q')).toBe(false);
+  });
+
+  it('single pass with image/webp forces webp and its quality', () => {
+    const qp = query(buildCloudimageUrlFromDescriptor(singlePass, { src: SRC, format: 'image/webp', quality: 0.8 }));
+    expect(qp.get('force_format')).toBe('webp');
+    expect(qp.get('q')).toBe('80');
+  });
+
+  it('nested (tilt) without a format forces no format and no quality, inner or outer', () => {
+    const url = buildCloudimageUrlFromDescriptor(nested, { src: SRC, quality: 0.8 });
+    expect(url).toContain('ci_url_encoded=1');
+    expect(decodeURIComponent(url)).not.toMatch(/force_format|[?&]q=/);
+  });
+
+  it('nested (tilt) with image/webp forces webp and its quality on the outer URL', () => {
+    const url = buildCloudimageUrlFromDescriptor(nested, { src: SRC, format: 'image/webp', quality: 0.8 });
+    expect(url).toContain('ci_url_encoded=1');
+    const qp = query(url);
+    expect(qp.get('force_format')).toBe('webp');
+    expect(qp.get('q')).toBe('80');
+  });
+});

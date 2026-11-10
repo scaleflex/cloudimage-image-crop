@@ -3,6 +3,31 @@ import { createRef } from 'react';
 import { render, cleanup } from '@testing-library/react';
 import '../../src/define';
 import { CloudimageCrop, type CloudimageCropElement } from '../../src/react';
+import { applyPropOrAttr } from '../../src/react/cloudimage-crop';
+import { LitElement } from 'lit';
+
+describe('applyPropOrAttr before the element is defined', () => {
+  it('keeps a false boolean whose default is true, once the element upgrades', async () => {
+    // The wrapper can render before `define` has loaded; a prop set then must survive the upgrade.
+    class LateElement extends LitElement {
+      static properties = { flag: { type: Boolean } };
+      declare flag: boolean;
+      constructor() {
+        super();
+        this.flag = true;
+      }
+    }
+    const el = document.createElement('late-crop-probe');
+    document.body.appendChild(el);
+    applyPropOrAttr(el, 'flag', false);
+
+    customElements.define('late-crop-probe', LateElement);
+    await (el as LateElement).updateComplete;
+
+    expect((el as LateElement).flag).toBe(false);
+    el.remove();
+  });
+});
 
 describe('<CloudimageCrop> React wrapper', () => {
   beforeAll(async () => {

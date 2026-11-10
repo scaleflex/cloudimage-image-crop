@@ -828,7 +828,7 @@ interface CloudimageCropConfig {
   bleedMarginColor: string;          // Default: 'rgba(255, 0, 0, 0.5)'
 
   // Export defaults
-  outputType: string;                // Default: 'image/png'
+  outputType?: string;               // Unset: raster export uses 'image/png'; Cloudimage URL forces no format
   outputQuality: number;             // Default: 0.92
   maxOutputWidth: number;            // 0 = original
   maxOutputHeight: number;           // 0 = original
@@ -904,7 +904,6 @@ const DEFAULT_CONFIG: CloudimageCropConfig = {
   handleSize: 12,
   handleColor: '#ffffff',
   borderRadius: 20,
-  outputType: 'image/png',
   outputQuality: 0.92,
   maxOutputWidth: 0,
   maxOutputHeight: 0,
@@ -1147,7 +1146,7 @@ resize → format`:
 | `rotation` (quarterTurns + tilt) | `r=<deg>` — CCW, so `r = normalize(-rotation)`; `bg_color` fills corners when not a multiple of 90° |
 | `crop` (original-image px) | `tl_px=x,y` + `br_px=x+w,y+h` |
 | `maxOutputWidth/Height` | `w`/`h` + `func=bound` + `org_if_sml=1` |
-| `outputType` → `force_format`; `outputQuality` (0–1) → `q` (0–100) | format / quality |
+| `outputType` → `force_format` (only when set); `outputQuality` (0–1) → `q` (0–100, only with jpeg/webp) | format / quality |
 
 **Full parity.** The crop window's pre-image is derived by inverting the shared
 `resolveDisplay()` matrix — the SAME transform chain `renderToCanvas` slices — so

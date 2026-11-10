@@ -19,7 +19,7 @@ describe('DEFAULT_CONFIG', () => {
     expect(DEFAULT_CONFIG.overlayColor).toBe('rgba(0, 0, 0, 0.55)');
     expect(DEFAULT_CONFIG.handleSize).toBe(12);
     expect(DEFAULT_CONFIG.handleColor).toBe('#ffffff');
-    expect(DEFAULT_CONFIG.outputType).toBe('image/png');
+    expect(DEFAULT_CONFIG.outputType).toBeUndefined();
     expect(DEFAULT_CONFIG.outputQuality).toBe(0.92);
     expect(DEFAULT_CONFIG.enableAnimations).toBe(true);
     expect(DEFAULT_CONFIG.animationSpeed).toBe(1.0);

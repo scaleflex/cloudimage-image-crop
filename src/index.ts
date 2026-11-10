@@ -44,6 +44,8 @@ export type {
   SpringConfig,
   LerpConfig,
   CropIconOverrides,
+  CropTooltipLabels,
+  CropTooltipMode,
 } from './core/types';
 
 export { parseRatio, getAspectRatio } from './transforms/constrain';
@@ -52,6 +54,8 @@ export { imageToCanvas, canvasToImage, buildTransformMatrix } from './transforms
 // Cloudimage server-side crop — turn a crop/transform into a Cloudimage URL
 // instead of a rasterized Blob (see `outputMode` / `toCloudimageURL()`).
 export { buildCloudimageUrl, buildCloudimageUrlFromDescriptor } from './export/cloudimage-url';
+export { cropDescriptorFromCloudimageUrl } from './export/cloudimage-url-restore';
+export type { CropRestoreTarget } from './export/cloudimage-url-restore';
 export type { CloudimageUrlOptions, CloudimageTarget, CropDescriptor } from './export/cloudimage-url';
 // Lower-level crop plan — lets a consumer inspect `clamped` (the crop reaches
 // outside the photo, so the CDN result drops background margins the canvas

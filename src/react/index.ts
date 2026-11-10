@@ -55,4 +55,6 @@ export type {
   Point,
   Size,
   CropIconOverrides,
+  CropTooltipLabels,
+  CropTooltipMode,
 } from '../core/types';

@@ -842,7 +842,7 @@ function renderDocConfiguration(): string {
     {
       heading: 'Export',
       rows: [
-        ['output-type',       'MIME',                                            'image/png',   'Default format for <code>toBlob()</code> / <code>toDataURL()</code> / <code>save()</code>.'],
+        ['output-type',       'MIME',                                            'unset',       'Output format. Unset: <code>toBlob()</code> / <code>toDataURL()</code> export PNG and a Cloudimage URL forces no format. Set it to force a format in the URL too.'],
         ['output-quality',    'number (0 – 1)',                                  '0.92',        'Quality for lossy formats (ignored for PNG).'],
         ['max-output-width',  'px',                                              '0',           'Clamp the exported width (<code>0</code> = original).'],
         ['max-output-height', 'px',                                              '0',           'Clamp the exported height (<code>0</code> = original).'],

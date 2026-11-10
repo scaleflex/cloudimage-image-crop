@@ -1,8 +1,9 @@
 import { html } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
 import { CloudimageCropBaseElement } from './base';
-import type { CropShapeName, CropIconOverrides } from '../core/types';
+import type { CropShapeName, CropIconOverrides, CropTooltipLabels, CropTooltipMode } from '../core/types';
 import { resolveIcon } from './icons';
 import './cloudimage-crop-rotate';
 import './cloudimage-crop-shapes';
@@ -78,6 +79,18 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
   /** Consumer icon overrides propagated from `<cloudimage-crop>`. */
   @property({ attribute: false }) icons: CropIconOverrides = {};
 
+  /** Browser `title` tooltips (default) or the editor's own, themable ones. */
+  @property({ type: String }) tooltips: CropTooltipMode = 'native';
+
+  /** Tooltip text overrides (e.g. translations); aria-labels stay English. */
+  @property({ attribute: false }) tooltipLabels: CropTooltipLabels = {};
+
+  /** `title` / `data-tooltip` for a button, by the tooltip mode. */
+  private tip(key: keyof CropTooltipLabels, fallback: string): { title?: string; tooltip?: string } {
+    const text = this.tooltipLabels?.[key] || fallback;
+    return this.tooltips === 'styled' ? { tooltip: text } : { title: text };
+  }
+
   @query('cloudimage-crop-rotate') private rotateEl?: CloudimageCropRotateElement;
   @query('cloudimage-crop-shapes') private shapesEl?: CloudimageCropShapesElement;
 
@@ -96,6 +109,11 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
     // actually shown — otherwise the tool group loses 120px for nothing.
     const gutterL = this.showCancelButton ? ' ci-crop-toolbar--gutter-l' : '';
     const gutterR = this.showDoneButton ? ' ci-crop-toolbar--gutter-r' : '';
+    const resetTip = this.tip('reset', 'Reset all changes');
+    const rotateTip = this.tip('rotateLeft', 'Rotate left 90°');
+    const flipTip = this.tip('flipHorizontal', 'Flip horizontal');
+    const cancelTip = this.tip('cancel', 'Cancel');
+    const doneTip = this.tip('done', 'Done');
 
     return html`
       <div class="ci-crop-toolbar${gutterL}${gutterR}" @cloudimage-crop-popover-open=${this.onPopoverOpen}>
@@ -104,7 +122,8 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
             type="button"
             class="ci-crop-reset-btn"
             aria-label="Reset all changes"
-            title="Reset all changes"
+            title=${ifDefined(resetTip.title)}
+            data-tooltip=${ifDefined(resetTip.tooltip)}
             @click=${() => this.emit({ type: 'reset' })}
           >
             ${unsafeHTML(resolveIcon('reset', this.icons))}
@@ -117,7 +136,8 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
                 type="button"
                 class="ci-crop-toolbar-btn"
                 aria-label="Rotate left 90°"
-                title="Rotate left 90°"
+                title=${ifDefined(rotateTip.title)}
+                data-tooltip=${ifDefined(rotateTip.tooltip)}
                 @click=${() => this.emit({ type: 'rotate-left' })}
               >${unsafeHTML(resolveIcon('rotateLeft', this.icons))}</button>
             ` : null}
@@ -126,7 +146,8 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
                 type="button"
                 class="ci-crop-toolbar-btn"
                 aria-label="Flip horizontal"
-                title="Flip horizontal"
+                title=${ifDefined(flipTip.title)}
+                data-tooltip=${ifDefined(flipTip.tooltip)}
                 @click=${() => this.emit({ type: 'flip-h' })}
               >${unsafeHTML(resolveIcon('flipHorizontal', this.icons))}</button>
             ` : null}
@@ -161,7 +182,9 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
           class="ci-crop-cancel-btn"
           part="cancel"
           aria-label="Cancel"
-          title="Cancel"
+          title=${ifDefined(cancelTip.title)}
+          data-tooltip=${ifDefined(cancelTip.tooltip)}
+          data-tooltip-align="start"
           @click=${() => this.emit({ type: 'cancel' })}
         >
           <span class="ci-crop-cancel-btn-icon">${unsafeHTML(resolveIcon('close', this.icons))}</span>
@@ -175,7 +198,9 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
           class="ci-crop-done-btn"
           part="done"
           aria-label="Done"
-          title="Done"
+          title=${ifDefined(doneTip.title)}
+          data-tooltip=${ifDefined(doneTip.tooltip)}
+          data-tooltip-align="end"
           @click=${() => this.emit({ type: 'save' })}
         >
           <span class="ci-crop-done-btn-icon">${unsafeHTML(resolveIcon('check', this.icons))}</span>

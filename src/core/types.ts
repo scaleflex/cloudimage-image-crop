@@ -97,6 +97,26 @@ export type CropIconOverrides = Partial<{
   check: string;
 }>;
 
+/**
+ * Tooltip text for the toolbar buttons, e.g. translated by the host app. Any key
+ * left undefined keeps the built-in English text. Only the tooltip changes — the
+ * buttons' `aria-label`s stay English, so tests and assistive-tech names are stable.
+ */
+export type CropTooltipLabels = Partial<{
+  reset: string;
+  rotateLeft: string;
+  flipHorizontal: string;
+  cancel: string;
+  done: string;
+}>;
+
+/**
+ * How toolbar buttons show their tooltip: `'native'` — the browser's `title`
+ * tooltip (default); `'styled'` — a tooltip drawn by the editor, themed through
+ * the `--ci-crop-tooltip-*` custom properties.
+ */
+export type CropTooltipMode = 'native' | 'styled';
+
 /** @deprecated Use CropShapeName instead */
 export type CropShape = CropShapeName;
 
@@ -297,8 +317,11 @@ export interface CloudimageCropConfig {
   borderRadius: number;
 
   // Export
-  /** Output format for toBlob/toDataURL */
-  outputType: string;
+  /**
+   * Output format (MIME type). Raster export (toBlob/toDataURL) falls back to
+   * `image/png` when unset; a Cloudimage URL forces this format only when it is set.
+   */
+  outputType?: string;
   /** Output quality (0-1) for lossy formats */
   outputQuality: number;
   /** Maximum output width (0 = original) */

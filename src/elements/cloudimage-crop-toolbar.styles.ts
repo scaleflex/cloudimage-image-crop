@@ -407,4 +407,62 @@ export const sfxCropToolbarStyles = css`
       display: none;
     }
   }
+
+  /* tooltips="styled": the editor's own tooltip instead of the browser's
+     title. Opens below the button (the bar sits at the top of the photo), on
+     hover after a short delay or at once on keyboard focus; the corner buttons
+     align to their edge so the card's overflow clip can't cut the text. */
+  /* Zero specificity: the corner Cancel/Done buttons are position:absolute
+     (already a positioning context) and must keep it. */
+  :where([data-tooltip]) {
+    position: relative;
+  }
+  [data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + var(--ci-crop-tooltip-offset, 6px));
+    left: 50%;
+    z-index: 1;
+    width: max-content;
+    max-width: 240px;
+    padding: var(--ci-crop-tooltip-padding, 8px 12px);
+    border-radius: var(--ci-crop-tooltip-radius, var(--ci-crop-radius-md, 6px));
+    background: var(--ci-crop-tooltip-bg, var(--ci-crop-surface));
+    color: var(--ci-crop-tooltip-color, var(--ci-crop-text));
+    box-shadow: var(--ci-crop-tooltip-shadow, 0 1px 3px var(--ci-crop-shadow));
+    font: 400 var(--ci-crop-tooltip-font-size, 14px) / 1.4 var(--ci-crop-font);
+    white-space: normal;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(-50%) scale(0.95);
+    transition: opacity 150ms ease, transform 150ms ease;
+    transition-delay: 0ms;
+  }
+  [data-tooltip-align='start']::after {
+    left: 0;
+    transform: scale(0.95);
+    transform-origin: top left;
+  }
+  [data-tooltip-align='end']::after {
+    left: auto;
+    right: 0;
+    transform: scale(0.95);
+    transform-origin: top right;
+  }
+  [data-tooltip]:hover::after,
+  [data-tooltip]:focus-visible::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  [data-tooltip]:hover::after {
+    transition-delay: var(--ci-crop-tooltip-delay, 400ms);
+  }
+  [data-tooltip-align]:hover::after,
+  [data-tooltip-align]:focus-visible::after {
+    transform: scale(1);
+  }
+  :host([interacting]) [data-tooltip]::after {
+    display: none;
+  }
 `;

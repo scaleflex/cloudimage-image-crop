@@ -34,6 +34,9 @@ import { renderToCanvas, canvasToBlob, getTransformParams } from '../export/expo
 import { buildCloudimageUrlFromDescriptor, type CloudimageUrlOptions, type CropDescriptor } from '../export/cloudimage-url';
 import { calibrateServerFraming } from '../export/calibrate';
 
+/** Raster export format when `outputType` is unset (Cloudimage URLs then force no format). */
+const DEFAULT_RASTER_TYPE = 'image/png';
+
 /**
  * Callbacks invoked by the controller in response to state transitions.
  * All are optional. Designed for bridging into CustomEvents (<cloudimage-crop>)
@@ -978,7 +981,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
 
   async function toBlob(type?: string, quality?: number): Promise<Blob> {
     const c = toCanvas();
-    return canvasToBlob(c, type || config.outputType, quality ?? config.outputQuality);
+    return canvasToBlob(c, type || config.outputType || DEFAULT_RASTER_TYPE, quality ?? config.outputQuality);
   }
 
   function toDataURL(type?: string, quality?: number): string {
@@ -986,7 +989,7 @@ export function createCropController(opts: CropControllerOptions): CropControlle
     // tainted by cross-origin pixels. Wrap so consumers get a clear message
     // instead of a raw DOMException — same surface as canvasToBlob.
     try {
-      return toCanvas().toDataURL(type || config.outputType, quality ?? config.outputQuality);
+      return toCanvas().toDataURL(type || config.outputType || DEFAULT_RASTER_TYPE, quality ?? config.outputQuality);
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       throw new Error(`Failed to export data URL: ${e.message}`);
