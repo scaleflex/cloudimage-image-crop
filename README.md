@@ -238,7 +238,7 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 
 | Attribute / Property | Type | Default | Description |
 |---|---|---|---|
-| `output-type` / `outputType`           | `string` | `'image/png'` | MIME type for `toBlob` / `toDataURL`. |
+| `output-type` / `outputType`           | `string` | unset | MIME type of the output. Unset: `toBlob` / `toDataURL` export PNG, and a Cloudimage URL forces no format (the CDN delivers the original format). Set it to force a format in the URL too. |
 | `output-quality` / `outputQuality`     | `number` | `0.92`        | Quality 0–1 for lossy types. |
 | `max-output-width` / `maxOutputWidth`  | `number` | `0`           | `0` = original. |
 | `max-output-height` / `maxOutputHeight`| `number` | `0`           | `0` = original. |
@@ -257,6 +257,8 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `enable-animations` / `enableAnimations` | `boolean` | `true` | Spring/lerp transitions. |
 | `animation-speed` / `animationSpeed`     | `number`  | `1.0`  | Multiplier on the default spring. |
 | `icons` (property only)             | `CropIconOverrides` | `{}` | SVG-string slot overrides — see `CropIconOverrides` in `src/core/types.ts`. |
+| `tooltips`                          | `'native' \| 'styled'` | `'native'` | Toolbar tooltips: the browser `title`, or the editor's own tooltip themed by `--ci-crop-tooltip-*`. |
+| `tooltipLabels` (property only)     | `CropTooltipLabels` | `{}` | Tooltip text per button (`reset`, `rotateLeft`, `flipHorizontal`, `cancel`, `done`), e.g. translations. `aria-label`s stay English. |
 
 ## Variants
 
@@ -325,6 +327,20 @@ If `src` is **already** a Cloudimage / Filerobot URL (`*.cloudimg.io` or
 `*.filerobot.com`), the crop ops are appended to it (preserving its existing
 query) and no token is needed. Otherwise the raw origin URL is wrapped as
 `https://<token>.cloudimg.io/<src>?…` (Cloudimage's fetch-from-origin form).
+
+> **`src` must be the original image.** The crop ops are merged onto the query
+> of an existing Cloudimage / Filerobot URL, so crop params left on `src` from a
+> previous crop (`tl_px`, `br_px`, `r`, `flip`, …) that this crop does not
+> overwrite survive in the new URL. Feed the editor the uncropped original and
+> store the emitted URL separately.
+
+### Output format
+
+The URL carries no `force_format` (and no `q`) unless `outputType` is set, so the
+CDN delivers the image in its original format. Set `output-type` (for example
+`image/webp` or `image/jpeg`) to force that format; `outputQuality` then maps to
+`q` for the lossy formats. Raster export (`toBlob` / `toDataURL`, and `save()` in
+`blob` mode) still defaults to PNG.
 
 ### Build a URL on demand
 
@@ -460,6 +476,7 @@ All methods live on the `<cloudimage-crop>` element instance. They throw if invo
 | `setScale(scale)`                   | `void`                  | Zoom level (clamped to `min`/`max-scale`). |
 | `reset()`                           | `void`                  | Restore the initial state, with the **configured** shape (`crop-shape` attribute / prop) — a shape picked in the toolbar or via `setCropShape()` is undone. |
 | `restoreState(descriptor)`          | `void`                  | Restore a saved `CropDescriptor` (from `toCropDescriptor()` / the save event): turns, tilt, flip, zoom, pan and frame. Call after `cloudimage-crop-image-load`. 3.0.0 descriptors render exactly as they did in 3.0.0. |
+| `restoreFromCloudimageUrl(url)`     | `Promise<boolean>`      | Reopen on a crop saved only as its Cloudimage `url` (no descriptor stored): turns, tilt, flip, zoom and pan are rebuilt from the url. `'fixed'` variant; load the **original** photo first and call after `cloudimage-crop-image-load`. A tilted url calibrates once. `false` when the url has no crop. The pure `cropDescriptorFromCloudimageUrl(url, target)` does the same without an element. |
 | `toCanvas()`                        | `HTMLCanvasElement`     | Render the current crop into a fresh canvas. |
 | `toBlob(type?, quality?)`           | `Promise<Blob>`         | Like `HTMLCanvasElement.toBlob` for the cropped output. |
 | `toDataURL(type?, quality?)`        | `string`                | Like `HTMLCanvasElement.toDataURL`. |
@@ -560,6 +577,10 @@ Every visual surface is keyed off `--ci-crop-*` tokens. The full list (see `src/
 #### Toolbar & controls
 
 `--ci-crop-toolbar-bg`, `--ci-crop-toolbar-color`, `--ci-crop-toolbar-border`, `--ci-crop-toolbar-shadow`, `--ci-crop-btn-size`, `--ci-crop-btn-radius`, `--ci-crop-btn-hover-bg`, `--ci-crop-btn-active-bg`, `--ci-crop-separator-color`, `--ci-crop-slider-track`, `--ci-crop-slider-fill`, `--ci-crop-slider-thumb`, `--ci-crop-dropdown-bg`, `--ci-crop-dropdown-hover`, `--ci-crop-dropdown-shadow`, `--ci-crop-zoom-bar-bg`.
+
+#### Tooltips (`tooltips="styled"`)
+
+`--ci-crop-tooltip-bg`, `--ci-crop-tooltip-color`, `--ci-crop-tooltip-radius`, `--ci-crop-tooltip-shadow`, `--ci-crop-tooltip-padding`, `--ci-crop-tooltip-font-size`, `--ci-crop-tooltip-offset`, `--ci-crop-tooltip-delay` (hover delay; keyboard focus shows it at once). Defaults follow the surface / text tokens above.
 
 #### Typography & radius
 

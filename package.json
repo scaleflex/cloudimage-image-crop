@@ -1,6 +1,6 @@
 {
   "name": "@cloudimage/image-crop",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Interactive image crop tool with rotation, flip, tilt, zoom and shape selection, plus server-side Cloudimage crop URLs — Scaleflex Web Component",
   "license": "MIT",
   "author": "Scaleflex",

@@ -13,6 +13,8 @@ import type {
   TransformState,
   TransformParams,
   CropIconOverrides,
+  CropTooltipLabels,
+  CropTooltipMode,
 } from '../core/types';
 import type { CropDescriptor } from '../export/cloudimage-url';
 
@@ -55,6 +57,10 @@ export interface CloudimageCropProps {
   availableShapes?: CropShapeName[];
   /** Per-slot icon overrides — see `CropIconOverrides` in the core types. */
   icons?: CropIconOverrides;
+  /** `'native'` browser tooltips (default) or the editor's `'styled'` ones. */
+  tooltips?: CropTooltipMode;
+  /** Toolbar tooltip text, e.g. translations; aria-labels stay English. Memoize it. */
+  tooltipLabels?: CropTooltipLabels;
   handleSize?: number;
   handleColor?: string;
   borderRadius?: number;
@@ -114,29 +120,20 @@ export interface CloudimageCropProps {
 }
 
 /**
- * Writes a property on the underlying element *if* the property key exists on
- * the custom-element class. Falls back to setAttribute for values that survive
- * as strings.
+ * Writes a forwarded prop as a property on the underlying element — always, even
+ * before `<cloudimage-crop>` is defined (the define module loads asynchronously):
+ * Lit keeps a property set on a not-yet-upgraded element and applies it on
+ * upgrade. An attribute fallback would lose `false` for a boolean whose default
+ * is `true` (e.g. `showShapeSelector`): removing an absent attribute is a no-op.
  *
- * Using properties (not attributes) for arrays/objects keeps identity intact
- * so Lit's diff doesn't thrash.
+ * Using properties (not attributes) also keeps array/object identity intact so
+ * Lit's diff doesn't thrash.
+ *
+ * @internal Exported for tests.
  */
-function applyPropOrAttr(el: CloudimageCropElement, key: string, value: unknown): void {
+export function applyPropOrAttr(el: HTMLElement, key: string, value: unknown): void {
   if (value === undefined) return;
-
-  if (key in el) {
-    (el as unknown as Record<string, unknown>)[key] = value;
-    return;
-  }
-
-  const attr = key.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase());
-  if (value === null || value === false) {
-    el.removeAttribute(attr);
-  } else if (value === true) {
-    el.setAttribute(attr, '');
-  } else {
-    el.setAttribute(attr, String(value));
-  }
+  (el as unknown as Record<string, unknown>)[key] = value;
 }
 
 /**
@@ -156,7 +153,7 @@ const FORWARDED_PROPS: readonly (keyof CloudimageCropProps)[] = [
   'showDoneButton', 'showCancelButton', 'dimToolbarOnDrag',
   'showBleedMargin', 'bleedMarginSize', 'bleedMarginColor', 'enableAnimations',
   'animationSpeed', 'keyboard', 'pinchZoom', 'wheelZoom',
-  'icons',
+  'icons', 'tooltips', 'tooltipLabels',
 ];
 
 /**

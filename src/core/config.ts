@@ -36,7 +36,6 @@ export const DEFAULT_CONFIG: CloudimageCropConfig = {
   handleSize: 12,
   handleColor: '#ffffff',
   borderRadius: 20,
-  outputType: 'image/png',
   outputQuality: 0.92,
   maxOutputWidth: 0,
   maxOutputHeight: 0,

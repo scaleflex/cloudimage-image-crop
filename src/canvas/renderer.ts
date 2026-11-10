@@ -128,14 +128,18 @@ export function createRenderer(
 
     const rawDpr = window.devicePixelRatio;
     const dpr = Math.min(Number.isFinite(rawDpr) && rawDpr > 0 ? rawDpr : 1, 2);
-    const rect = container.getBoundingClientRect();
+    // Layout size, not getBoundingClientRect(): an ancestor transform (a dialog's
+    // zoom-in) would shrink the rect, and a transform change fires no
+    // ResizeObserver tick to correct it. Same box draw() measures.
+    const width = container.clientWidth;
+    const height = container.clientHeight;
     // Container may not be laid out yet (0×0); bail and let the next
     // ResizeObserver tick call us again.
-    if (rect.width <= 0 || rect.height <= 0) return;
-    canvas.width = Math.max(0, Math.floor(rect.width * dpr));
-    canvas.height = Math.max(0, Math.floor(rect.height * dpr));
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
+    if (width <= 0 || height <= 0) return;
+    canvas.width = Math.max(0, Math.floor(width * dpr));
+    canvas.height = Math.max(0, Math.floor(height * dpr));
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     dirty = true;
   }

@@ -3,6 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { createCropController, type CropController } from '../core/crop-controller';
 import type { CloudimageUrlOptions, CropDescriptor } from '../export/cloudimage-url';
+import { cropDescriptorFromCloudimageUrl } from '../export/cloudimage-url-restore';
 import { mergeConfig } from '../core/config';
 import { setupAria } from '../a11y/aria';
 import type {
@@ -12,6 +13,8 @@ import type {
   TransformState,
   TransformParams,
   CropIconOverrides,
+  CropTooltipLabels,
+  CropTooltipMode,
 } from '../core/types';
 import { CloudimageCropCanvasElement } from './cloudimage-crop-canvas';
 import type { CloudimageCropToolbarElement, CloudimageCropToolbarCommand } from './cloudimage-crop-toolbar';
@@ -102,7 +105,8 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
   @property({ type: String, attribute: 'handle-color' }) handleColor = '#ffffff';
   @property({ type: String, attribute: 'overlay-color' }) overlayColor = 'rgba(0, 0, 0, 0.55)';
   @property({ type: String, attribute: 'bleed-margin-color' }) bleedMarginColor = 'rgba(255, 0, 0, 0.5)';
-  @property({ type: String, attribute: 'output-type' }) outputType = 'image/png';
+  /** Unset: raster export falls back to PNG; a Cloudimage URL forces no format. */
+  @property({ type: String, attribute: 'output-type' }) outputType?: string;
   @property({ type: String, attribute: 'toolbar-position', reflect: true }) toolbarPosition: 'bottom' | 'top' = 'top';
 
   /**
@@ -176,6 +180,15 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
    * Not an HTML attribute; set via DOM property only.
    */
   @property({ attribute: false }) icons: CropIconOverrides = {};
+
+  /**
+   * Toolbar tooltips: `'native'` (browser `title`, default) or `'styled'` — the
+   * editor's own tooltip, themed via `--ci-crop-tooltip-*` custom properties.
+   */
+  @property({ type: String }) tooltips: CropTooltipMode = 'native';
+
+  /** Toolbar tooltip text (e.g. translations). aria-labels stay English. Property only. */
+  @property({ attribute: false }) tooltipLabels: CropTooltipLabels = {};
 
   // === Internal reactive state ===
   @state() private loading = false;
@@ -339,17 +352,19 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
           <cloudimage-crop-toolbar
             part="toolbar"
             .shape=${this.cropShape}
-            ?show-rotate-button=${this.showRotateButton}
-            ?show-flip-button=${this.showFlipButton}
-            ?show-rotate-slider=${this.showRotateSlider}
-            ?show-shape-selector=${this.showShapeSelector}
-            ?show-cancel-button=${this.showCancelButton}
+            .showRotateButton=${this.showRotateButton}
+            .showFlipButton=${this.showFlipButton}
+            .showRotateSlider=${this.showRotateSlider}
+            .showShapeSelector=${this.showShapeSelector}
+            .showCancelButton=${this.showCancelButton}
             .showDoneButton=${this.showDoneButton}
             toolbar-position=${this.toolbarPosition}
             variant=${this.variant}
             ?interacting=${this.dimToolbarOnDrag && this.isInteracting}
             .availableShapes=${this.availableShapes}
             .icons=${this.icons}
+            .tooltips=${this.tooltips}
+            .tooltipLabels=${this.tooltipLabels}
             @cloudimage-crop-toolbar-command=${this.onToolbarCommand}
           ></cloudimage-crop-toolbar>
         ` : null}
@@ -558,6 +573,38 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
    * (async); `save()` awaits this automatically for tilted `cloudimage` output.
    */
   calibrateCloudimage(): Promise<'centered' | 'inset' | null> { return this.ensure().calibrateCloudimage(); }
+
+  /**
+   * Reopen the editor on a crop that was saved only as its Cloudimage url (the
+   * `url` of a `cloudimage-crop-save` in `cloudimage` mode): zoom, pan, flips,
+   * quarter turns and free tilt are rebuilt from the url and restored. Call once
+   * the ORIGINAL photo (the url's source, without the crop) has loaded, e.g. from
+   * a `cloudimage-crop-image-load` listener. `'fixed'` variant only; a tilted url
+   * calibrates the photo's CDN framing first (one probe, cached for save()).
+   *
+   * @returns `false` when the url carries no crop, cannot be parsed, or the
+   *   variant is not `'fixed'` — the editor is then left untouched.
+   */
+  async restoreFromCloudimageUrl(url: string): Promise<boolean> {
+    const current = this.ensure().toCropDescriptor();
+    if (current.variant !== 'fixed') return false;
+
+    const nested = new URLSearchParams(url.split('?')[1] ?? '').get('ci_url_encoded') === '1';
+    const serverFraming = nested
+      ? (current.serverFraming ?? (await this.calibrateCloudimage()) ?? undefined)
+      : undefined;
+    const descriptor = cropDescriptorFromCloudimageUrl(url, {
+      imageWidth: current.imageWidth,
+      imageHeight: current.imageHeight,
+      containerWidth: current.containerWidth,
+      containerHeight: current.containerHeight,
+      serverFraming,
+    });
+    if (!descriptor) return false;
+
+    this.restoreState(descriptor);
+    return true;
+  }
 
   /**
    * Emit the crop result via `cloudimage-crop-save`. In the default `'blob'`

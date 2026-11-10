@@ -7,6 +7,52 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [3.2.0] — 2026-11-10
+
+### Added
+
+- **Reopen a crop from its url.** `restoreFromCloudimageUrl(url)` on the element,
+  and the pure `cropDescriptorFromCloudimageUrl(url, target)`, rebuild a `'fixed'`
+  crop — zoom, pan, flips, quarter turns and free tilt — from the Cloudimage url
+  a `cloudimage`-mode save produced, so an app that stores only the url can
+  reopen the editor where the user left it. A crop of another shape (e.g. from an
+  older editor) reopens centred on the same region.
+- **Styled, translatable toolbar tooltips.** `tooltips="styled"` replaces the
+  browser `title` tooltips with the editor's own, themed by `--ci-crop-tooltip-*`;
+  `tooltipLabels` sets their text (e.g. translations) while `aria-label`s stay
+  English. Default `'native'` keeps today's behaviour.
+
+### Changed
+
+- **cloudimage mode no longer forces PNG; set `outputType` to keep it.**
+  `outputType` has no default any more (it was `'image/png'`, which appended
+  `force_format=png` to every Cloudimage URL and turned photos into heavy PNGs).
+  Unset, single-pass and nested (tilt) Cloudimage URLs carry no `force_format`
+  and no `q`, so the CDN delivers the original format. Setting `outputType`
+  (e.g. `image/webp`) forces that format and its quality as before. Raster export
+  (`toBlob`, `toDataURL`, `save()` in `blob` mode) still defaults to PNG.
+- `CloudimageCropConfig.outputType` is now optional (`string | undefined`).
+  TypeScript code that read it as a plain `string` needs a fallback.
+
+### Fixed
+
+- `showRotateButton`, `showFlipButton`, `showRotateSlider` and `showShapeSelector`
+  set to `false` before the first render now reach the toolbar; `showCancelButton`
+  is forwarded the same way.
+- React: props passed before `<cloudimage-crop>` is defined (its module loads
+  asynchronously) survive the upgrade — a `false` boolean whose default is `true`,
+  such as `showShapeSelector={false}`, used to be dropped. They were bound
+  as boolean attributes, so a `false` never created the attribute and the toolbar
+  kept its `true` default (the same fix `showDoneButton` already had).
+- The canvas takes its container's layout size instead of its transformed
+  bounding rect. Opened inside an animated dialog (zoom-in), it was sized at the
+  animation's start scale and stayed short of the box, leaving empty strips.
+
+### Documentation
+
+- README: the new `outputType` default, and that `src` must be the original
+  image (crop ops are merged onto an existing Cloudimage URL's query).
+
 ## [3.1.0] — 2026-10-12
 
 ### Added
