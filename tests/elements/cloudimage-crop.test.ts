@@ -208,6 +208,23 @@ describe('<cloudimage-crop>', () => {
     expect(() => el.rotateLeft()).toThrow(/not connected/);
   });
 
+  it('restoreFromCloudimageUrl() resolves false (never rejects) when not connected', async () => {
+    el = document.createElement('cloudimage-crop') as CloudimageCropElement;
+    await expect(
+      el.restoreFromCloudimageUrl('https://demo.cloudimg.io/photo.jpg?tl_px=0,0&br_px=10,10'),
+    ).resolves.toBe(false);
+  });
+
+  it('restoreFromCloudimageUrl() resolves false before a photo has loaded', async () => {
+    el = document.createElement('cloudimage-crop') as CloudimageCropElement;
+    el.variant = 'fixed';
+    document.body.appendChild(el);
+    await el.updateComplete;
+    await expect(
+      el.restoreFromCloudimageUrl('https://demo.cloudimg.io/photo.jpg?tl_px=0,0&br_px=10,10'),
+    ).resolves.toBe(false);
+  });
+
   it('cleans up on disconnect without throwing', async () => {
     el = document.createElement('cloudimage-crop') as CloudimageCropElement;
     document.body.appendChild(el);

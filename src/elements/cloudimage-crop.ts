@@ -3,7 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { createCropController, type CropController } from '../core/crop-controller';
 import type { CloudimageUrlOptions, CropDescriptor } from '../export/cloudimage-url';
-import { cropDescriptorFromCloudimageUrl } from '../export/cloudimage-url-restore';
+import { cropDescriptorFromCloudimageUrl, isNestedCloudimageCropUrl } from '../export/cloudimage-url-restore';
 import { mergeConfig } from '../core/config';
 import { setupAria } from '../a11y/aria';
 import type {
@@ -582,28 +582,54 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
    * a `cloudimage-crop-image-load` listener. `'fixed'` variant only; a tilted url
    * calibrates the photo's CDN framing first (one probe, cached for save()).
    *
-   * @returns `false` when the url carries no crop, cannot be parsed, or the
-   *   variant is not `'fixed'` — the editor is then left untouched.
+   * @returns `false` when the url carries no crop, cannot be parsed or does not
+   *   fit the loaded photo, the variant is not `'fixed'`, no photo is loaded yet,
+   *   or the photo changed while the framing was being calibrated — the editor is
+   *   then left untouched. Never rejects.
    */
   async restoreFromCloudimageUrl(url: string): Promise<boolean> {
-    const current = this.ensure().toCropDescriptor();
-    if (current.variant !== 'fixed') return false;
+    const current = this.currentDescriptor();
+    if (!current || current.variant !== 'fixed') return false;
 
-    const nested = new URLSearchParams(url.split('?')[1] ?? '').get('ci_url_encoded') === '1';
-    const serverFraming = nested
-      ? (current.serverFraming ?? (await this.calibrateCloudimage()) ?? undefined)
-      : undefined;
+    let serverFraming = current.serverFraming;
+    if (isNestedCloudimageCropUrl(url) && !serverFraming) {
+      const src = this.src;
+      try {
+        serverFraming = (await this.calibrateCloudimage()) ?? undefined;
+      } catch {
+        serverFraming = undefined;
+      }
+      // The probe is a network round-trip: a new photo may have loaded meanwhile,
+      // and the descriptor below is sized for the old one.
+      const after = this.currentDescriptor();
+      if (
+        !after || this.src !== src
+        || after.imageWidth !== current.imageWidth || after.imageHeight !== current.imageHeight
+      ) {
+        return false;
+      }
+    }
     const descriptor = cropDescriptorFromCloudimageUrl(url, {
       imageWidth: current.imageWidth,
       imageHeight: current.imageHeight,
       containerWidth: current.containerWidth,
       containerHeight: current.containerHeight,
       serverFraming,
+      maxScale: this.maxScale,
     });
     if (!descriptor) return false;
 
     this.restoreState(descriptor);
     return true;
+  }
+
+  /** The current crop descriptor, or `null` before the controller / photo is ready. */
+  private currentDescriptor(): CropDescriptor | null {
+    try {
+      return this.ensure().toCropDescriptor();
+    } catch {
+      return null;
+    }
   }
 
   /**

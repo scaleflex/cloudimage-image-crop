@@ -16,11 +16,14 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   crop — zoom, pan, flips, quarter turns and free tilt — from the Cloudimage url
   a `cloudimage`-mode save produced, so an app that stores only the url can
   reopen the editor where the user left it. A crop of another shape (e.g. from an
-  older editor) reopens centred on the same region.
+  older editor) reopens centred on the same region. It resolves `false` instead
+  of rejecting (no photo yet, a url that does not fit the photo, the photo
+  changed during calibration), works for origins whose url has its own query,
+  and caps the zoom at `maxScale`.
 - **Styled, translatable toolbar tooltips.** `tooltips="styled"` replaces the
   browser `title` tooltips with the editor's own, themed by `--ci-crop-tooltip-*`;
   `tooltipLabels` sets their text (e.g. translations) while `aria-label`s stay
-  English. Default `'native'` keeps today's behaviour.
+  English (so translated text and the accessible name differ — see README). Default `'native'` keeps today's behaviour.
 
 ### Changed
 
@@ -31,8 +34,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   and no `q`, so the CDN delivers the original format. Setting `outputType`
   (e.g. `image/webp`) forces that format and its quality as before. Raster export
   (`toBlob`, `toDataURL`, `save()` in `blob` mode) still defaults to PNG.
-- `CloudimageCropConfig.outputType` is now optional (`string | undefined`).
-  TypeScript code that read it as a plain `string` needs a fallback.
+- **TypeScript (source-breaking):** `CloudimageCropConfig.outputType` and the
+  element's `outputType` are now optional (`string | undefined`, default
+  `undefined`). Code that read them as a plain `string` needs a fallback, e.g.
+  `config.outputType ?? 'image/png'`.
 
 ### Fixed
 

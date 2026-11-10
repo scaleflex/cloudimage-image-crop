@@ -126,6 +126,53 @@ describe('cropDescriptorFromCloudimageUrl', () => {
     expect(d.state.scale).toBeGreaterThanOrEqual(1);
   });
 
+  describe('an origin src with its own query (token form, ci_url_encoded=1 on a single-pass url)', () => {
+    const ORIGIN = 'https://example.com/photo.jpg?v=2';
+    const target = { src: ORIGIN, token: 'demo' };
+    const trip = (s: TransformState, serverFraming?: 'centered' | 'inset') => {
+      const saved = buildCloudimageUrlFromDescriptor(descriptor(s, serverFraming), target);
+      const d = cropDescriptorFromCloudimageUrl(saved, { imageWidth: IW, imageHeight: IH, ...BOX, serverFraming });
+      expect(d).not.toBeNull();
+      return { saved, d: d!, restored: buildCloudimageUrlFromDescriptor(d!, target) };
+    };
+
+    it.each([
+      ['a flip', state({ scale: 1.4, panX: -30, flipH: true })],
+      ['a quarter turn with a flip', state({ quarterTurns: 90, scale: 2.2, panX: 20, flipH: true })],
+      ['three quarter turns', state({ quarterTurns: 270, scale: 1.8, panY: 12 })],
+    ])('keeps %s', (_, s) => {
+      const { saved, d, restored } = trip(s);
+      expect(new URL(saved).searchParams.get('ci_url_encoded')).toBe('1');
+      expect(d.state.flipH).toBe(s.flipH);
+      expect(d.state.quarterTurns).toBe(s.quarterTurns);
+      expectSameCrop(restored, saved);
+    });
+
+    it('still reads a tilted (nested) url', () => {
+      const { saved, d, restored } = trip(state({ rotation: 12, scale: 1.8, flipV: true }), 'inset');
+      expect(d.state.rotation).toBeCloseTo(12, 1);
+      expect(d.state.flipV).toBe(true);
+      expectSameCrop(restored, saved);
+    });
+  });
+
+  it('returns null when the crop does not fit the photo (e.g. the cropped url was loaded)', () => {
+    const saved = buildCloudimageUrlFromDescriptor(descriptor(state({ scale: 1.2 })), { src: SRC });
+    // The delivered crop (smaller than the original) loaded as if it were the original.
+    expect(cropDescriptorFromCloudimageUrl(saved, { imageWidth: 1000, imageHeight: 560, ...BOX })).toBeNull();
+  });
+
+  it('caps the zoom at maxScale and keeps the saved region centred', () => {
+    const tiny = `${SRC}&tl_px=2400,1300&br_px=2472,1341`; // ~72px wide → needs zoom ≈ 70
+    const d = cropDescriptorFromCloudimageUrl(tiny, { imageWidth: IW, imageHeight: IH, ...BOX, maxScale: 5 })!;
+    expect(d.state.scale).toBe(5);
+    const rebuilt = ops(buildCloudimageUrlFromDescriptor(d, { src: SRC }));
+    const [x1, y1] = point(rebuilt.tl_px);
+    const [x2, y2] = point(rebuilt.br_px);
+    expect(Math.abs((x1 + x2) / 2 - 2436)).toBeLessThanOrEqual(2);
+    expect(Math.abs((y1 + y2) / 2 - 1320.5)).toBeLessThanOrEqual(2);
+  });
+
   it('never zooms out past the cover floor', () => {
     const whole = `${SRC}&tl_px=0,0&br_px=${IW},${IH}`;
     const d = cropDescriptorFromCloudimageUrl(whole, { imageWidth: IW, imageHeight: IH, ...BOX })!;

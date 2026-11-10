@@ -258,7 +258,7 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `animation-speed` / `animationSpeed`     | `number`  | `1.0`  | Multiplier on the default spring. |
 | `icons` (property only)             | `CropIconOverrides` | `{}` | SVG-string slot overrides — see `CropIconOverrides` in `src/core/types.ts`. |
 | `tooltips`                          | `'native' \| 'styled'` | `'native'` | Toolbar tooltips: the browser `title`, or the editor's own tooltip themed by `--ci-crop-tooltip-*`. |
-| `tooltipLabels` (property only)     | `CropTooltipLabels` | `{}` | Tooltip text per button (`reset`, `rotateLeft`, `flipHorizontal`, `cancel`, `done`), e.g. translations. `aria-label`s stay English. |
+| `tooltipLabels` (property only)     | `CropTooltipLabels` | `{}` | Tooltip text per button (`reset`, `rotateLeft`, `flipHorizontal`, `cancel`, `done`), e.g. translations. `aria-label`s stay English, so the visible text and the accessible name differ (WCAG 2.5.3 "Label in Name": voice-control users must say the English name); keep the labels close to the English ones or accept that trade-off. |
 
 ## Variants
 
@@ -476,7 +476,7 @@ All methods live on the `<cloudimage-crop>` element instance. They throw if invo
 | `setScale(scale)`                   | `void`                  | Zoom level (clamped to `min`/`max-scale`). |
 | `reset()`                           | `void`                  | Restore the initial state, with the **configured** shape (`crop-shape` attribute / prop) — a shape picked in the toolbar or via `setCropShape()` is undone. |
 | `restoreState(descriptor)`          | `void`                  | Restore a saved `CropDescriptor` (from `toCropDescriptor()` / the save event): turns, tilt, flip, zoom, pan and frame. Call after `cloudimage-crop-image-load`. 3.0.0 descriptors render exactly as they did in 3.0.0. |
-| `restoreFromCloudimageUrl(url)`     | `Promise<boolean>`      | Reopen on a crop saved only as its Cloudimage `url` (no descriptor stored): turns, tilt, flip, zoom and pan are rebuilt from the url. `'fixed'` variant; load the **original** photo first and call after `cloudimage-crop-image-load`. A tilted url calibrates once. `false` when the url has no crop. The pure `cropDescriptorFromCloudimageUrl(url, target)` does the same without an element. |
+| `restoreFromCloudimageUrl(url)`     | `Promise<boolean>`      | Reopen on a crop saved only as its Cloudimage `url` (no descriptor stored): turns, tilt, flip, zoom and pan are rebuilt from the url. `'fixed'` variant; load the **original** photo first and call after `cloudimage-crop-image-load`. A tilted url calibrates once. Resolves `false` (never rejects) when the url has no crop or does not fit the loaded photo, before the photo has loaded, or when the photo changed during calibration. A crop needing more zoom than `maxScale` opens at `maxScale`, centred on the same region. The pure `cropDescriptorFromCloudimageUrl(url, target)` does the same without an element. |
 | `toCanvas()`                        | `HTMLCanvasElement`     | Render the current crop into a fresh canvas. |
 | `toBlob(type?, quality?)`           | `Promise<Blob>`         | Like `HTMLCanvasElement.toBlob` for the cropped output. |
 | `toDataURL(type?, quality?)`        | `string`                | Like `HTMLCanvasElement.toDataURL`. |

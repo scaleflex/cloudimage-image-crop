@@ -25,6 +25,11 @@ export interface CropRestoreTarget {
    * (nested) url. Omitted → the same `'auto'` heuristic the url builder falls back to.
    */
   serverFraming?: 'centered' | 'inset';
+  /**
+   * The editor's zoom ceiling (`maxScale`). A crop that needs more zoom is restored at this zoom,
+   * still centred on the saved region (the editor would otherwise clamp the zoom and shift it).
+   */
+  maxScale?: number;
 }
 
 interface ParsedCrop {
@@ -52,7 +57,8 @@ const FULL_FRAME = { x: 0, y: 0, width: 1, height: 1 };
  * A crop of another shape than the box (e.g. made by an older editor) is restored centred on the
  * same region, zoomed so the box covers it, never below the cover floor.
  *
- * @returns `null` when the url carries no crop (`tl_px`/`br_px`) or cannot be parsed.
+ * @returns `null` when the url carries no crop (`tl_px`/`br_px`), cannot be parsed, or its crop does
+ *   not fit the given photo (e.g. the already-cropped url was loaded instead of the original).
  */
 export function cropDescriptorFromCloudimageUrl(url: string, target: CropRestoreTarget): CropDescriptor | null {
   const { imageWidth: iw, imageHeight: ih, containerWidth: cw, containerHeight: ch } = target;
@@ -60,6 +66,7 @@ export function cropDescriptorFromCloudimageUrl(url: string, target: CropRestore
 
   const parsed = parseCrop(url);
   if (!parsed) return null;
+  if (!cropFitsImage(parsed, iw, ih)) return null;
 
   const { quarterTurns, rotation } = splitAngle(parsed.geomDeg, parsed.flipH !== parsed.flipV);
   const base: TransformState = {
@@ -88,8 +95,11 @@ export function cropDescriptorFromCloudimageUrl(url: string, target: CropRestore
 
   const unit = windowInImage(base, iw, ih, cw, ch);
   // Window size scales as 1/zoom. The smaller zoom keeps the whole saved region in view when its
-  // shape differs from the box; 1 is the fixed variant's cover floor.
-  const scale = Math.max(1, Math.min(unit.width / targetW, unit.height / targetH));
+  // shape differs from the box; 1 is the fixed variant's cover floor. Capped at `maxScale` here,
+  // before the pan is solved, so the restored view stays centred on the saved region.
+  const fit = Math.max(1, Math.min(unit.width / targetW, unit.height / targetH));
+  const maxScale = target.maxScale !== undefined && target.maxScale >= 1 ? target.maxScale : Infinity;
+  const scale = Math.min(fit, maxScale);
 
   const at = (panX: number, panY: number): { x: number; y: number } =>
     windowInImage({ ...base, scale, panX, panY }, iw, ih, cw, ch).center;
@@ -124,15 +134,9 @@ function parseCrop(url: string): ParsedCrop | null {
   const rect = readRect(outer.searchParams);
   if (!rect) return null;
 
-  const nested = outer.searchParams.get('ci_url_encoded') === '1';
-  let rotationParams = outer.searchParams;
-  if (nested) {
-    try {
-      rotationParams = new URL(decodeURIComponent(outer.pathname.slice(1))).searchParams;
-    } catch {
-      return null;
-    }
-  }
+  const inner = nestedInnerParams(outer);
+  const nested = inner !== null;
+  const rotationParams = inner ?? outer.searchParams;
 
   const flip = rotationParams.get('flip') ?? '';
   const rotateCCW = Number(rotationParams.get('r') ?? 0);
@@ -145,6 +149,53 @@ function parseCrop(url: string): ParsedCrop | null {
     geomDeg: normalizeSigned(-rotateCCW),
     nested,
   };
+}
+
+/**
+ * The inner url's params when `outer` is a nested (free-tilt) crop url, else `null`.
+ *
+ * `ci_url_encoded=1` alone does not mark a nested url: a single-pass url over an origin whose own
+ * url has a query (`https://<token>.cloudimg.io/<encoded src>?ci_url_encoded=1&flip=…&r=…`) carries
+ * it too. The builder puts flip/rotation in the OUTER query of a single-pass url and only in the
+ * INNER url of a nested one (whose inner always rotates — that is what makes it nested).
+ */
+function nestedInnerParams(outer: URL): URLSearchParams | null {
+  const params = outer.searchParams;
+  if (params.get('ci_url_encoded') !== '1' || params.has('r') || params.has('flip')) return null;
+  try {
+    const inner = new URL(decodeURIComponent(outer.pathname.slice(1))).searchParams;
+    return inner.has('r') ? inner : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True when `url` is a nested (free-tilt) crop url — restoring it needs the photo's calibrated
+ * CDN framing (`calibrateCloudimage()`). False for single-pass urls and for unparsable input.
+ */
+export function isNestedCloudimageCropUrl(url: string): boolean {
+  try {
+    return nestedInnerParams(new URL(url)) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The crop lies inside the photo it is restored onto (1px slack for rounding). A single-pass crop
+ * is in original px; a nested one in the rotated canvas, offset by at most its centred inset.
+ */
+function cropFitsImage(parsed: ParsedCrop, iw: number, ih: number): boolean {
+  let maxX = iw;
+  let maxY = ih;
+  if (parsed.nested) {
+    const rad = degreesToRadians(parsed.geomDeg);
+    maxX = Math.round(Math.abs(iw * Math.cos(rad)) + Math.abs(ih * Math.sin(rad)));
+    maxY = Math.round(Math.abs(iw * Math.sin(rad)) + Math.abs(ih * Math.cos(rad)));
+  }
+  const { x, y, width, height } = parsed.rect;
+  return x + width <= maxX + 1 && y + height <= maxY + 1;
 }
 
 function readRect(params: URLSearchParams): ParsedCrop['rect'] | null {
