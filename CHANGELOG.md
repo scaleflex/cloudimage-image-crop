@@ -7,6 +7,8 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [3.3.0] — 2026-11-11
+
 ### Added
 
 - **Reset next to Cancel.** `resetPlacement` (`reset-placement`) moves the
