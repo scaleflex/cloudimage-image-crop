@@ -57,4 +57,5 @@ export type {
   CropIconOverrides,
   CropTooltipLabels,
   CropTooltipMode,
+  CropResetPlacement,
 } from '../core/types';

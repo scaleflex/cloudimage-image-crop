@@ -7,6 +7,14 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- **Reset next to Cancel.** `resetPlacement` (`reset-placement`) moves the
+  toolbar's Reset button out of the centred tool group into the left corner,
+  after Cancel when it is shown, so both "back out" actions sit together. The
+  narrow-box gutter widens to fit both circles. Default `'toolbar'` keeps
+  today's layout.
+
 ## [3.2.0] — 2026-11-10
 
 ### Added

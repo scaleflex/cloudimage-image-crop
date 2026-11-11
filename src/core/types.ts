@@ -117,6 +117,12 @@ export type CropTooltipLabels = Partial<{
  */
 export type CropTooltipMode = 'native' | 'styled';
 
+/**
+ * Where the toolbar's Reset button sits: `'toolbar'` — first in the centred tool
+ * group (default); `'start'` — pinned to the left corner, next to Cancel.
+ */
+export type CropResetPlacement = 'toolbar' | 'start';
+
 /** @deprecated Use CropShapeName instead */
 export type CropShape = CropShapeName;
 

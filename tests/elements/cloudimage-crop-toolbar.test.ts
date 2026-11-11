@@ -57,6 +57,115 @@ describe('<cloudimage-crop-toolbar>', () => {
     expect(row().contains('ci-crop-toolbar--gutter-l')).toBe(true);
   });
 
+  describe('resetPlacement', () => {
+    const reset = (): HTMLButtonElement =>
+      el.shadowRoot!.querySelector<HTMLButtonElement>('button[aria-label="Reset all changes"]')!;
+    const group = (): Element => el.shadowRoot!.querySelector('.ci-crop-toolbar-group')!;
+    const row = (): DOMTokenList => el.shadowRoot!.querySelector('.ci-crop-toolbar')!.classList;
+
+    it('keeps Reset first in the tool group by default', async () => {
+      await mount();
+      expect(el.resetPlacement).toBe('toolbar');
+      expect(group().firstElementChild).toBe(reset());
+      expect(el.shadowRoot!.querySelector('.ci-crop-start')).toBeNull();
+    });
+
+    it("'start' pins Reset next to Cancel, out of the tool group", async () => {
+      await mount();
+      el.showCancelButton = true;
+      el.resetPlacement = 'start';
+      await el.updateComplete;
+
+      const start = el.shadowRoot!.querySelector('.ci-crop-start')!;
+      expect([...start.children].map((b) => b.getAttribute('aria-label'))).toEqual(['Cancel', 'Reset all changes']);
+      expect(group().contains(reset())).toBe(false);
+      expect(reset().getAttribute('data-tooltip-align')).toBe('start');
+      // No divider is left leading the group once Reset has moved out.
+      expect(group().firstElementChild?.classList.contains('ci-crop-toolbar-divider')).toBe(false);
+      expect(row().contains('ci-crop-toolbar--gutter-l2')).toBe(true);
+    });
+
+    it("'start' without Cancel pins Reset alone and reserves one gutter", async () => {
+      await mount();
+      el.showCancelButton = false;
+      el.resetPlacement = 'start';
+      await el.updateComplete;
+
+      const start = el.shadowRoot!.querySelector('.ci-crop-start')!;
+      expect(start.children).toHaveLength(1);
+      expect(start.firstElementChild).toBe(reset());
+      expect(row().contains('ci-crop-toolbar--gutter-l')).toBe(true);
+      expect(row().contains('ci-crop-toolbar--gutter-l2')).toBe(false);
+    });
+
+    it('drops the shape divider when nothing precedes it in the group', async () => {
+      await mount();
+      el.resetPlacement = 'start';
+      el.showRotateButton = false;
+      el.showFlipButton = false;
+      await el.updateComplete;
+      expect(group().querySelector('.ci-crop-toolbar-divider')).toBeNull();
+    });
+
+    it('puts the left corner first in focus order, matching what the user sees', async () => {
+      await mount();
+      el.showCancelButton = true;
+      const toolbarRow = (): Element => el.shadowRoot!.querySelector('.ci-crop-toolbar')!;
+      const precedes = (a: Element, b: Element): boolean =>
+        Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+      await el.updateComplete;
+      expect(precedes(el.shadowRoot!.querySelector('.ci-crop-cancel-btn')!, toolbarRow())).toBe(true);
+
+      el.resetPlacement = 'start';
+      await el.updateComplete;
+      expect(precedes(el.shadowRoot!.querySelector('.ci-crop-start')!, toolbarRow())).toBe(true);
+    });
+
+    it('keeps focus on Reset when it moves between positions', async () => {
+      await mount();
+      reset().focus();
+      expect(el.shadowRoot!.activeElement).toBe(reset());
+
+      el.resetPlacement = 'start';
+      await el.updateComplete;
+      expect(el.shadowRoot!.activeElement).toBe(reset());
+
+      el.resetPlacement = 'toolbar';
+      await el.updateComplete;
+      expect(el.shadowRoot!.activeElement).toBe(reset());
+    });
+
+    it('does not move focus to Reset when something else had it', async () => {
+      await mount();
+      const rotate = el.shadowRoot!.querySelector<HTMLButtonElement>('button[aria-label="Rotate left 90°"]')!;
+      rotate.focus();
+      el.resetPlacement = 'start';
+      await el.updateComplete;
+      expect(el.shadowRoot!.activeElement).toBe(rotate);
+    });
+
+    it('renders no empty tool group when Reset is pinned and every tool is off', async () => {
+      await mount();
+      el.resetPlacement = 'start';
+      el.showRotateButton = false;
+      el.showFlipButton = false;
+      el.showShapeSelector = false;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('.ci-crop-toolbar-group')).toBeNull();
+      expect(reset()).not.toBeNull();
+    });
+
+    it('still emits reset from the pinned position', async () => {
+      await mount();
+      el.resetPlacement = 'start';
+      await el.updateComplete;
+      const waitForEvent = captureCommand(document);
+      reset().click();
+      await expect(waitForEvent).resolves.toEqual({ type: 'reset' });
+    });
+  });
+
   it('emits rotate-left on the rotate button click', async () => {
     await mount();
     const waitForEvent = captureCommand(document);

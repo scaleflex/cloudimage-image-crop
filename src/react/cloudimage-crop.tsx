@@ -15,6 +15,7 @@ import type {
   CropIconOverrides,
   CropTooltipLabels,
   CropTooltipMode,
+  CropResetPlacement,
 } from '../core/types';
 import type { CropDescriptor } from '../export/cloudimage-url';
 
@@ -91,6 +92,8 @@ export interface CloudimageCropProps {
   showDoneButton?: boolean;
   /** Toolbar's Cancel button (calls `cancel()`). Default `false`. */
   showCancelButton?: boolean;
+  /** Reset in the tool group (`'toolbar'`, default) or pinned left next to Cancel (`'start'`). */
+  resetPlacement?: CropResetPlacement;
   /** Fade the toolbar while the user drags / resizes / pans. Default `false`. */
   dimToolbarOnDrag?: boolean;
   showBleedMargin?: boolean;
@@ -150,7 +153,7 @@ const FORWARDED_PROPS: readonly (keyof CloudimageCropProps)[] = [
   'maxOutputHeight', 'outputMode', 'cloudimageToken', 'cloudimageDomain', 'cloudimageBgColor', 'showGrid',
   'showToolbar', 'showRotateSlider', 'showZoomSlider', 'showShapeSelector',
   'showRotateButton', 'showFlipButton', 'toolbarPosition',
-  'showDoneButton', 'showCancelButton', 'dimToolbarOnDrag',
+  'showDoneButton', 'showCancelButton', 'resetPlacement', 'dimToolbarOnDrag',
   'showBleedMargin', 'bleedMarginSize', 'bleedMarginColor', 'enableAnimations',
   'animationSpeed', 'keyboard', 'pinchZoom', 'wheelZoom',
   'icons', 'tooltips', 'tooltipLabels',

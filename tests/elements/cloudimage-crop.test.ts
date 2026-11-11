@@ -137,6 +137,18 @@ describe('<cloudimage-crop>', () => {
     expect(toolbar.showCancelButton).toBe(false);
   });
 
+  it('forwards the `reset-placement` attribute to the toolbar', async () => {
+    el = document.createElement('cloudimage-crop') as CloudimageCropElement;
+    el.setAttribute('reset-placement', 'start');
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.resetPlacement).toBe('start');
+    const toolbar = el.shadowRoot!.querySelector('cloudimage-crop-toolbar') as CloudimageCropToolbarElement;
+    await toolbar.updateComplete;
+    expect(toolbar.resetPlacement).toBe('start');
+    expect(toolbar.shadowRoot!.querySelector('.ci-crop-start .ci-crop-reset-btn')).not.toBeNull();
+  });
+
   it('reflects `crop-shape` attribute to the `cropShape` property', async () => {
     el = document.createElement('cloudimage-crop') as CloudimageCropElement;
     el.setAttribute('crop-shape', '16:9');
