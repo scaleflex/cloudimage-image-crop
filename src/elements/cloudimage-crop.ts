@@ -15,6 +15,7 @@ import type {
   CropIconOverrides,
   CropTooltipLabels,
   CropTooltipMode,
+  CropResetPlacement,
 } from '../core/types';
 import { CloudimageCropCanvasElement } from './cloudimage-crop-canvas';
 import type { CloudimageCropToolbarElement, CloudimageCropToolbarCommand } from './cloudimage-crop-toolbar';
@@ -146,6 +147,12 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
    * lives inside the box. Emits `cloudimage-crop-cancel` via `cancel()`.
    */
   @property({ type: Boolean, attribute: 'show-cancel-button' }) showCancelButton = false;
+  /**
+   * Where the toolbar's Reset button sits: `'toolbar'` (default) keeps it first
+   * in the centred tool group; `'start'` pins it to the left corner, after Cancel
+   * when Cancel is shown, so the two "back out" actions sit together.
+   */
+  @property({ type: String, attribute: 'reset-placement' }) resetPlacement: CropResetPlacement = 'toolbar';
   /**
    * Show the toolbar's primary "Done" button (top-right, calls `save()`). On by
    * default. Turn off when the host commits the crop through its own action —
@@ -357,6 +364,7 @@ export class CloudimageCropElement extends CloudimageCropBaseElement {
             .showRotateSlider=${this.showRotateSlider}
             .showShapeSelector=${this.showShapeSelector}
             .showCancelButton=${this.showCancelButton}
+            .resetPlacement=${this.resetPlacement}
             .showDoneButton=${this.showDoneButton}
             toolbar-position=${this.toolbarPosition}
             variant=${this.variant}

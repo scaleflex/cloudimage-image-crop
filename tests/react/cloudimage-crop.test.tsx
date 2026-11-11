@@ -69,6 +69,15 @@ describe('<CloudimageCrop> React wrapper', () => {
     expect(el.dimToolbarOnDrag).toBe(true);
   });
 
+  it('forwards resetPlacement to the element and on to its toolbar', async () => {
+    const { container } = render(<CloudimageCrop showCancelButton resetPlacement='start' />);
+    const el = container.querySelector('cloudimage-crop') as CloudimageCropElement;
+    await el.updateComplete;
+    expect(el.resetPlacement).toBe('start');
+    const toolbar = el.shadowRoot!.querySelector('cloudimage-crop-toolbar') as unknown as { resetPlacement: string };
+    expect(toolbar.resetPlacement).toBe('start');
+  });
+
   it('bridges CustomEvents to prop callbacks', async () => {
     const onChange = vi.fn();
     const onCropChange = vi.fn();

@@ -607,6 +607,7 @@ Every configuration value has a kebab-case attribute on `<cloudimage-crop>`. Not
 | `toolbar-position` | `top \| bottom` | `top` |
 | `show-done-button` | boolean | `true` |
 | `show-cancel-button`, `dim-toolbar-on-drag` | boolean | `false` |
+| `reset-placement` | `toolbar \| start` | `toolbar` |
 | `border-radius` | px | `20` |
 | `overlay-color`, `handle-color`, `bleed-margin-color` | CSS color | `rgba(0,0,0,0.55)`, `#ffffff`, `rgba(255,0,0,0.5)` |
 | `show-bleed-margin`, `bleed-margin-size` | boolean, px | `false`, `10` |

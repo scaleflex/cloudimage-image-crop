@@ -1,9 +1,15 @@
-import { html } from 'lit';
+import { html, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { CloudimageCropBaseElement } from './base';
-import type { CropShapeName, CropIconOverrides, CropTooltipLabels, CropTooltipMode } from '../core/types';
+import type {
+  CropShapeName,
+  CropIconOverrides,
+  CropTooltipLabels,
+  CropTooltipMode,
+  CropResetPlacement,
+} from '../core/types';
 import { resolveIcon } from './icons';
 import './cloudimage-crop-rotate';
 import './cloudimage-crop-shapes';
@@ -53,6 +59,11 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
    * own `cancel()` (dispatches `cloudimage-crop-cancel`).
    */
   @property({ type: Boolean, attribute: 'show-cancel-button' }) showCancelButton = false;
+  /**
+   * `'toolbar'` (default): Reset leads the centred tool group. `'start'`: Reset
+   * is pinned to the left corner, after Cancel when shown.
+   */
+  @property({ type: String, attribute: 'reset-placement' }) resetPlacement: CropResetPlacement = 'toolbar';
   /**
    * Show the primary "Done" button (top-right). On by default. Turn off when the
    * host commits the crop through its own action instead (e.g. an embedding
@@ -105,9 +116,12 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
       ? parsedShapes.filter((s) => s !== 'free')
       : parsedShapes;
 
+    const resetAtStart = this.resetPlacement === 'start';
     // Narrow editor: reserve the corner gutters only for the corner buttons
-    // actually shown — otherwise the tool group loses 120px for nothing.
-    const gutterL = this.showCancelButton ? ' ci-crop-toolbar--gutter-l' : '';
+    // actually shown — otherwise the tool group loses 120px for nothing. The
+    // left corner holds up to two circles (Cancel + a pinned Reset).
+    const startButtons = Number(this.showCancelButton) + Number(resetAtStart);
+    const gutterL = ['', ' ci-crop-toolbar--gutter-l', ' ci-crop-toolbar--gutter-l2'][startButtons];
     const gutterR = this.showDoneButton ? ' ci-crop-toolbar--gutter-r' : '';
     const resetTip = this.tip('reset', 'Reset all changes');
     const rotateTip = this.tip('rotateLeft', 'Rotate left 90°');
@@ -115,22 +129,54 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
     const cancelTip = this.tip('cancel', 'Cancel');
     const doneTip = this.tip('done', 'Done');
 
+    const resetButton = html`
+      <button
+        type="button"
+        class="ci-crop-reset-btn"
+        aria-label="Reset all changes"
+        title=${ifDefined(resetTip.title)}
+        data-tooltip=${ifDefined(resetTip.tooltip)}
+        data-tooltip-align=${ifDefined(resetAtStart ? 'start' : undefined)}
+        @click=${() => this.emit({ type: 'reset' })}
+      >
+        ${unsafeHTML(resolveIcon('reset', this.icons))}
+      </button>
+    `;
+
+    const cancelButton = this.showCancelButton ? html`
+      <button
+        type="button"
+        class="ci-crop-cancel-btn"
+        part="cancel"
+        aria-label="Cancel"
+        title=${ifDefined(cancelTip.title)}
+        data-tooltip=${ifDefined(cancelTip.tooltip)}
+        data-tooltip-align="start"
+        @click=${() => this.emit({ type: 'cancel' })}
+      >
+        <span class="ci-crop-cancel-btn-icon">${unsafeHTML(resolveIcon('close', this.icons))}</span>
+        <span class="ci-crop-cancel-btn-label">Cancel</span>
+      </button>
+    ` : null;
+
+    // A pinned Reset can leave the centred group with nothing in it — skip the
+    // empty 36px box rather than keep an invisible element in the row.
+    const hasGroup = !resetAtStart || hasLeftButtons || this.showShapeSelector;
+
+    // The left corner renders BEFORE the tool row: it is absolutely positioned,
+    // so DOM order changes nothing visually, but it makes Tab follow what the
+    // user sees — Cancel / Reset on the left first, the tools, then Done.
     return html`
+      ${resetAtStart ? html`
+        <div class="ci-crop-start">${cancelButton}${resetButton}</div>
+      ` : cancelButton}
+
       <div class="ci-crop-toolbar${gutterL}${gutterR}" @cloudimage-crop-popover-open=${this.onPopoverOpen}>
-        <div class="ci-crop-toolbar-group">
-          <button
-            type="button"
-            class="ci-crop-reset-btn"
-            aria-label="Reset all changes"
-            title=${ifDefined(resetTip.title)}
-            data-tooltip=${ifDefined(resetTip.tooltip)}
-            @click=${() => this.emit({ type: 'reset' })}
-          >
-            ${unsafeHTML(resolveIcon('reset', this.icons))}
-          </button>
+        ${hasGroup ? html`<div class="ci-crop-toolbar-group">
+          ${resetAtStart ? null : resetButton}
 
           ${hasLeftButtons ? html`
-            <span class="ci-crop-toolbar-divider" aria-hidden="true"></span>
+            ${resetAtStart ? null : html`<span class="ci-crop-toolbar-divider" aria-hidden="true"></span>`}
             ${this.showRotateButton ? html`
               <button
                 type="button"
@@ -154,7 +200,7 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
           ` : null}
 
           ${this.showShapeSelector ? html`
-            <span class="ci-crop-toolbar-divider" aria-hidden="true"></span>
+            ${resetAtStart && !hasLeftButtons ? null : html`<span class="ci-crop-toolbar-divider" aria-hidden="true"></span>`}
             <cloudimage-crop-shapes
               .value=${this.shape}
               .shapes=${shapes}
@@ -164,7 +210,7 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
                 this.emit({ type: 'shape', value: e.detail.shape })}
             ></cloudimage-crop-shapes>
           ` : null}
-        </div>
+        </div>` : null}
 
         ${this.showRotateSlider ? html`
           <cloudimage-crop-rotate
@@ -175,22 +221,6 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
           ></cloudimage-crop-rotate>
         ` : null}
       </div>
-
-      ${this.showCancelButton ? html`
-        <button
-          type="button"
-          class="ci-crop-cancel-btn"
-          part="cancel"
-          aria-label="Cancel"
-          title=${ifDefined(cancelTip.title)}
-          data-tooltip=${ifDefined(cancelTip.tooltip)}
-          data-tooltip-align="start"
-          @click=${() => this.emit({ type: 'cancel' })}
-        >
-          <span class="ci-crop-cancel-btn-icon">${unsafeHTML(resolveIcon('close', this.icons))}</span>
-          <span class="ci-crop-cancel-btn-label">Cancel</span>
-        </button>
-      ` : null}
 
       ${this.showDoneButton ? html`
         <button
@@ -208,6 +238,27 @@ export class CloudimageCropToolbarElement extends CloudimageCropBaseElement {
         </button>
       ` : null}
     `;
+  }
+
+  /** Set when Reset had focus as `resetPlacement` changed; see `updated()`. */
+  private refocusReset = false;
+
+  /**
+   * Moving Reset between the tool group and the left corner renders a new
+   * button in a different template slot, which drops focus. Remember whether
+   * the old one had it so `updated()` can hand it to the new one.
+   */
+  protected willUpdate(changed: PropertyValues<this>): void {
+    if (changed.has('resetPlacement')) {
+      const active = this.shadowRoot?.activeElement;
+      this.refocusReset = Boolean(active?.classList.contains('ci-crop-reset-btn'));
+    }
+  }
+
+  protected updated(): void {
+    if (!this.refocusReset) return;
+    this.refocusReset = false;
+    this.shadowRoot?.querySelector<HTMLButtonElement>('.ci-crop-reset-btn')?.focus();
   }
 
   /**

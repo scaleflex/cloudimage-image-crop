@@ -135,6 +135,25 @@ export const sfxCropToolbarStyles = css`
     outline-offset: 2px;
   }
 
+  /* reset-placement="start": the left corner holds Cancel (when shown) and
+     Reset side by side, at the exact spot a lone Cancel takes. The cluster is
+     what is pinned, so Cancel drops its own absolute offsets inside it and
+     stays a positioning context for its tooltip. */
+  .ci-crop-start {
+    position: absolute;
+    left: 16px;
+    top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .ci-crop-start .ci-crop-cancel-btn {
+    position: relative;
+    left: auto;
+    top: auto;
+  }
+
   /* Cancel/Done render both an icon and a text label so the narrow-editor
      breakpoint (below) can swap to icon-only circles without a JS-driven
      state — just flip which span is visible. Text-label layout is the
@@ -367,6 +386,8 @@ export const sfxCropToolbarStyles = css`
     }
     /* Gutters only on the sides where Cancel / Done actually sit. */
     .ci-crop-toolbar--gutter-l { padding-left: 60px; }
+    /* Two circles in the left corner (Cancel + a pinned Reset): 16 + 36 + 8 + 36 + 8. */
+    .ci-crop-toolbar--gutter-l2 { padding-left: 104px; }
     .ci-crop-toolbar--gutter-r { padding-right: 60px; }
 
     /* The tools live in ONE group, so wrapping the outer row alone never

@@ -305,6 +305,7 @@ kbd {
 .demo-grid-toggle,
 .demo-bleed-toggle,
 .demo-cancel-toggle,
+.demo-reset-placement-toggle,
 .demo-dim-toggle {
   display: inline-flex;
   align-items: center;
@@ -325,6 +326,7 @@ kbd {
 .demo-grid-toggle:hover,
 .demo-bleed-toggle:hover,
 .demo-cancel-toggle:hover,
+.demo-reset-placement-toggle:hover,
 .demo-dim-toggle:hover {
   color: var(--sf-text, #1e293b);
   transform: translateY(-1px);
@@ -333,6 +335,7 @@ kbd {
 .demo-grid-toggle:focus-visible,
 .demo-bleed-toggle:focus-visible,
 .demo-cancel-toggle:focus-visible,
+.demo-reset-placement-toggle:focus-visible,
 .demo-dim-toggle:focus-visible {
   outline: 2px solid var(--sf-primary, #155bcd);
   outline-offset: 2px;
@@ -341,6 +344,7 @@ kbd {
 .demo-grid-toggle[aria-pressed="true"],
 .demo-bleed-toggle[aria-pressed="true"],
 .demo-cancel-toggle[aria-pressed="true"],
+.demo-reset-placement-toggle[aria-pressed="true"],
 .demo-dim-toggle[aria-pressed="true"] {
   color: #fff;
   background: var(--sf-primary, #155bcd);

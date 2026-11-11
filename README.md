@@ -231,6 +231,7 @@ All options below are exposed as both HTML attributes (kebab-case) and DOM prope
 | `show-shape-selector` / `showShapeSelector`  | `boolean`                  | `true` | Shape dropdown. |
 | `show-done-button` / `showDoneButton`        | `boolean`                  | `true` | Primary "Done" button (calls `save()`). Turn off when the host commits the crop through its own action. |
 | `show-cancel-button` / `showCancelButton`    | `boolean`                  | `false` | "Cancel" button mirroring Done (calls `cancel()`). |
+| `reset-placement` / `resetPlacement`         | `'toolbar' \| 'start'`     | `'toolbar'` | Where Reset sits: first in the centred tool group, or pinned to the left corner next to Cancel. |
 | `dim-toolbar-on-drag` / `dimToolbarOnDrag`   | `boolean`                  | `false` | Fade the toolbar while the user drags / resizes / pans, so it doesn't compete with the photo mid-gesture. |
 | `show-grid` / `showGrid`                     | `boolean \| 'interaction'` | `'interaction'` | Rule-of-thirds overlay; `'interaction'` shows it only while dragging. |
 

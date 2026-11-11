@@ -491,6 +491,7 @@ export function Editor() {
           <button type="button" class="demo-grid-toggle" aria-label="Toggle rule-of-thirds grid" aria-pressed="false">Grid: off</button>
           <button type="button" class="demo-bleed-toggle" aria-label="Toggle print bleed guides" aria-pressed="false">Bleed: off</button>
           <button type="button" class="demo-cancel-toggle" aria-label="Toggle the toolbar's Cancel button" aria-pressed="false">Cancel button: off</button>
+          <button type="button" class="demo-reset-placement-toggle" aria-label="Toggle where the toolbar's Reset button sits" aria-pressed="false">Reset: toolbar</button>
           <button type="button" class="demo-dim-toggle" aria-label="Toggle dimming the toolbar while dragging" aria-pressed="false">Dim toolbar on drag: off</button>
           <button type="button" class="demo-theme-toggle" aria-label="Toggle crop theme" aria-pressed="false">${ICONS.moon}</button>
         </div>
@@ -640,6 +641,17 @@ function hydrateHome(root: HTMLElement): void {
       el.showCancelButton = next;
       cancelBtn.textContent = `Cancel button: ${next ? 'on' : 'off'}`;
       cancelBtn.setAttribute('aria-pressed', String(next));
+    });
+  }
+  // Reset-placement toggle — flips the toolbar's Reset button between the
+  // centred tool group ('toolbar', default) and the left corner next to Cancel ('start').
+  const resetPlacementBtn = root.querySelector<HTMLButtonElement>('.demo-reset-placement-toggle');
+  if (el && resetPlacementBtn) {
+    resetPlacementBtn.addEventListener('click', () => {
+      const next = el.resetPlacement === 'start' ? 'toolbar' : 'start';
+      el.resetPlacement = next;
+      resetPlacementBtn.textContent = `Reset: ${next}`;
+      resetPlacementBtn.setAttribute('aria-pressed', String(next === 'start'));
     });
   }
   // Dim-toolbar-on-drag toggle — opt-in fade of the toolbar while the user
@@ -821,6 +833,7 @@ function renderDocConfiguration(): string {
         ['show-shape-selector',  'boolean',                                      'true',    'Show the shape-selector dropdown.'],
         ['show-done-button',     'boolean',                                      'true',    'Primary <strong>Done</strong> button (calls <code>save()</code>). Turn off when the host commits the crop through its own action.'],
         ['show-cancel-button',   'boolean',                                      'false',   '<strong>Cancel</strong> button mirroring Done (calls <code>cancel()</code>).'],
+        ['reset-placement',      'toolbar | start',                              'toolbar', 'Where <strong>Reset</strong> sits: first in the centred tool group, or pinned to the left corner after Cancel.'],
         ['dim-toolbar-on-drag',  'boolean',                                      'false',   'Fade the toolbar while the user drags / resizes / pans.'],
         ['show-grid',            'true | false | interaction',                   'interaction', 'Rule-of-thirds grid: always on, always off, or only while dragging.'],
       ],

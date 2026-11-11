@@ -46,6 +46,7 @@ export type {
   CropIconOverrides,
   CropTooltipLabels,
   CropTooltipMode,
+  CropResetPlacement,
 } from './core/types';
 
 export { parseRatio, getAspectRatio } from './transforms/constrain';
